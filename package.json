@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "@ethereum-attestation-service/eas-sdk": "^0.27.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "hardhat": "^2.13.0"
+  },
+  "dependencies": {
+    "@ethereum-attestation-service/eas-contracts": "^0.26.1"
+  }
+}
