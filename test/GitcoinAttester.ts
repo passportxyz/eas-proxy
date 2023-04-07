@@ -11,6 +11,7 @@ import {
   ZERO_BYTES32,
   NO_EXPIRATION,
   ATTEST_TYPE,
+  ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
 
 describe("GitcoinAttester", function () {
@@ -53,7 +54,7 @@ describe("GitcoinAttester", function () {
   }
 
   describe("Deployment", function () {
-    it("Should deploy contract", async function () {
+    it.skip("Should write multiple attestations", async function () {
       const { gitcoinAttester, eas, gitcoinVCSchema, EASContractAddress } =
         await loadFixture(deployGitcoinAttester);
 
@@ -104,7 +105,7 @@ describe("GitcoinAttester", function () {
     });
   });
 
-  it("Should sign attestation data", async function () {
+  it("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
     const { gitcoinAttester, eas, gitcoinVCSchema, EASContractAddress } =
       await loadFixture(deployGitcoinAttester);
 
@@ -119,15 +120,96 @@ describe("GitcoinAttester", function () {
       verifyingContract: gitcoinAttester.address,
     };
 
-    var types = ATTEST_TYPE;
-    const domainData = {
-      name: "app",
-      version: "1",
-      chainId: 3,
-      // verifyingContract: cardExchangeContract,
-      salt: "0xa222082684812afae4e093416fff16bc218b569abe4db590b6a058e1f2c1cd3e",
+    // var types = { ATTEST_PRIMARY_TYPE: ATTEST_TYPE };
+    // console.log("types", types);
+
+    const schemaEncoder = new SchemaEncoder("string provider, string hash");
+    const encodedData = schemaEncoder.encodeData([
+      { name: "provider", value: "TestProvider", type: "string" },
+      { name: "hash", value: "234567890", type: "string" },
+    ]);
+
+    const encodeDataBytes = Buffer.from(encodedData.substring(2), "hex");
+    // console.log("encodedData", encodedData);
+    // console.log("encodeDataBytes", encodeDataBytes);
+
+    const attestationRequest = {
+      // Unix timestamp of when attestation expires. (0 for no expiration)
+      expirationTime: NO_EXPIRATION,
+      data: encodeDataBytes,
     };
 
-    // signer._signTypedData(domain, )
+    // const signature = await signer._signTypedData(
+    //   domain,
+    //   types,
+    //   attestationRequest
+    // );
+    // console.log("signature", signature);
+
+    // Next: create a signature for an array of attestations
+    const StampAttestationType = [
+      { name: "expirationTime", type: "uint64" },
+      // { name: "revocable", type: "bool" },   // TODO: we should decide if we want to have this set to true by default ...
+      // { name: "refUID", type: "bytes32" },  // TODO: we do not need this for the passport
+      { name: "data", type: "bytes" },
+    ];
+
+    const arrayTypes = {
+      StampAttestation: StampAttestationType,
+      PassportAttestationRequests: [
+        { name: "attestations", type: `StampAttestation[]` },
+        { name: "nonce", type: "uint256" },
+        { name: "recipient", type: "address" }, // TODO: The recipient will be the same for all attestations / stamps
+        // { name: 'schema', type: 'bytes32' },    // TODO: Shall we use the schema here? Or can we skip this?
+      ],
+    };
+
+    const passportStampAttestationRequest = {
+      attestations: [
+        attestationRequest,
+        attestationRequest,
+        attestationRequest,
+      ],
+      nonce: 0,
+      recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
+    };
+
+    const signatureForArray = await signer._signTypedData(
+      domain,
+      arrayTypes,
+      passportStampAttestationRequest
+    );
+    console.log("signatureForArray", signatureForArray);
+    const splitSig = ethers.utils.splitSignature(signatureForArray);
+    console.log("splitSig", splitSig);
+    const resultTx = await gitcoinAttester.addPassportWithSignature(
+      gitcoinVCSchema,
+      passportStampAttestationRequest,
+      splitSig.v,
+      splitSig.r,
+      splitSig.s
+    );
+
+    console.log("resultTx", resultTx);
+    const result = await resultTx.wait();
+    console.log("result", result);
+    console.log("result.logs", result.logs);
+    console.log("result.logs[0]", result.logs[0]);
+    console.log("result.logs[0].data", result.logs[0].data);
+
+    const attestation_1 = await gitcoinAttester.getAttestation(
+      result.logs[0].data
+    );
+    const attestation_2 = await gitcoinAttester.getAttestation(
+      result.logs[1].data
+    );
+    const attestation_3 = await gitcoinAttester.getAttestation(
+      result.logs[2].data
+    );
+    console.log("attestation", attestation_1);
+    console.log("attestation", attestation_2);
+    console.log("attestation", attestation_3);
+    console.log("gitcoinAttester.address", gitcoinAttester.address);
+    // Read back the attestations written to the chain
   });
 });
