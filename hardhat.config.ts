@@ -6,7 +6,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://sepolia.infura.io/v3/4818dbcee84d4651a832894818bd4534",
+        url: "https://eth-sepolia.g.alchemy.com/v2/<YOUR API KEY>",
       },
     },
   },
