@@ -155,9 +155,9 @@ describe("GitcoinAttester", function () {
       ];
   
       const arrayTypes = {
-        StampAttestation: StampAttestationType,
-        PassportAttestationRequests: [
-          { name: "attestations", type: `StampAttestation[]` },
+        PassportStampAttestationRequest: StampAttestationType,
+        PassportAttestationRequest: [
+          { name: "attestations", type: `PassportStampAttestationRequest[]` },
           { name: "nonce", type: "uint256" },
           { name: "recipient", type: "address" }, // TODO: The recipient will be the same for all attestations / stamps
           // { name: 'schema', type: 'bytes32' },    // TODO: Shall we use the schema here? Or can we skip this?
