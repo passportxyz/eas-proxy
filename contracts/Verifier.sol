@@ -17,10 +17,12 @@ struct Stamp {
     string provider;
     string stampHash;
     string expirationDate;
+    string encodedData;
 }
 
 struct Passport {
     Stamp[] stamps;
+    address recipient;
 }
 
 contract Verifier {
@@ -33,8 +35,8 @@ contract Verifier {
     bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256(
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
-    bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate)");
-    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps)Stamp(string provider,string stampHash,string expirationDate)");
+    bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate,string encodedData)");
+    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps,address recipient)Stamp(string provider,string stampHash,string expirationDate,string encodedData)");
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
@@ -69,7 +71,8 @@ contract Verifier {
             STAMP_TYPEHASH,
             keccak256(bytes(stamp.provider)),
             keccak256(bytes(stamp.stampHash)),
-            keccak256(bytes(stamp.expirationDate))
+            keccak256(bytes(stamp.expirationDate)),
+            keccak256(bytes(stamp.encodedData))
         ));
     }
 
@@ -81,7 +84,7 @@ contract Verifier {
         result = keccak256(abi.encodePacked(_array));
     }
 
-    function _hashPassport(Passport memory passport) private pure returns (bytes32) {
+    function _hashPassport(Passport memory passport) private view returns (bytes32) {
         bytes32[] memory _array = new bytes32[](passport.stamps.length);
 
         for (uint256 i = 0; i < passport.stamps.length; ++i) {
@@ -92,7 +95,8 @@ contract Verifier {
 
         return keccak256(abi.encode(
             PASSPORT_TYPEHASH,
-            hashedArray
+            hashedArray,
+            passport.recipient
         ));
     }
 
