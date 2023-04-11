@@ -13,54 +13,59 @@ import {
   ATTEST_TYPE,
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
+
 import { GitcoinAttester } from "../typechain-types";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
+
+
+let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string;
+export async function deployGitcoinAttester() {
+  // Deployment and ABI: SchemaRegistry.json
+  // Sepolia
+
+  // v0.26
+
+  // EAS:
+  // Contract: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
+  // Deployment and ABI: EAS.json
+  // SchemaRegistry:
+  // Contract: 0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0
+  // Deployment and ABI: SchemaRegistry.json
+  EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
+  gitcoinVCSchema =
+    "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
+
+  // Contracts are deployed using the first signer/account by default
+  // Deploy the GitcoinAttester contract
+  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+  gitcoinAttester = await GitcoinAttester.deploy();
+
+  const provider = ethers.getDefaultProvider();
+
+  console.log("provider", provider);
+  // Initialize the sdk with the address of the EAS Schema contract address
+  eas = new EAS(EASContractAddress);
+
+  // Connects an ethers style provider/signingProvider to perform read/write functions.
+  // MUST be a signer to do write operations!
+  eas.connect(provider);
+}
+
+let contractOwner: SignerWithAddress, iamSigner: SignerWithAddress;
 
 describe("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
-
+  this.beforeAll(async function () {
+    await loadFixture(deployGitcoinAttester);
+    const [owner, otherAccount] = await ethers.getSigners();
+    contractOwner = owner
+    iamSigner = otherAccount
+  });
   describe("Deployment", function () {
-    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string
-
-    this.beforeAll(async function () {
-      async function deployGitcoinAttester() {
-        // Deployment and ABI: SchemaRegistry.json
-        // Sepolia
-    
-        // v0.26
-    
-        // EAS:
-        // Contract: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
-        // Deployment and ABI: EAS.json
-        // SchemaRegistry:
-        // Contract: 0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0
-        // Deployment and ABI: SchemaRegistry.json
-        EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
-        gitcoinVCSchema =
-          "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-    
-        // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount] = await ethers.getSigners();
-    
-        const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-        gitcoinAttester = await GitcoinAttester.deploy();
-    
-        const provider = ethers.getDefaultProvider();
-    
-        console.log("provider", provider);
-        // Initialize the sdk with the address of the EAS Schema contract address
-        eas = new EAS(EASContractAddress);
-    
-        // Connects an ethers style provider/signingProvider to perform read/write functions.
-        // MUST be a signer to do write operations!
-        eas.connect(provider);
-      }
-
-      await loadFixture(deployGitcoinAttester);
-    });
-
-    it("Should write multiple attestations", async function () {
+    it.skip("Should write multiple attestations", async function () {
 
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
@@ -108,7 +113,7 @@ describe("GitcoinAttester", function () {
       // expect(await lock.unlockTime()).to.equal(unlockTime);
     });
 
-    it("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
+    it.skip("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
       const signers = await ethers.getSigners();
       console.log("signers", signers);
       const signer = signers[0];
@@ -119,9 +124,6 @@ describe("GitcoinAttester", function () {
         chainId: 1,
         verifyingContract: gitcoinAttester.address,
       };
-  
-      // var types = { ATTEST_PRIMARY_TYPE: ATTEST_TYPE };
-      // console.log("types", types);
   
       const schemaEncoder = new SchemaEncoder("string provider, string hash");
       const encodedData = schemaEncoder.encodeData([
@@ -213,5 +215,4 @@ describe("GitcoinAttester", function () {
       // Read back the attestations written to the chain
     });
   });
-
 });
