@@ -8,6 +8,9 @@ import "hardhat/console.sol";
 
 struct EIP712Domain {
     string name;
+    string version;
+    uint256 chainId;
+    address verifyingContract;
 }
 
 struct Stamp {
@@ -17,24 +20,39 @@ struct Stamp {
 }
 
 struct Passport {
-    Stamp[] stamps;
+    Stamp stamps;
 }
 
 contract Verifier {
+    using ECDSA for bytes32;
+
     address public issuer;
     string public name;
 
     // Define the type hashes
-    bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name)");
+    bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate)");
-    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps)");
+    // bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp stamps)");
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
 
     constructor(address iamIssuer) {
+        console.log("Deploying a Verifier with address:", iamIssuer);
         issuer = iamIssuer;
         name = "Attester";
+
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                EIP712DOMAIN_TYPEHASH,
+                keccak256(bytes(name)),
+                keccak256(bytes("1")), // version
+                1, // chainId
+                address(this) // verifyingContract
+            )
+        );
     }
 
     function _hashStamp(Stamp memory stamp) private pure returns (bytes32) {
@@ -46,33 +64,25 @@ contract Verifier {
         ));
     }
 
-    function _hashPassport(Passport memory passport) private pure returns (bytes32) {
-        bytes32 stampHash = _hashStamp(passport.stamps[0]);
-        bytes32 stampHash1 = _hashStamp(passport.stamps[1]);
-        bytes32 stampHash2 = _hashStamp(passport.stamps[2]);
-
-        return keccak256(abi.encode(
-            PASSPORT_TYPEHASH,
-            keccak256(abi.encodePacked([stampHash,stampHash1,stampHash2]))
-        ));
-    }
+    // function _hashPassport(Passport memory passport) private pure returns (bytes32) {
+    //     // bytes32 stampHash = _hashStamp(passport.stamps[0]);
+    //     // bytes32 stampHash1 = _hashStamp(passport.stamps[1]);
+    //     // bytes32 stampHash2 = _hashStamp(passport.stamps[2]);
+    //     bytes32 stampHash = _hashStamp(passport.stamps);
+    //     return keccak256(abi.encode(
+    //         PASSPORT_TYPEHASH,
+    //         stampHash
+    //     ));
+    // }
 
     function verify(
         uint8 v,
         bytes32 r,
         bytes32 s,
-        Passport calldata passport
+        Stamp calldata stamp
     ) public view returns (bool) {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                EIP712DOMAIN_TYPEHASH,
-                keccak256(bytes(name))
-            )
-        );
-
-        bytes32 passportHash = _hashPassport(passport);
-
-        bytes32 digest = ECDSA.toTypedDataHash(domainSeparator, passportHash);
+        bytes32 passportHash = _hashStamp(stamp);
+        bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
         // Recover signer from the signature
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
