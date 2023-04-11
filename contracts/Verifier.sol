@@ -20,7 +20,7 @@ struct Stamp {
 }
 
 struct Passport {
-    Stamp stamps;
+    Stamp[] stamps;
 }
 
 contract Verifier {
@@ -34,7 +34,7 @@ contract Verifier {
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate)");
-    // bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp stamps)");
+    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps)");
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
@@ -64,30 +64,39 @@ contract Verifier {
         ));
     }
 
-    // function _hashPassport(Passport memory passport) private pure returns (bytes32) {
-    //     // bytes32 stampHash = _hashStamp(passport.stamps[0]);
-    //     // bytes32 stampHash1 = _hashStamp(passport.stamps[1]);
-    //     // bytes32 stampHash2 = _hashStamp(passport.stamps[2]);
-    //     bytes32 stampHash = _hashStamp(passport.stamps);
-    //     return keccak256(abi.encode(
-    //         PASSPORT_TYPEHASH,
-    //         stampHash
-    //     ));
-    // }
+    function _hashArray(string[] calldata array) internal pure returns (bytes32 result) {
+        bytes32[] memory _array = new bytes32[](array.length);
+        for (uint256 i = 0; i < array.length; ++i) {
+            _array[i] = keccak256(bytes(array[i]));
+        }
+        result = keccak256(abi.encodePacked(_array));
+    }
+
+    function _hashPassport(Passport memory passport) private pure returns (bytes32) {
+        bytes32 stampHash = _hashStamp(passport.stamps[0]);
+        bytes32 stampHash1 = _hashStamp(passport.stamps[1]);
+        // bytes32 stampHash2 = _hashStamp(passport.stamps[2]);
+
+        return keccak256(abi.encode(
+            PASSPORT_TYPEHASH,
+            keccak256(abi.encode([stampHash,stampHash1]))
+        ));
+    }
 
     function verify(
         uint8 v,
         bytes32 r,
         bytes32 s,
-        Stamp calldata stamp
+        Passport calldata passport
     ) public view returns (bool) {
-        bytes32 passportHash = _hashStamp(stamp);
+        bytes32 passportHash = _hashPassport(passport);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
         // Recover signer from the signature
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
-        console.log(recoveredSigner, issuer);
         // Compare the recovered signer with the expected signer
+        console.log("Recovered signer:", recoveredSigner);
+        console.log("Expected signer:", issuer);
         return recoveredSigner == issuer;
     }
 }

@@ -9,6 +9,12 @@ const googleStamp = {
   expirationDate: "2023-12-31",
 };
 
+const facebookStamp = {
+  provider: "Facebook",
+  stampHash: "234567891",
+  expirationDate: "2023-12-31",
+};
+
 let iamAccount: SignerWithAddress, iamSigner: Signer;
 
 describe("Verifier", function () {
@@ -34,27 +40,29 @@ describe("Verifier", function () {
         { name: "stampHash", type: "string" },
         { name: "expirationDate", type: "string" },
       ],
+      Passport: [
+        { name: "stamps", type: "Stamp[]" },
+      ]
     };
 
-    const message = {
-      provider: googleStamp.provider,
-      stampHash: googleStamp.stampHash,
-      expirationDate: googleStamp.expirationDate,
-    };
+    
+    const passport = {
+      stamps: [googleStamp, facebookStamp],
+    }
 
-    const signature = await iamAccount._signTypedData(domain, types, message);
+    const signature = await iamAccount._signTypedData(domain, types, passport);
     const recoveredAddress = ethers.utils.verifyTypedData(
       domain,
       types,
-      message,
+      passport,
       signature
     );
-    console.log(recoveredAddress, "recoveredAddress", iamAccount.address, "iamAccount.address")
+
     expect(recoveredAddress).to.equal(iamAccount.address);
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const verifiedStamp = await this.verifier.verify(v, r, s, googleStamp);
+    const verifiedStamp = await this.verifier.verify(v, r, s, [passport.stamps]);
 
     expect(verifiedStamp).to.equal(true);
   });
