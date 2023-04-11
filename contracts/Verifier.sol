@@ -34,22 +34,31 @@ contract Verifier {
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate)");
-    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps)");
+    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps)Stamp(string provider,string stampHash,string expirationDate)");
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
 
+    function getChainId() public view returns (uint256) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return chainId;
+    }
+
     constructor(address iamIssuer) {
-        console.log("Deploying a Verifier with address:", iamIssuer);
         issuer = iamIssuer;
         name = "Attester";
+
+        uint256 chainId = getChainId();
 
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 EIP712DOMAIN_TYPEHASH,
                 keccak256(bytes(name)),
                 keccak256(bytes("1")), // version
-                1, // chainId
+                chainId, // chainId
                 address(this) // verifyingContract
             )
         );
@@ -73,13 +82,17 @@ contract Verifier {
     }
 
     function _hashPassport(Passport memory passport) private pure returns (bytes32) {
-        bytes32 stampHash = _hashStamp(passport.stamps[0]);
-        bytes32 stampHash1 = _hashStamp(passport.stamps[1]);
-        // bytes32 stampHash2 = _hashStamp(passport.stamps[2]);
+        bytes32[] memory _array = new bytes32[](passport.stamps.length);
+
+        for (uint256 i = 0; i < passport.stamps.length; ++i) {
+            _array[i] = _hashStamp(passport.stamps[i]);
+        }
+
+        bytes32 hashedArray = keccak256(abi.encodePacked(_array));
 
         return keccak256(abi.encode(
             PASSPORT_TYPEHASH,
-            keccak256(abi.encode([stampHash,stampHash1]))
+            hashedArray
         ));
     }
 

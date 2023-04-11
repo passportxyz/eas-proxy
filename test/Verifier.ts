@@ -27,10 +27,12 @@ describe("Verifier", function () {
     this.verifier = await verifierFactory.deploy(iamAccount.address);
   });
   it("should verify a valid EIP712 signature", async function () {
+    const chainId = await iamAccount.getChainId();
+    console.log({ chainId })
     const domain = {
       name: "Attester",
       version: "1",
-      chainId: 1,
+      chainId,
       verifyingContract: this.verifier.address,
     };
 
@@ -45,10 +47,20 @@ describe("Verifier", function () {
       ]
     };
 
-    
     const passport = {
-      stamps: [googleStamp, facebookStamp],
-    }
+      stamps: [
+        {
+          provider: googleStamp.provider,
+          stampHash: googleStamp.stampHash,
+          expirationDate: googleStamp.expirationDate
+        },
+        {
+          provider: facebookStamp.provider,
+          stampHash: facebookStamp.stampHash,
+          expirationDate: facebookStamp.expirationDate
+        }
+      ],
+    };
 
     const signature = await iamAccount._signTypedData(domain, types, passport);
     const recoveredAddress = ethers.utils.verifyTypedData(
@@ -62,7 +74,7 @@ describe("Verifier", function () {
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const verifiedStamp = await this.verifier.verify(v, r, s, [passport.stamps]);
+    const verifiedStamp = await this.verifier.verify(v, r, s, passport);
 
     expect(verifiedStamp).to.equal(true);
   });
