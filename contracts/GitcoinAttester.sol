@@ -2,12 +2,13 @@
 pragma solidity ^0.8.9;
 
 import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import {Verifier, Passport, Stamp} from "./Verifier.sol";
 
 // Uncomment this line to use console.log
 import "hardhat/console.sol";
 
 struct PassportStampAttestationRequest {
-    uint64 expirationTime; // The time when the attestation expires (Unix timestamp).
+    uint64 expirationDate; // The time when the attestation expires (Unix timestamp).
     bytes data; // Custom attestation data.
 }
 
@@ -17,11 +18,11 @@ struct PassportAttestationRequest {
     address recipient; // The receiver of the attestations
 }
 
-contract GitcoinAttester {
+contract GitcoinAttester is Verifier {
     address private easContractAddress;
     IEAS eas;
 
-    constructor() payable {}
+    constructor(address iamIssuer) Verifier(iamIssuer) payable {}
 
     function setEASAddress(address _easContractAddress) public {
         easContractAddress = _easContractAddress;
@@ -43,33 +44,51 @@ contract GitcoinAttester {
         return ret;
     }
 
+    function hashStampData(
+        Stamp memory stamp
+    ) public pure returns (bytes32 array) {
+         return keccak256(
+            abi.encode(
+                bytes(stamp.provider),
+                bytes(stamp.stampHash)
+            )
+        );
+    }
+
     function addPassportWithSignature(
         bytes32 schema,
-        PassportAttestationRequest calldata passportAttestationRequest,
+        Passport calldata passport,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) public payable virtual returns (bytes32[] memory) {
-        // TODO: verify the EIP-712 signature & reject transaction if this does not match
+        if (verify(v, r, s, passport) == false) {
+            revert("Invalid signature");
+        }
+
         bytes32[] memory ret = new bytes32[](
-            passportAttestationRequest.attestations.length
+            passport.stamps.length
         );
         for (
             uint i = 0;
-            i < passportAttestationRequest.attestations.length;
+            i < passport.stamps.length;
             i++
         ) {
             console.log("Handling stamp #", i);
-            PassportStampAttestationRequest
-                memory stamp = passportAttestationRequest.attestations[i];
+            Stamp memory stamp = passport.stamps[i];
+
+            bytes memory encodedData = abi.encodePacked(hashStampData(stamp));
+
             AttestationRequest memory attestationRequest = AttestationRequest({
                 schema: schema,
                 data: AttestationRequestData({
-                    recipient: passportAttestationRequest.recipient, // The recipient of the attestation.
-                    expirationTime: stamp.expirationTime, // The time when the attestation expires (Unix timestamp).
+                    recipient: passport.recipient, // The recipient of the attestation.
+                    // TODO: modify Verifier and Schema to accept expirationDate as uint64
+                    expirationTime: 123, // The time when the attestation expires (Unix timestamp).
                     revocable: true, // Whether the attestation is revocable.
                     refUID: 0, // The UID of the related attestation.
-                    data: stamp.data, // Custom attestation data.
+                    // You could make a keccak hash of (provider + hash string + recipient address + optional expiration time) and sign it
+                    data: encodedData, // Custom attestation data.
                     value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
                 })
             });

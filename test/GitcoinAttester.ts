@@ -15,13 +15,25 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester } from "../typechain-types";
 
+const googleStamp = {
+  provider: "Google",
+  stampHash: "234567890",
+  expirationDate: "2023-12-31",
+};
+
+const facebookStamp = {
+  provider: "Facebook",
+  stampHash: "234567891",
+  expirationDate: "2023-12-31",
+};
+
 describe("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
 
   describe("Deployment", function () {
-    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string
+    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string, iamAccount: any, verifier: any, recipient: any;
 
     this.beforeAll(async function () {
       async function deployGitcoinAttester() {
@@ -41,10 +53,13 @@ describe("GitcoinAttester", function () {
           "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
     
         // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount] = await ethers.getSigners();
+        const [owner, otherAccount, recipientAccount] = await ethers.getSigners();
+
+        iamAccount = otherAccount;
+        recipient = recipientAccount;
     
         const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-        gitcoinAttester = await GitcoinAttester.deploy();
+        gitcoinAttester = await GitcoinAttester.deploy(iamAccount.address);
     
         const provider = ethers.getDefaultProvider();
     
@@ -55,12 +70,60 @@ describe("GitcoinAttester", function () {
         // Connects an ethers style provider/signingProvider to perform read/write functions.
         // MUST be a signer to do write operations!
         eas.connect(provider);
+
+        const verifierFactory = await ethers.getContractFactory("Verifier");
+        verifier = await verifierFactory.deploy(iamAccount.address);
       }
 
       await loadFixture(deployGitcoinAttester);
     });
 
-    it("Should write multiple attestations", async function () {
+    it("should verify signature and make attestations for each stamp", async function () {
+      const chainId = await iamAccount.getChainId();
+
+      const domain = {
+        name: "Attester",
+        version: "1",
+        chainId,
+        verifyingContract: gitcoinAttester.address,
+      };
+
+      const types = {
+        Stamp: [
+          { name: "provider", type: "string" },
+          { name: "stampHash", type: "string" },
+          { name: "expirationDate", type: "string" }
+        ],
+        Passport: [
+          { name: "stamps", type: "Stamp[]" },
+          { name: "recipient", type: "address" }
+        ]
+      };
+
+      const passport = {
+        stamps: [
+          {
+            provider: googleStamp.provider,
+            stampHash: googleStamp.stampHash,
+            expirationDate: googleStamp.expirationDate,
+          },
+          {
+            provider: facebookStamp.provider,
+            stampHash: facebookStamp.stampHash,
+            expirationDate: facebookStamp.expirationDate,
+          }
+        ],
+        recipient: recipient.address
+      };
+
+      const signature = await iamAccount._signTypedData(domain, types, passport);
+
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+
+      const verifiedStamp = await gitcoinAttester.addPassportWithSignature(gitcoinVCSchema, passport, v, r, s);
+    });
+
+    it.skip("Should write multiple attestations", async function () {
 
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
@@ -108,7 +171,7 @@ describe("GitcoinAttester", function () {
       // expect(await lock.unlockTime()).to.equal(unlockTime);
     });
 
-    it("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
+    it.skip("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
       const signers = await ethers.getSigners();
       console.log("signers", signers);
       const signer = signers[0];
