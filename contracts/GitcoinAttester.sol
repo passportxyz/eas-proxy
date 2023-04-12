@@ -44,17 +44,6 @@ contract GitcoinAttester is Verifier {
         return ret;
     }
 
-    function hashStampData(
-        Stamp memory stamp
-    ) public pure returns (bytes32 array) {
-         return keccak256(
-            abi.encode(
-                bytes(stamp.provider),
-                bytes(stamp.stampHash)
-            )
-        );
-    }
-
     function addPassportWithSignature(
         bytes32 schema,
         Passport calldata passport,
@@ -74,21 +63,16 @@ contract GitcoinAttester is Verifier {
             i < passport.stamps.length;
             i++
         ) {
-            console.log("Handling stamp #", i);
             Stamp memory stamp = passport.stamps[i];
-
-            bytes memory encodedData = abi.encodePacked(hashStampData(stamp));
 
             AttestationRequest memory attestationRequest = AttestationRequest({
                 schema: schema,
                 data: AttestationRequestData({
                     recipient: passport.recipient, // The recipient of the attestation.
-                    // TODO: modify Verifier and Schema to accept expirationDate as uint64
-                    expirationTime: 123, // The time when the attestation expires (Unix timestamp).
+                    expirationTime: 0, // The time when the attestation expires (Unix timestamp).
                     revocable: true, // Whether the attestation is revocable.
                     refUID: 0, // The UID of the related attestation.
-                    // You could make a keccak hash of (provider + hash string + recipient address + optional expiration time) and sign it
-                    data: encodedData, // Custom attestation data.
+                    data: stamp.encodedData, // Custom attestation data.
                     value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
                 })
             });

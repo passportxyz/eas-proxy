@@ -27,6 +27,21 @@ const facebookStamp = {
   expirationDate: "2023-12-31",
 };
 
+type Stamp = {
+  provider: string;
+  stampHash: string;
+  expirationDate: string;
+}
+
+export const easEncodeData = (stamp: Stamp) => {
+  const schemaEncoder = new SchemaEncoder("string provider, string hash");
+  const encodedData = schemaEncoder.encodeData([
+    { name: "provider", value: stamp.provider, type: "string" },
+    { name: "hash", value: stamp.stampHash, type: "string" },
+  ]);
+  return encodedData;
+};
+
 describe("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -92,7 +107,8 @@ describe("GitcoinAttester", function () {
         Stamp: [
           { name: "provider", type: "string" },
           { name: "stampHash", type: "string" },
-          { name: "expirationDate", type: "string" }
+          { name: "expirationDate", type: "string" },
+          { name: "encodedData", type: "bytes" },
         ],
         Passport: [
           { name: "stamps", type: "Stamp[]" },
@@ -106,11 +122,13 @@ describe("GitcoinAttester", function () {
             provider: googleStamp.provider,
             stampHash: googleStamp.stampHash,
             expirationDate: googleStamp.expirationDate,
+            encodedData: easEncodeData(googleStamp),
           },
           {
             provider: facebookStamp.provider,
             stampHash: facebookStamp.stampHash,
             expirationDate: facebookStamp.expirationDate,
+            encodedData: easEncodeData(facebookStamp),
           }
         ],
         recipient: recipient.address

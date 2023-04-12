@@ -3,6 +3,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { easEncodeData } from "./GitcoinAttester"
 
 const googleStamp = {
   provider: "Google",
@@ -47,7 +48,8 @@ describe("Verifier", function () {
       Stamp: [
         { name: "provider", type: "string" },
         { name: "stampHash", type: "string" },
-        { name: "expirationDate", type: "string" }
+        { name: "expirationDate", type: "string" },
+        { name: "encodedData", type: "bytes"}
       ],
       Passport: [
         { name: "stamps", type: "Stamp[]" },
@@ -61,11 +63,13 @@ describe("Verifier", function () {
           provider: googleStamp.provider,
           stampHash: googleStamp.stampHash,
           expirationDate: googleStamp.expirationDate,
+          encodedData: easEncodeData(googleStamp)
         },
         {
           provider: facebookStamp.provider,
           stampHash: facebookStamp.stampHash,
           expirationDate: facebookStamp.expirationDate,
+          encodedData: easEncodeData(googleStamp)
         }
       ],
       recipient: this.otherAccount.address
