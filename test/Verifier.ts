@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Signer } from "ethers";
-import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { NO_EXPIRATION, SchemaEncoder, ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeData } from "./GitcoinAttester"
 
 const googleStamp = {
@@ -53,8 +53,12 @@ describe("Verifier", function () {
       ],
       Passport: [
         { name: "stamps", type: "Stamp[]" },
-        { name: "recipient", type: "address" }
-      ]
+        { name: "recipient", type: "address" },
+        { name: "expirationTime", type: "uint64" },
+        { name: "revocable", type: "bool" },
+        { name: "refUID", type: "bytes32" },
+        { name: "value", type: "uint256" },
+      ],
     };
 
     const passport = {
@@ -72,7 +76,11 @@ describe("Verifier", function () {
           encodedData: easEncodeData(googleStamp)
         }
       ],
-      recipient: this.otherAccount.address
+      recipient: this.otherAccount.address,
+      expirationTime: NO_EXPIRATION,
+      revocable: true,
+      refUID: ZERO_BYTES32,
+      value: 0,
     };
 
     const signature = await iamAccount._signTypedData(domain, types, passport);

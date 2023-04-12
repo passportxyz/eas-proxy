@@ -23,6 +23,10 @@ struct Stamp {
 struct Passport {
     Stamp[] stamps;
     address recipient;
+    uint64 expirationTime;
+    bool revocable;
+    bytes32 refUID;
+    uint256 value;
 }
 
 contract Verifier {
@@ -36,7 +40,10 @@ contract Verifier {
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)");
-    bytes32 private constant PASSPORT_TYPEHASH = keccak256("Passport(Stamp[] stamps,address recipient)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)");
+    bytes32 private constant PASSPORT_TYPEHASH = keccak256(
+        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
+    );
+
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
@@ -96,7 +103,11 @@ contract Verifier {
         return keccak256(abi.encode(
             PASSPORT_TYPEHASH,
             hashedArray,
-            passport.recipient
+            passport.recipient,
+            passport.expirationTime,
+            passport.revocable,
+            passport.refUID,
+            passport.value
         ));
     }
 
