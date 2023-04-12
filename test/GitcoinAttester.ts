@@ -15,13 +15,40 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester } from "../typechain-types";
 
+const googleStamp = {
+  provider: "Google",
+  stampHash: "234567890",
+  expirationDate: "2023-12-31",
+};
+
+const facebookStamp = {
+  provider: "Facebook",
+  stampHash: "234567891",
+  expirationDate: "2023-12-31",
+};
+
+type Stamp = {
+  provider: string;
+  stampHash: string;
+  expirationDate: string;
+}
+
+export const easEncodeData = (stamp: Stamp) => {
+  const schemaEncoder = new SchemaEncoder("string provider, string hash");
+  const encodedData = schemaEncoder.encodeData([
+    { name: "provider", value: stamp.provider, type: "string" },
+    { name: "hash", value: stamp.stampHash, type: "string" },
+  ]);
+  return encodedData;
+};
+
 describe("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
 
   describe("Deployment", function () {
-    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string
+    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string, iamAccount: any, verifier: any, recipient: any;
 
     this.beforeAll(async function () {
       async function deployGitcoinAttester() {
@@ -41,10 +68,13 @@ describe("GitcoinAttester", function () {
           "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
     
         // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount] = await ethers.getSigners();
+        const [owner, otherAccount, recipientAccount] = await ethers.getSigners();
+
+        iamAccount = otherAccount;
+        recipient = recipientAccount;
     
         const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-        gitcoinAttester = await GitcoinAttester.deploy();
+        gitcoinAttester = await GitcoinAttester.deploy(iamAccount.address);
     
         const provider = ethers.getDefaultProvider();
     
@@ -55,13 +85,75 @@ describe("GitcoinAttester", function () {
         // Connects an ethers style provider/signingProvider to perform read/write functions.
         // MUST be a signer to do write operations!
         eas.connect(provider);
+
+        const verifierFactory = await ethers.getContractFactory("Verifier");
+        verifier = await verifierFactory.deploy(iamAccount.address);
       }
 
       await loadFixture(deployGitcoinAttester);
     });
 
-    it("Should write multiple attestations", async function () {
+    it("should verify signature and make attestations for each stamp", async function () {
+      await gitcoinAttester.setEASAddress(EASContractAddress);
+      const chainId = await iamAccount.getChainId();
 
+      const domain = {
+        name: "Attester",
+        version: "1",
+        chainId,
+        verifyingContract: gitcoinAttester.address,
+      };
+
+      const types = {
+        Stamp: [
+          { name: "provider", type: "string" },
+          { name: "stampHash", type: "string" },
+          { name: "expirationDate", type: "string" },
+          { name: "encodedData", type: "bytes" }
+        ],
+        Passport: [
+          { name: "stamps", type: "Stamp[]" },
+          { name: "recipient", type: "address" },
+          { name: "expirationTime", type: "uint64" },
+          { name: "revocable", type: "bool" },
+          { name: "refUID", type: "bytes32" },
+          { name: "value", type: "uint256" },
+        ],
+      };
+
+      const passport = {
+        stamps: [
+          {
+            provider: googleStamp.provider,
+            stampHash: googleStamp.stampHash,
+            expirationDate: googleStamp.expirationDate,
+            encodedData: easEncodeData(googleStamp),
+          },
+          {
+            provider: facebookStamp.provider,
+            stampHash: facebookStamp.stampHash,
+            expirationDate: facebookStamp.expirationDate,
+            encodedData: easEncodeData(facebookStamp),
+          }
+        ],
+        recipient: recipient.address,
+        expirationTime: NO_EXPIRATION,
+        revocable: true,
+        refUID: ZERO_BYTES32,
+        value: 0,
+      };
+
+      const signature = await iamAccount._signTypedData(domain, types, passport);
+
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+
+      const verifiedPassportTx = await gitcoinAttester.addPassportWithSignature(gitcoinVCSchema, passport, v, r, s);
+      const verifiedPassport = await verifiedPassportTx.wait();
+      // expect(verifiedPassport.length).to.equal(2);
+      expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
+    });
+
+    it("Should write multiple attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
       const schemaEncoder = new SchemaEncoder("string provider, string hash");
@@ -105,112 +197,6 @@ describe("GitcoinAttester", function () {
       console.log("attestation", attestation_2);
       console.log("attestation", attestation_3);
       console.log("gitcoinAttester.address", gitcoinAttester.address);
-      // expect(await lock.unlockTime()).to.equal(unlockTime);
-    });
-
-    it("Should write a passport to the blockchain by providing EIP712 signed array of requests", async function () {
-      const signers = await ethers.getSigners();
-      console.log("signers", signers);
-      const signer = signers[0];
-  
-      const domain = {
-        name: "Gitcoin Attester",
-        version: "1",
-        chainId: 1,
-        verifyingContract: gitcoinAttester.address,
-      };
-  
-      // var types = { ATTEST_PRIMARY_TYPE: ATTEST_TYPE };
-      // console.log("types", types);
-  
-      const schemaEncoder = new SchemaEncoder("string provider, string hash");
-      const encodedData = schemaEncoder.encodeData([
-        { name: "provider", value: "TestProvider", type: "string" },
-        { name: "hash", value: "234567890", type: "string" },
-      ]);
-  
-      const encodeDataBytes = Buffer.from(encodedData.substring(2), "hex");
-      // console.log("encodedData", encodedData);
-      // console.log("encodeDataBytes", encodeDataBytes);
-  
-      const attestationRequest = {
-        // Unix timestamp of when attestation expires. (0 for no expiration)
-        expirationTime: NO_EXPIRATION,
-        data: encodeDataBytes,
-      };
-  
-      // const signature = await signer._signTypedData(
-      //   domain,
-      //   types,
-      //   attestationRequest
-      // );
-      // console.log("signature", signature);
-  
-      // Next: create a signature for an array of attestations
-      const StampAttestationType = [
-        { name: "expirationTime", type: "uint64" },
-        // { name: "revocable", type: "bool" },   // TODO: we should decide if we want to have this set to true by default ...
-        // { name: "refUID", type: "bytes32" },  // TODO: we do not need this for the passport
-        { name: "data", type: "bytes" },
-      ];
-  
-      const arrayTypes = {
-        StampAttestation: StampAttestationType,
-        PassportAttestationRequests: [
-          { name: "attestations", type: `StampAttestation[]` },
-          { name: "nonce", type: "uint256" },
-          { name: "recipient", type: "address" }, // TODO: The recipient will be the same for all attestations / stamps
-          // { name: 'schema', type: 'bytes32' },    // TODO: Shall we use the schema here? Or can we skip this?
-        ],
-      };
-  
-      const passportStampAttestationRequest = {
-        attestations: [
-          attestationRequest,
-          attestationRequest,
-          attestationRequest,
-        ],
-        nonce: 0,
-        recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
-      };
-  
-      const signatureForArray = await signer._signTypedData(
-        domain,
-        arrayTypes,
-        passportStampAttestationRequest
-      );
-      console.log("signatureForArray", signatureForArray);
-      const splitSig = ethers.utils.splitSignature(signatureForArray);
-      console.log("splitSig", splitSig);
-      const resultTx = await gitcoinAttester.addPassportWithSignature(
-        gitcoinVCSchema,
-        passportStampAttestationRequest,
-        splitSig.v,
-        splitSig.r,
-        splitSig.s
-      );
-  
-      console.log("resultTx", resultTx);
-      const result = await resultTx.wait();
-      console.log("result", result);
-      console.log("result.logs", result.logs);
-      console.log("result.logs[0]", result.logs[0]);
-      console.log("result.logs[0].data", result.logs[0].data);
-  
-      const attestation_1 = await gitcoinAttester.getAttestation(
-        result.logs[0].data
-      );
-      const attestation_2 = await gitcoinAttester.getAttestation(
-        result.logs[1].data
-      );
-      const attestation_3 = await gitcoinAttester.getAttestation(
-        result.logs[2].data
-      );
-      console.log("attestation", attestation_1);
-      console.log("attestation", attestation_2);
-      console.log("attestation", attestation_3);
-      console.log("gitcoinAttester.address", gitcoinAttester.address);
-      // Read back the attestations written to the chain
     });
   });
 
