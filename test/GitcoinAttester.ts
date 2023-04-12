@@ -108,12 +108,16 @@ describe("GitcoinAttester", function () {
           { name: "provider", type: "string" },
           { name: "stampHash", type: "string" },
           { name: "expirationDate", type: "string" },
-          { name: "encodedData", type: "bytes" },
+          { name: "encodedData", type: "bytes" }
         ],
         Passport: [
           { name: "stamps", type: "Stamp[]" },
-          { name: "recipient", type: "address" }
-        ]
+          { name: "recipient", type: "address" },
+          { name: "expirationTime", type: "uint64" },
+          { name: "revocable", type: "bool" },
+          { name: "refUID", type: "bytes32" },
+          { name: "value", type: "uint256" },
+        ],
       };
 
       const passport = {
@@ -131,7 +135,11 @@ describe("GitcoinAttester", function () {
             encodedData: easEncodeData(facebookStamp),
           }
         ],
-        recipient: recipient.address
+        recipient: recipient.address,
+        expirationTime: NO_EXPIRATION,
+        revocable: true,
+        refUID: ZERO_BYTES32,
+        value: 0,
       };
 
       const signature = await iamAccount._signTypedData(domain, types, passport);
