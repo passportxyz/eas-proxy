@@ -123,8 +123,6 @@ contract Verifier {
         // Recover signer from the signature
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
-        console.log("Recovered signer:", recoveredSigner);
-        console.log("Expected signer:", issuer);
         return recoveredSigner == issuer;
     }
 }

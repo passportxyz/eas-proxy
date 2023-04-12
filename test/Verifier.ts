@@ -33,23 +33,21 @@ describe("Verifier", function () {
     iamAccount = owner;
     this.verifier = await verifierFactory.deploy(iamAccount.address);
     this.otherAccount = otherAccount;
-  });
-  it("should verify a valid EIP712 signature", async function () {
     const chainId = await iamAccount.getChainId();
     console.log({ chainId })
-    const domain = {
+    this.domain = {
       name: "Attester",
       version: "1",
       chainId,
       verifyingContract: this.verifier.address,
     };
 
-    const types = {
+    this.types = {
       Stamp: [
         { name: "provider", type: "string" },
         { name: "stampHash", type: "string" },
         { name: "expirationDate", type: "string" },
-        { name: "encodedData", type: "bytes"}
+        { name: "encodedData", type: "bytes" }
       ],
       Passport: [
         { name: "stamps", type: "Stamp[]" },
@@ -61,7 +59,7 @@ describe("Verifier", function () {
       ],
     };
 
-    const passport = {
+    this.passport = {
       stamps: [
         {
           provider: googleStamp.provider,
@@ -82,12 +80,13 @@ describe("Verifier", function () {
       refUID: ZERO_BYTES32,
       value: 0,
     };
-
-    const signature = await iamAccount._signTypedData(domain, types, passport);
+  });
+  it("should verify a valid EIP712 signature", async function () {
+    const signature = await iamAccount._signTypedData(this.domain, this.types, this.passport);
     const recoveredAddress = ethers.utils.verifyTypedData(
-      domain,
-      types,
-      passport,
+      this.domain,
+      this.types,
+      this.passport,
       signature
     );
 
@@ -95,8 +94,30 @@ describe("Verifier", function () {
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const verifiedStamp = await this.verifier.verify(v, r, s, passport);
+    const verifiedSignature = await this.verifier.verify(v, r, s, this.passport);
 
-    expect(verifiedStamp).to.equal(true);
+    expect(verifiedSignature).to.equal(true);
+  });
+  it("should revert if the signature is invalid", async function () {
+    const signature = await iamAccount._signTypedData(this.domain, this.types, this.passport);
+    const recoveredAddress = ethers.utils.verifyTypedData(
+      this.domain,
+      this.types,
+      this.passport,
+      signature
+    );
+
+    expect(recoveredAddress).to.equal(iamAccount.address);
+
+    const { v, r, s } = ethers.utils.splitSignature(signature);
+
+    const badV = 30;
+
+    try {
+      const verifiedSignature = await this.verifier.verify(badV, r, s, this.passport);
+    } catch (e: any) {
+      expect(e.message).to.include("ECDSA: invalid signature");
+      return;
+    }
   });
 });
