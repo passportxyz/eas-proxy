@@ -141,7 +141,7 @@ describe("GitcoinAttester", function () {
       const verifiedStamp = await gitcoinAttester.addPassportWithSignature(gitcoinVCSchema, passport, v, r, s);
     });
 
-    it.skip("Should write multiple attestations", async function () {
+    it("Should write multiple attestations", async function () {
 
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
