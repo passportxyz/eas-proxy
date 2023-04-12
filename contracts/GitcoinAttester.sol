@@ -76,12 +76,7 @@ contract GitcoinAttester is Verifier {
                     value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
                 })
             });
-            console.log("attestation request.recipient:", attestationRequest.data.recipient);
-            console.log("attestation request.expirationTime:", attestationRequest.data.expirationTime);
-            console.log("attestation request.revocable:", attestationRequest.data.revocable);
-            // console.log("attestation request.refUID:", attestationRequest.data.refUID);
-            console.log("attestation request.value:", attestationRequest.data.value);
-            console.log("attestation request.expirationTime:", attestationRequest.data.expirationTime);
+
             ret[i] = eas.attest(attestationRequest);
         }
         return ret;
