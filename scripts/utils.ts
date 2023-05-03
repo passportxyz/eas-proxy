@@ -13,6 +13,9 @@ export const assertEnvironment = () => {
   if (!process.env.PROVIDER_URL) {
     console.error("Please set your PROVIDER_URL in a .env file");
   }
+  if (!process.env.IAM_ISSUER_ADDRESS) {
+    console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
+  }
 };
 
 /**

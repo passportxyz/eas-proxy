@@ -17,7 +17,11 @@ const config: HardhatUserConfig = {
     sepolia: {
       url: process.env.PROVIDER_URL as string,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+      chainId: 11155111,
     },
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY as string,
   },
 };
 
