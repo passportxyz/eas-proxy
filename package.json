@@ -7,6 +7,8 @@
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
     "@types/mocha": ">=9.1.0",
+    "chai": "^4.3.7",
+    "dotenv": "^16.0.3",
     "hardhat": "^2.13.0",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.1",

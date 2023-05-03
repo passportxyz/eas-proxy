@@ -4,9 +4,6 @@ pragma solidity ^0.8.9;
 import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 import {Verifier, Passport, Stamp} from "./Verifier.sol";
 
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
-
 struct PassportStampAttestationRequest {
     uint64 expirationDate; // The time when the attestation expires (Unix timestamp).
     bytes data; // Custom attestation data.
