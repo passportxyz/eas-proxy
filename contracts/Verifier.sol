@@ -83,6 +83,7 @@ contract Verifier {
         ));
     }
 
+    // TODO remove?
     function _hashArray(string[] calldata array) internal pure returns (bytes32 result) {
         bytes32[] memory _array = new bytes32[](array.length);
         for (uint256 i = 0; i < array.length; ++i) {

@@ -21,11 +21,13 @@ contract GitcoinAttester is Verifier {
 
     constructor(address iamIssuer) Verifier(iamIssuer) payable {}
 
+    // TODO !!! onlyAdmin or something !!!
     function setEASAddress(address _easContractAddress) public {
         easContractAddress = _easContractAddress;
         eas = IEAS(easContractAddress);
     }
 
+    // TODO should we delete this?
     function addPassport(
         bytes32 schema,
         AttestationRequestData[] calldata attestationRequestData
@@ -42,12 +44,15 @@ contract GitcoinAttester is Verifier {
     }
 
     function addPassportWithSignature(
+        // TODO should we maybe make the schema a stored, updateable variable? Should discuss
         bytes32 schema,
         Passport calldata passport,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) public payable virtual returns (bytes32[] memory) {
+        // TODO require that eas is set
+
         if (verify(v, r, s, passport) == false) {
             revert("Invalid signature");
         }
@@ -64,6 +69,8 @@ contract GitcoinAttester is Verifier {
 
             AttestationRequest memory attestationRequest = AttestationRequest({
                 schema: schema,
+                // TODO reference dynamic data from the passport object
+                // TODO should individual stamps be able to be e.g. revokable or not?
                 data: AttestationRequestData({
                     recipient: passport.recipient, // The recipient of the attestation.
                     expirationTime: 0, // The time when the attestation expires (Unix timestamp).
