@@ -27,6 +27,7 @@ struct Passport {
     bool revocable;
     bytes32 refUID;
     uint256 value;
+    uint256 nonce;
 }
 
 contract Verifier {
@@ -34,6 +35,7 @@ contract Verifier {
 
     address public issuer;
     string public name;
+    mapping(address => uint) public recipientNonces;
 
     // Define the type hashes
     bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256(
@@ -116,7 +118,7 @@ contract Verifier {
         bytes32 r,
         bytes32 s,
         Passport calldata passport
-    ) public view returns (bool) {
+    ) public returns (bool) {
         bytes32 passportHash = _hashPassport(passport);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
@@ -124,5 +126,15 @@ contract Verifier {
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
         return recoveredSigner == issuer;
+
+        // Check the nonce
+        bool validNonce = passport.nonce == recipientNonces[passport.recipient];
+        if (validNonce) {
+            // Increment the nonce for this recipient
+            recipientNonces[passport.recipient]++;
+        }   
+
+        // Only return true if the signer and nonce are both valid
+        return validSigner && validNonce;
     }
 }
