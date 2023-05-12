@@ -31,7 +31,7 @@ type Stamp = {
   provider: string;
   stampHash: string;
   expirationDate: string;
-}
+};
 
 export const easEncodeData = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("string provider, string hash");
@@ -48,15 +48,21 @@ describe("GitcoinAttester", function () {
   // and reset Hardhat Network to that snapshot in every test.
 
   describe("Deployment", function () {
-    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string, iamAccount: any, verifier: any, recipient: any;
+    let gitcoinAttester: GitcoinAttester,
+      eas,
+      gitcoinVCSchema: string,
+      EASContractAddress: string,
+      iamAccount: any,
+      verifier: any,
+      recipient: any;
 
     this.beforeAll(async function () {
       async function deployGitcoinAttester() {
         // Deployment and ABI: SchemaRegistry.json
         // Sepolia
-    
+
         // v0.26
-    
+
         // EAS:
         // Contract: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
         // Deployment and ABI: EAS.json
@@ -66,22 +72,25 @@ describe("GitcoinAttester", function () {
         EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
         gitcoinVCSchema =
           "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-    
+
         // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount, recipientAccount] = await ethers.getSigners();
+        const [owner, otherAccount, recipientAccount] =
+          await ethers.getSigners();
 
         iamAccount = otherAccount;
         recipient = recipientAccount;
-    
-        const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-        gitcoinAttester = await GitcoinAttester.deploy(iamAccount.address);
-    
+
+        const GitcoinAttester = await ethers.getContractFactory(
+          "GitcoinAttester"
+        );
+        gitcoinAttester = await GitcoinAttester.deploy();
+
         const provider = ethers.getDefaultProvider();
-    
+
         console.log("provider", provider);
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);
-    
+
         // Connects an ethers style provider/signingProvider to perform read/write functions.
         // MUST be a signer to do write operations!
         eas.connect(provider);
@@ -109,7 +118,7 @@ describe("GitcoinAttester", function () {
           { name: "provider", type: "string" },
           { name: "stampHash", type: "string" },
           { name: "expirationDate", type: "string" },
-          { name: "encodedData", type: "bytes" }
+          { name: "encodedData", type: "bytes" },
         ],
         Passport: [
           { name: "stamps", type: "Stamp[]" },
@@ -134,7 +143,7 @@ describe("GitcoinAttester", function () {
             stampHash: facebookStamp.stampHash,
             expirationDate: facebookStamp.expirationDate,
             encodedData: easEncodeData(facebookStamp),
-          }
+          },
         ],
         recipient: recipient.address,
         expirationTime: NO_EXPIRATION,
@@ -143,11 +152,21 @@ describe("GitcoinAttester", function () {
         value: 0,
       };
 
-      const signature = await iamAccount._signTypedData(domain, types, passport);
+      const signature = await iamAccount._signTypedData(
+        domain,
+        types,
+        passport
+      );
 
       const { v, r, s } = ethers.utils.splitSignature(signature);
 
-      const verifiedPassportTx = await gitcoinAttester.addPassportWithSignature(gitcoinVCSchema, passport, v, r, s);
+      const verifiedPassportTx = await gitcoinAttester.addPassportWithSignature(
+        gitcoinVCSchema,
+        passport,
+        v,
+        r,
+        s
+      );
       const verifiedPassport = await verifiedPassportTx.wait();
       // expect(verifiedPassport.length).to.equal(2);
       expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
@@ -199,5 +218,4 @@ describe("GitcoinAttester", function () {
       console.log("gitcoinAttester.address", gitcoinAttester.address);
     });
   });
-
 });

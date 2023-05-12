@@ -16,6 +16,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.6.1",
     "@ethereum-attestation-service/eas-contracts": "^0.26.1",
     "@openzeppelin/contracts": "^4.8.2"
   }

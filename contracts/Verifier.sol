@@ -2,6 +2,9 @@
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./GitcoinAttester.sol";
 
 // Uncomment this line to use console.log
 import "hardhat/console.sol";
@@ -31,6 +34,9 @@ struct Passport {
 
 contract Verifier {
     using ECDSA for bytes32;
+    
+    AggregatorV3Interface internal priceFeed;
+    GitcoinAttester internal gitcoinAttester;
 
     address public issuer;
     string public name;
@@ -56,7 +62,7 @@ contract Verifier {
         return chainId;
     }
 
-    constructor(address iamIssuer) {
+    constructor(address iamIssuer, address gitcoinAttesterAddress) {
         issuer = iamIssuer;
         name = "Attester";
 
@@ -71,6 +77,12 @@ contract Verifier {
                 address(this) // verifyingContract
             )
         );
+
+        priceFeed = AggregatorV3Interface(
+            0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43
+        );
+
+        gitcoinAttester = new GitcoinAttester();
     }
 
     function _hashStamp(Stamp memory stamp) private pure returns (bytes32) {
@@ -124,5 +136,40 @@ contract Verifier {
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
         return recoveredSigner == issuer;
+    }
+
+    function checkFee(uint256 fee) public view returns (bool) {
+        // prettier-ignore
+        (
+            /* uint80 roundID */,
+            int price,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = priceFeed.latestRoundData();
+
+        // Convert the price to a uint256
+        uint256 ethPriceInUsd = uint256(price);
+
+        // Calculate the fee in USD, taking into account the fact that the fee is in Wei (10^18 Wei = 1 ETH)
+        uint256 feeInUsd = (fee * ethPriceInUsd) / 1e18;
+
+        // Check if the fee is greater than $2
+        return feeInUsd > 2;
+    }
+
+    function addPassportWithSignature(
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint256 fee,
+        bytes32 schema,
+        Passport calldata passport
+    ) public returns (bool) {
+        require(verify(v, r, s, passport), "Invalid signature");
+        require(checkFee(fee), "Insufficient fee");
+
+        // We are ok to add the passport
+        // gitcoinAttester.addPassport(schema, passport);
     }
 }

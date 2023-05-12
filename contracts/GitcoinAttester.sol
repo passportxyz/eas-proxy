@@ -15,11 +15,11 @@ struct PassportAttestationRequest {
     address recipient; // The receiver of the attestations
 }
 
-contract GitcoinAttester is Verifier {
+contract GitcoinAttester {
     address private easContractAddress;
     IEAS eas;
 
-    constructor(address iamIssuer) Verifier(iamIssuer) payable {}
+    constructor() payable {}
 
     function setEASAddress(address _easContractAddress) public {
         easContractAddress = _easContractAddress;
@@ -48,9 +48,9 @@ contract GitcoinAttester is Verifier {
         bytes32 r,
         bytes32 s
     ) public payable virtual returns (bytes32[] memory) {
-        if (verify(v, r, s, passport) == false) {
-            revert("Invalid signature");
-        }
+        // if (verify(v, r, s, passport) == false) {
+        //     revert("Invalid signature");
+        // }
 
         bytes32[] memory ret = new bytes32[](
             passport.stamps.length
