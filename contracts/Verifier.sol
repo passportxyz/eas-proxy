@@ -2,9 +2,10 @@
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
+import "./GitcoinAttester.sol";
+
 
 struct EIP712Domain {
     string name;
@@ -29,9 +30,21 @@ struct Passport {
     uint256 value;
 }
 
+// struct PassportStampAttestationRequest {
+//     uint64 expirationDate; // The time when the attestation expires (Unix timestamp).
+//     bytes data; // Custom attestation data.
+// }
+
+// struct PassportAttestationRequest {
+//     PassportStampAttestationRequest[] attestations; // The individual requests for each stamp
+//     uint256 nonce; // A unique nonce to prevent replay attacks.
+//     address recipient; // The receiver of the attestations
+// }
+
 contract Verifier {
     using ECDSA for bytes32;
 
+    GitcoinAttester public attester;
     address public issuer;
     string public name;
 
@@ -56,7 +69,8 @@ contract Verifier {
         return chainId;
     }
 
-    constructor(address iamIssuer) {
+    constructor(address iamIssuer, address _attester) {
+        attester = GitcoinAttester(_attester);
         issuer = iamIssuer;
         name = "Attester";
 
@@ -111,7 +125,7 @@ contract Verifier {
         ));
     }
 
-    function verify(
+    function _verify(
         uint8 v,
         bytes32 r,
         bytes32 s,
@@ -124,5 +138,40 @@ contract Verifier {
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
         return recoveredSigner == issuer;
+    }
+
+    function addPassportWithSignature(
+        bytes32 schema,
+        Passport calldata passport,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public payable virtual returns (bytes32[] memory) {
+        if (_verify(v, r, s, passport) == false) {
+            revert("Invalid signature");
+        }
+
+        AttestationRequestData[] memory attestationRequestData = new AttestationRequestData[](passport.stamps.length);
+
+        for (
+            uint i = 0;
+            i < passport.stamps.length;
+            i++
+        ) {
+            Stamp memory stamp = passport.stamps[i];
+
+            attestationRequestData[i] = AttestationRequestData({
+                recipient: passport.recipient, // The recipient of the attestation.
+                expirationTime: 0, // The time when the attestation expires (Unix timestamp).
+                revocable: true, // Whether the attestation is revocable.
+                refUID: 0, // The UID of the related attestation.
+                data: stamp.encodedData, // Custom attestation data.
+                value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
+            });
+        }
+
+        bytes32[] memory ret = attester.addPassport(schema, attestationRequestData);
+
+        return ret;
     }
 }
