@@ -10,17 +10,24 @@ import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@et
  */
 contract GitcoinAttester is Ownable {
     address private easContractAddress; // The address of the EAS contract.
-    address public verifier; // The address of the contract that verifies that a user is eligible to add a passport.
+    mapping(address => bool) public verifiers; // An allow-list of Verifiers that are authorized and trusted to call the addPassport function.
 
     IEAS eas; // The instance of the EAS contract.
 
+    /**
+     * @dev Adds a verifier to the allow-list.
+     * @param _verifier The address of the verifier to add.
+     */
+    function addVerifier(address _verifier) public onlyOwner {
+        verifiers[_verifier] = true;
+    }
 
     /**
-     * @dev Sets the address of the Verifier contract.
-     * @param _verifier The address of the Verifier contract.
+     * @dev Removes a verifier from the allow-list.
+     * @param _verifier The address of the verifier to remove.
      */
-    function setVerifier(address _verifier) public onlyOwner {
-        verifier = _verifier;
+    function removeVerifier(address _verifier) public onlyOwner {
+        verifiers[_verifier] = false;
     }
 
     /**
@@ -42,7 +49,7 @@ contract GitcoinAttester is Ownable {
         bytes32 schema,
         AttestationRequestData[] calldata attestationRequestData
     ) public payable virtual returns (bytes32[] memory ret) {
-        require(msg.sender == verifier, "Only the Verifier contract can call this function");
+        require(verifiers[msg.sender], "Only authorized verifiers can call this function");
 
         ret = new bytes32[](attestationRequestData.length);
         for (uint i = 0; i < attestationRequestData.length; i++) {
