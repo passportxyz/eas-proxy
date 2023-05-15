@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -6,35 +6,42 @@ import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@et
 
 import "./GitcoinAttester.sol";
 
-struct EIP712Domain {
-    string name;
-    string version;
-    uint256 chainId;
-    address verifyingContract;
-}
-
-struct Stamp {
-    string provider;
-    string stampHash;
-    string expirationDate;
-    bytes encodedData;
-}
-
-struct Passport {
-    Stamp[] stamps;
-    address recipient;
-    uint64 expirationTime;
-    bool revocable;
-    bytes32 refUID;
-    uint256 value;
-}
-
+/**
+ * @title Verifier
+ * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
+ */
 contract Verifier {
     using ECDSA for bytes32;
 
     GitcoinAttester public attester;
     address public issuer;
     string public name;
+
+    // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
+    bytes32 private DOMAIN_SEPARATOR;
+
+    struct EIP712Domain {
+        string name;
+        string version;
+        uint256 chainId;
+        address verifyingContract;
+    }
+
+    struct Stamp {
+        string provider;
+        string stampHash;
+        string expirationDate;
+        bytes encodedData;
+    }
+
+    struct Passport {
+        Stamp[] stamps;
+        address recipient;
+        uint64 expirationTime;
+        bool revocable;
+        bytes32 refUID;
+        uint256 value;
+    }
 
     // Define the type hashes
     bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256(
@@ -45,22 +52,27 @@ contract Verifier {
         "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
     );
 
-
-    // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
-    bytes32 public DOMAIN_SEPARATOR;
-
-    function getChainId() public view returns (uint256 chainId) {
+    /**
+     * @notice Gets the current chain ID.
+     * @return chainId The chain ID.
+     */
+    function _getChainId() private view returns (uint256 chainId) {
         assembly {
             chainId := chainid()
         }
     }
 
+    /**
+     * @notice Constructor function to set the GitcoinAttester contract address and the contract name.
+     * @param iamIssuer The address of the issuer of the passport.
+     * @param _attester The address of the GitcoinAttester contract.
+     */
     constructor(address iamIssuer, address _attester) {
         attester = GitcoinAttester(_attester);
         issuer = iamIssuer;
         name = "Attester";
 
-        uint256 chainId = getChainId();
+        uint256 chainId = _getChainId();
 
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -73,7 +85,12 @@ contract Verifier {
         );
     }
 
-    function _hashStamp(Stamp memory stamp) private pure returns (bytes32) {
+    /**
+     * @dev Calculates the hash of a stamp using the STAMP_TYPEHASH.
+     * @param stamp The stamp to be hashed.
+     * @return The hash of the stamp.
+     */
+    function _hashStamp(Stamp memory stamp) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             STAMP_TYPEHASH,
             keccak256(bytes(stamp.provider)),
@@ -83,6 +100,11 @@ contract Verifier {
         ));
     }
 
+    /**
+     * @dev Calculates the hash of an array of strings.
+     * @param array The array of strings to hash.
+     * @return result The hash of the array of strings.
+     */
     function _hashArray(string[] calldata array) internal pure returns (bytes32 result) {
         bytes32[] memory _array = new bytes32[](array.length);
         for (uint256 i = 0; i < array.length; ++i) {
@@ -91,7 +113,12 @@ contract Verifier {
         result = keccak256(abi.encodePacked(_array));
     }
 
-    function _hashPassport(Passport memory passport) private pure returns (bytes32) {
+    /**
+     * @dev Calculates the hash of a passport.
+     * @param passport The passport to hash.
+     * @return The hash of the passport.
+     */
+    function _hashPassport(Passport memory passport) internal pure returns (bytes32) {
         bytes32[] memory _array = new bytes32[](passport.stamps.length);
 
         for (uint256 i = 0; i < passport.stamps.length; ++i) {
@@ -111,12 +138,20 @@ contract Verifier {
         ));
     }
 
+    /**
+     * @dev Verifies a passport signature.
+     * @param v ECDSA signature parameter v.
+     * @param r ECDSA signature parameter r.
+     * @param s ECDSA signature parameter s.
+     * @param passport The passport to verify.
+     * @return true if the signature is valid, false otherwise.
+     */
     function _verify(
         uint8 v,
         bytes32 r,
         bytes32 s,
         Passport calldata passport
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         bytes32 passportHash = _hashPassport(passport);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
@@ -126,6 +161,15 @@ contract Verifier {
         return recoveredSigner == issuer;
     }
 
+    /**
+     * @dev Adds a passport to the attester contract, verifying it using the provided signature.
+     * @param schema The schema to use.
+     * @param passport The passport to add.
+     * @param v The v component of the signature.
+     * @param r The r component of the signature.
+     * @param s The s component of the signature.
+     * @return An array of UIDs of the added attestations.
+     */
     function addPassportWithSignature(
         bytes32 schema,
         Passport calldata passport,
@@ -161,6 +205,11 @@ contract Verifier {
         return ret;
     }
 
+    /**
+     * @dev Retrieves an attestation for a given unique identifier from GitcoinAttester.
+     * @param uid The unique identifier of the attestation to retrieve.
+     * @return An `Attestation` structure representing the attestation.
+     */
     function getAttestation(
         bytes32 uid
     ) external view returns (Attestation memory) {
