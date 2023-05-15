@@ -6,7 +6,6 @@ import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@et
 
 import "./GitcoinAttester.sol";
 
-
 struct EIP712Domain {
     string name;
     string version;
@@ -30,17 +29,6 @@ struct Passport {
     uint256 value;
 }
 
-// struct PassportStampAttestationRequest {
-//     uint64 expirationDate; // The time when the attestation expires (Unix timestamp).
-//     bytes data; // Custom attestation data.
-// }
-
-// struct PassportAttestationRequest {
-//     PassportStampAttestationRequest[] attestations; // The individual requests for each stamp
-//     uint256 nonce; // A unique nonce to prevent replay attacks.
-//     address recipient; // The receiver of the attestations
-// }
-
 contract Verifier {
     using ECDSA for bytes32;
 
@@ -61,12 +49,10 @@ contract Verifier {
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 public DOMAIN_SEPARATOR;
 
-    function getChainId() public view returns (uint256) {
-        uint256 chainId;
+    function getChainId() public view returns (uint256 chainId) {
         assembly {
             chainId := chainid()
         }
-        return chainId;
     }
 
     constructor(address iamIssuer, address _attester) {
@@ -173,5 +159,11 @@ contract Verifier {
         bytes32[] memory ret = attester.addPassport(schema, attestationRequestData);
 
         return ret;
+    }
+
+    function getAttestation(
+        bytes32 uid
+    ) external view returns (Attestation memory) {
+        return attester.getAttestation(uid);
     }
 }
