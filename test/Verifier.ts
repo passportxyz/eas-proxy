@@ -37,13 +37,11 @@ describe("Verifier", function () {
     const [owner, otherAccount] = await ethers.getSigners();
 
     // Mock deploy AggregatorV3Interface contract
-    // const aggregatorFactory = await ethers.getContractFactory(
-    //   "AggregatorV3Interface"
-    // );
-    this.aggregator = await ethers.getContractAt(
-      "AggregatorV3Interface",
-      "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"
+    const MockAggregator = await ethers.getContractFactory(
+      "MockAggregatorV3Interface"
     );
+    this.priceFeed = await MockAggregator.deploy();
+    await this.priceFeed.deployed();
 
     // Mock Deploy GitcoinAttester
     const gitcoinAttesterFactory = await ethers.getContractFactory(
@@ -55,7 +53,8 @@ describe("Verifier", function () {
     iamAccount = owner;
     this.verifier = await verifierFactory.deploy(
       iamAccount.address,
-      this.gitcoinAttester.address
+      this.gitcoinAttester.address,
+      this.priceFeed.address
     );
     this.otherAccount = otherAccount;
     const chainId = await iamAccount.getChainId();
@@ -165,28 +164,15 @@ describe("Verifier", function () {
   });
   describe("checkFee", function () {
     it("should return true when fee is greater than $2", async function () {
-      // Mock the latestRoundData function to return a price of $2000 for ETH
-      // await this.aggregator.mock.latestRoundData.returns(
-      //   0,
-      //   ethers.utils.parseUnits("2000", "ether"),
-      //   0,
-      //   0,
-      //   0
-      // );
+      // Set the price of ETH in the mock price feed
+      await this.priceFeed.setLatestAnswer(2000 * 10 ** 8); // ETH price is $2000
 
       const feeInWei = ethers.utils.parseEther("0.002"); // $4
       expect(await this.verifier.checkFee(feeInWei)).to.be.true;
     });
 
     it("should return false when fee is less than $2", async function () {
-      // Mock the latestRoundData function to return a price of $2000 for ETH
-      // await this.aggregator.mock.latestRoundData.returns(
-      //   0,
-      //   ethers.utils.parseUnits("2000", "ether"),
-      //   0,
-      //   0,
-      //   0
-      // );
+      await this.priceFeed.setLatestAnswer(2000 * 10 ** 8); // ETH price is $2000
 
       const feeInWei = ethers.utils.parseEther("0.0005"); // $1
       expect(await this.verifier.checkFee(feeInWei)).to.be.false;

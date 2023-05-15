@@ -6,8 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./GitcoinAttester.sol";
 
-// Uncomment this line to use console.log
-import "hardhat/console.sol";
 
 struct EIP712Domain {
     string name;
@@ -62,7 +60,7 @@ contract Verifier {
         return chainId;
     }
 
-    constructor(address iamIssuer, address gitcoinAttesterAddress) {
+    constructor(address iamIssuer, address gitcoinAttesterAddress, address priceFeedAddress) {
         issuer = iamIssuer;
         name = "Attester";
 
@@ -79,7 +77,7 @@ contract Verifier {
         );
 
         priceFeed = AggregatorV3Interface(
-            0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43
+            priceFeedAddress
         );
 
         gitcoinAttester = new GitcoinAttester();
@@ -139,17 +137,17 @@ contract Verifier {
     }
 
     function checkFee(uint256 fee) public view returns (bool) {
-        // prettier-ignore
         (
-            /* uint80 roundID */,
+            uint80 roundID,
             int price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
+            uint startedAt,
+            uint timeStamp,
+            uint80 answeredInRound
         ) = priceFeed.latestRoundData();
 
-        // Convert the price to a uint256
-        uint256 ethPriceInUsd = uint256(price);
+        // Convert the price to a uint256 and adjust for the 8 decimal places
+        uint256 ethPriceInUsd = uint256(price) / 1e8;
+
 
         // Calculate the fee in USD, taking into account the fact that the fee is in Wei (10^18 Wei = 1 ETH)
         uint256 feeInUsd = (fee * ethPriceInUsd) / 1e18;

@@ -96,7 +96,11 @@ describe("GitcoinAttester", function () {
         eas.connect(provider);
 
         const verifierFactory = await ethers.getContractFactory("Verifier");
-        verifier = await verifierFactory.deploy(iamAccount.address);
+        verifier = await verifierFactory.deploy(
+          iamAccount.address,
+          "0xC79ABB54e4824Cdb65C71f2eeb2D7f2db5dA1fB8",
+          "0xC79ABB54e4824Cdb65C71f2eeb2D7f2db5dA1fB8"
+        );
       }
 
       await loadFixture(deployGitcoinAttester);
