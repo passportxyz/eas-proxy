@@ -15,10 +15,22 @@ contract GitcoinAttester is Ownable {
     IEAS eas; // The instance of the EAS contract.
 
     /**
+     * @dev Checks if the given address is a Gnosis Safe contract.
+     * @param addr The address to check.
+     * @return A boolean indicating whether the address is a Gnosis Safe contract or not.
+     */
+    function _isGnosisSafe(address addr) internal view returns (bool) {
+        // TODO: Check if the address is a Gnosis Safe contract.
+        return true;
+    }
+
+    /**
      * @dev Adds a verifier to the allow-list.
-     * @param _verifier The address of the verifier to add.
+     * @param _verifier The address of the verifier to add. It must be a Gnosis Safe contract.
      */
     function addVerifier(address _verifier) public onlyOwner {
+        require(_isGnosisSafe(_verifier), "Verifier address is not a Gnosis Safe contract");
+        require(!verifiers[_verifier], "Verifier already exists");
         verifiers[_verifier] = true;
     }
 
@@ -27,6 +39,7 @@ contract GitcoinAttester is Ownable {
      * @param _verifier The address of the verifier to remove.
      */
     function removeVerifier(address _verifier) public onlyOwner {
+        require(verifiers[_verifier], "Verifier does not exist");
         verifiers[_verifier] = false;
     }
 
