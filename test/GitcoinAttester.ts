@@ -14,6 +14,7 @@ import {
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester } from "../typechain-types";
+import {utils} from "ethers";
 
 const googleStamp = {
   provider: "Google",
@@ -34,11 +35,27 @@ type Stamp = {
 };
 
 export const easEncodeData = (stamp: Stamp) => {
-  const schemaEncoder = new SchemaEncoder("string provider, string hash");
+
+  const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
+
+  let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
+
+  console.log("hash: ", providerValue);
+  console.log("hash: ", utils.isBytesLike(providerValue));
+
+  // const providerValue2 = utils.arrayify(providerValue);
+
+  // providerValue = providerValue.slice(2);
+  // console.log("providerValue2: ", providerValue2);
+
+  // providerValue = utils.formatBytes32String(providerValue)
+  // console.log("format: ", providerValue);
+
   const encodedData = schemaEncoder.encodeData([
-    { name: "provider", value: stamp.provider, type: "string" },
-    { name: "hash", value: stamp.stampHash, type: "string" },
+    { name: "provider", value: providerValue, type: "bytes32" },
+    { name: "hash", value: providerValue, type: "bytes32" }, // TODO decode hash here
   ]);
+  console.log("encodedData: ", encodedData);
   return encodedData;
 };
 
@@ -106,7 +123,8 @@ describe("GitcoinAttester", function () {
       await loadFixture(deployGitcoinAttester);
     });
 
-    it("should verify signature and make attestations for each stamp", async function () {
+
+    it.only("should verify signature and make attestations for each stamp", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
       const chainId = await iamAccount.getChainId();
 
@@ -119,9 +137,9 @@ describe("GitcoinAttester", function () {
 
       const types = {
         Stamp: [
-          { name: "provider", type: "string" },
-          { name: "stampHash", type: "string" },
-          { name: "expirationDate", type: "string" },
+          // { name: "provider", type: "string" },
+          // { name: "stampHash", type: "string" },
+          // { name: "expirationDate", type: "string" },
           { name: "encodedData", type: "bytes" },
         ],
         Passport: [
@@ -137,15 +155,15 @@ describe("GitcoinAttester", function () {
       const passport = {
         stamps: [
           {
-            provider: googleStamp.provider,
-            stampHash: googleStamp.stampHash,
-            expirationDate: googleStamp.expirationDate,
+            // provider: googleStamp.provider,
+            // stampHash: googleStamp.stampHash,
+            // expirationDate: googleStamp.expirationDate,
             encodedData: easEncodeData(googleStamp),
           },
           {
-            provider: facebookStamp.provider,
-            stampHash: facebookStamp.stampHash,
-            expirationDate: facebookStamp.expirationDate,
+            // provider: facebookStamp.provider,
+            // stampHash: facebookStamp.stampHash,
+            // expirationDate: facebookStamp.expirationDate,
             encodedData: easEncodeData(facebookStamp),
           },
         ],

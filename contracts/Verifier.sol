@@ -15,9 +15,9 @@ struct EIP712Domain {
 }
 
 struct Stamp {
-    string provider;
-    string stampHash;
-    string expirationDate;
+    // string provider;
+    // string stampHash;
+    // string expirationDate;
     bytes encodedData;
 }
 
@@ -86,9 +86,9 @@ contract Verifier {
     function _hashStamp(Stamp memory stamp) private pure returns (bytes32) {
         return keccak256(abi.encode(
             STAMP_TYPEHASH,
-            keccak256(bytes(stamp.provider)),
-            keccak256(bytes(stamp.stampHash)),
-            keccak256(bytes(stamp.expirationDate)),
+            // keccak256(bytes(stamp.provider)),
+            // keccak256(bytes(stamp.stampHash)),
+            // keccak256(bytes(stamp.expirationDate)),
             keccak256(stamp.encodedData)
         ));
     }
