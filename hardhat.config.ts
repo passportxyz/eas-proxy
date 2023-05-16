@@ -18,6 +18,7 @@ const config: HardhatUserConfig = {
       url: process.env.PROVIDER_URL as string,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
       chainId: 11155111,
+      from: process.env.DEPLOYER_ADDRESS as string,
     },
   },
   etherscan: {

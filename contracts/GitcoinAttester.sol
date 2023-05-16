@@ -1,36 +1,64 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
-import {Verifier, Passport, Stamp} from "./Verifier.sol";
 
-struct PassportStampAttestationRequest {
-    uint64 expirationDate; // The time when the attestation expires (Unix timestamp).
-    bytes data; // Custom attestation data.
-}
+/**
+ * @title GitcoinAttester
+ * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
+ */
+contract GitcoinAttester is Ownable {
+    address private easContractAddress; // The address of the EAS contract.
+    mapping(address => bool) public verifiers; // An allow-list of Verifiers that are authorized and trusted to call the addPassport function.
 
-struct PassportAttestationRequest {
-    PassportStampAttestationRequest[] attestations; // The individual requests for each stamp
-    uint256 nonce; // A unique nonce to prevent replay attacks.
-    address recipient; // The receiver of the attestations
-}
+    IEAS eas; // The instance of the EAS contract.
 
-contract GitcoinAttester is Verifier {
-    address private easContractAddress;
-    IEAS eas;
+    event VerifierAdded(address verifier); // Emitted when a verifier is added to the allow-list.
+    event VerifierRemoved(address verifier); // Emitted when a verifier is removed from the allow-list.
 
-    constructor(address iamIssuer) Verifier(iamIssuer) payable {}
+    /**
+     * @dev Adds a verifier to the allow-list.
+     * @param _verifier The address of the verifier to add. It must be a Gnosis Safe contract.
+     */
+    function addVerifier(address _verifier) public onlyOwner {
+        require(!verifiers[_verifier], "Verifier already added");
+        verifiers[_verifier] = true;
+        emit VerifierAdded(_verifier);
+    }
 
-    function setEASAddress(address _easContractAddress) public {
+    /**
+     * @dev Removes a verifier from the allow-list.
+     * @param _verifier The address of the verifier to remove.
+     */
+    function removeVerifier(address _verifier) public onlyOwner {
+        require(verifiers[_verifier], "Verifier does not exist");
+        verifiers[_verifier] = false;
+        emit VerifierRemoved(_verifier);
+    }
+
+    /**
+     * @dev Sets the address of the EAS contract.
+     * @param _easContractAddress The address of the EAS contract.
+     */
+    function setEASAddress(address _easContractAddress) public onlyOwner {
         easContractAddress = _easContractAddress;
         eas = IEAS(easContractAddress);
     }
 
+    /**
+     * @dev Adds passport information for a user using EAS.
+     * @param schema The ID of the schema to use.
+     * @param attestationRequestData An array of `AttestationRequestData` structures containing the user's passport information.
+     * @return ret An array of `bytes32` values representing the unique identifiers of the attestations.
+     */
     function addPassport(
         bytes32 schema,
         AttestationRequestData[] calldata attestationRequestData
-    ) public payable virtual returns (bytes32[] memory) {
-        bytes32[] memory ret = new bytes32[](attestationRequestData.length);
+    ) public payable virtual returns (bytes32[] memory ret) {
+        require(verifiers[msg.sender], "Only authorized verifiers can call this function");
+
+        ret = new bytes32[](attestationRequestData.length);
         for (uint i = 0; i < attestationRequestData.length; i++) {
             AttestationRequest memory attestationRequest = AttestationRequest({
                 schema: schema,
@@ -38,50 +66,5 @@ contract GitcoinAttester is Verifier {
             });
             ret[i] = eas.attest(attestationRequest);
         }
-        return ret;
-    }
-
-    function addPassportWithSignature(
-        bytes32 schema,
-        Passport calldata passport,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public payable virtual returns (bytes32[] memory) {
-        if (verify(v, r, s, passport) == false) {
-            revert("Invalid signature");
-        }
-
-        bytes32[] memory ret = new bytes32[](
-            passport.stamps.length
-        );
-        for (
-            uint i = 0;
-            i < passport.stamps.length;
-            i++
-        ) {
-            Stamp memory stamp = passport.stamps[i];
-
-            AttestationRequest memory attestationRequest = AttestationRequest({
-                schema: schema,
-                data: AttestationRequestData({
-                    recipient: passport.recipient, // The recipient of the attestation.
-                    expirationTime: 0, // The time when the attestation expires (Unix timestamp).
-                    revocable: true, // Whether the attestation is revocable.
-                    refUID: 0, // The UID of the related attestation.
-                    data: stamp.encodedData, // Custom attestation data.
-                    value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
-                })
-            });
-
-            ret[i] = eas.attest(attestationRequest);
-        }
-        return ret;
-    }
-
-    function getAttestation(
-        bytes32 uid
-    ) external view returns (Attestation memory) {
-        return eas.getAttestation(uid);
     }
 }

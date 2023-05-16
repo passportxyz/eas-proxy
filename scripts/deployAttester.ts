@@ -15,18 +15,16 @@ export async function main() {
   });
 
   // Deploy GitcoinAttester
-  const gitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-  const contract = await gitcoinAttester.deploy(
-    process.env.IAM_ISSUER_ADDRESS as string
-  );
+  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+  const attester = await GitcoinAttester.deploy();
 
-  console.log(`Deploying GitcoinAttester to ${contract.address}`);
+  console.log(`Deploying GitcoinAttester to ${attester.address}`);
 
-  await contract.deployTransaction.wait(blocksToWait);
+  await attester.deployTransaction.wait(blocksToWait);
 
-  console.log("✅ Deployed.");
+  console.log("✅ Deployed GitcoinAttester.");
 
-  return contract.address;
+  return attester.address;
 }
 
 main().catch((error) => {
