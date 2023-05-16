@@ -7,10 +7,10 @@ import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@et
 import "./GitcoinAttester.sol";
 
 /**
- * @title Verifier
+ * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
  */
-contract Verifier {
+contract GitcoinVerifier {
     using ECDSA for bytes32;
 
     GitcoinAttester public attester;
@@ -64,13 +64,13 @@ contract Verifier {
 
     /**
      * @notice Constructor function to set the GitcoinAttester contract address and the contract name.
-     * @param iamIssuer The address of the issuer of the passport.
+     * @param _issuer The address of the issuer of the passport.
      * @param _attester The address of the GitcoinAttester contract.
      */
-    constructor(address iamIssuer, address _attester) {
+    constructor(address _issuer, address _attester) {
         attester = GitcoinAttester(_attester);
-        issuer = iamIssuer;
-        name = "Attester";
+        issuer = _issuer;
+        name = "GitcoinVerifier";
 
         uint256 chainId = _getChainId();
 
@@ -140,9 +140,9 @@ contract Verifier {
 
     /**
      * @dev Verifies a passport signature.
-     * @param v ECDSA signature parameter v.
-     * @param r ECDSA signature parameter r.
-     * @param s ECDSA signature parameter s.
+     * @param v The v component of the signature.
+     * @param r The r component of the signature.
+     * @param s The s component of the signature.
      * @param passport The passport to verify.
      * @return true if the signature is valid, false otherwise.
      */
@@ -168,7 +168,6 @@ contract Verifier {
      * @param v The v component of the signature.
      * @param r The r component of the signature.
      * @param s The s component of the signature.
-     * @return An array of UIDs of the added attestations.
      */
     function addPassportWithSignature(
         bytes32 schema,
@@ -176,7 +175,7 @@ contract Verifier {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public payable virtual returns (bytes32[] memory) {
+    ) public payable virtual {
         if (_verify(v, r, s, passport) == false) {
             revert("Invalid signature");
         }
@@ -200,19 +199,6 @@ contract Verifier {
             });
         }
 
-        bytes32[] memory ret = attester.addPassport(schema, attestationRequestData);
-
-        return ret;
-    }
-
-    /**
-     * @dev Retrieves an attestation for a given unique identifier from GitcoinAttester.
-     * @param uid The unique identifier of the attestation to retrieve.
-     * @return An `Attestation` structure representing the attestation.
-     */
-    function getAttestation(
-        bytes32 uid
-    ) external view returns (Attestation memory) {
-        return attester.getAttestation(uid);
+        attester.addPassport(schema, attestationRequestData);
     }
 }

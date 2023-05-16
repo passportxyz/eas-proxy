@@ -31,7 +31,24 @@ type Stamp = {
   provider: string;
   stampHash: string;
   expirationDate: string;
-}
+};
+
+const schemaEncoder = new SchemaEncoder("string provider, string hash");
+
+const encodedData = schemaEncoder.encodeData([
+  { name: "provider", value: "TestProvider", type: "string" },
+  { name: "hash", value: "234567890", type: "string" },
+]);
+
+const attestationRequest = {
+  recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
+  // Unix timestamp of when attestation expires. (0 for no expiration)
+  expirationTime: NO_EXPIRATION,
+  revocable: true,
+  data: encodedData,
+  refUID: ZERO_BYTES32,
+  value: 0,
+};
 
 export const easEncodeData = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("string provider, string hash");
@@ -42,21 +59,28 @@ export const easEncodeData = (stamp: Stamp) => {
   return encodedData;
 };
 
-describe("GitcoinAttester", function () {
+describe.only("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
 
   describe("Deployment", function () {
-    let gitcoinAttester: GitcoinAttester, eas, gitcoinVCSchema: string, EASContractAddress: string, iamAccount: any, verifier: any, recipient: any;
+    let gitcoinAttester: GitcoinAttester,
+      eas,
+      gitcoinVCSchema: string,
+      EASContractAddress: string,
+      owner: any,
+      iamAccount: any,
+      gitcoinVerifier: any,
+      recipient: any;
 
     this.beforeAll(async function () {
       async function deployGitcoinAttester() {
         // Deployment and ABI: SchemaRegistry.json
         // Sepolia
-    
+
         // v0.26
-    
+
         // EAS:
         // Contract: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
         // Deployment and ABI: EAS.json
@@ -66,117 +90,58 @@ describe("GitcoinAttester", function () {
         EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
         gitcoinVCSchema =
           "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-    
-        // Contracts are deployed using the first signer/account by default
-        const [owner, otherAccount, recipientAccount] = await ethers.getSigners();
 
+        // Contracts are deployed using the first signer/account by default
+        const [ownerAccount, otherAccount, recipientAccount] =
+          await ethers.getSigners();
+
+        owner = ownerAccount;
         iamAccount = otherAccount;
         recipient = recipientAccount;
-    
-        const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-        gitcoinAttester = await GitcoinAttester.deploy(iamAccount.address);
-    
+
+        const GitcoinAttester = await ethers.getContractFactory(
+          "GitcoinAttester"
+        );
+        gitcoinAttester = await GitcoinAttester.connect(owner).deploy();
+
         const provider = ethers.getDefaultProvider();
-    
+
         console.log("provider", provider);
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);
-    
+
         // Connects an ethers style provider/signingProvider to perform read/write functions.
         // MUST be a signer to do write operations!
         eas.connect(provider);
 
-        const verifierFactory = await ethers.getContractFactory("Verifier");
-        verifier = await verifierFactory.deploy(iamAccount.address);
+        const GitcoinVerifier = await ethers.getContractFactory(
+          "GitcoinVerifier"
+        );
+        gitcoinVerifier = await GitcoinVerifier.deploy(
+          iamAccount.address,
+          gitcoinAttester.address
+        );
       }
 
       await loadFixture(deployGitcoinAttester);
     });
 
-    it("should verify signature and make attestations for each stamp", async function () {
-      await gitcoinAttester.setEASAddress(EASContractAddress);
-      const chainId = await iamAccount.getChainId();
-
-      const domain = {
-        name: "Attester",
-        version: "1",
-        chainId,
-        verifyingContract: gitcoinAttester.address,
-      };
-
-      const types = {
-        Stamp: [
-          { name: "provider", type: "string" },
-          { name: "stampHash", type: "string" },
-          { name: "expirationDate", type: "string" },
-          { name: "encodedData", type: "bytes" }
-        ],
-        Passport: [
-          { name: "stamps", type: "Stamp[]" },
-          { name: "recipient", type: "address" },
-          { name: "expirationTime", type: "uint64" },
-          { name: "revocable", type: "bool" },
-          { name: "refUID", type: "bytes32" },
-          { name: "value", type: "uint256" },
-        ],
-      };
-
-      const passport = {
-        stamps: [
-          {
-            provider: googleStamp.provider,
-            stampHash: googleStamp.stampHash,
-            expirationDate: googleStamp.expirationDate,
-            encodedData: easEncodeData(googleStamp),
-          },
-          {
-            provider: facebookStamp.provider,
-            stampHash: facebookStamp.stampHash,
-            expirationDate: facebookStamp.expirationDate,
-            encodedData: easEncodeData(facebookStamp),
-          }
-        ],
-        recipient: recipient.address,
-        expirationTime: NO_EXPIRATION,
-        revocable: true,
-        refUID: ZERO_BYTES32,
-        value: 0,
-      };
-
-      const signature = await iamAccount._signTypedData(domain, types, passport);
-
-      const { v, r, s } = ethers.utils.splitSignature(signature);
-
-      const verifiedPassportTx = await gitcoinAttester.addPassportWithSignature(gitcoinVCSchema, passport, v, r, s);
-      const verifiedPassport = await verifiedPassportTx.wait();
-      // expect(verifiedPassport.length).to.equal(2);
-      expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
-    });
-
     it("Should write multiple attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
-      const schemaEncoder = new SchemaEncoder("string provider, string hash");
-      const encodedData = schemaEncoder.encodeData([
-        { name: "provider", value: "TestProvider", type: "string" },
-        { name: "hash", value: "234567890", type: "string" },
-      ]);
+      const attestationRequests = [
+        attestationRequest,
+        attestationRequest,
+        attestationRequest,
+      ];
 
-      const attestationRequest = {
-        recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
-        // Unix timestamp of when attestation expires. (0 for no expiration)
-        expirationTime: NO_EXPIRATION,
-        revocable: true,
-        data: encodedData,
-        refUID: ZERO_BYTES32,
-        value: 0,
-      };
+      const tx = await gitcoinAttester.addVerifier(owner.address);
+      await tx.wait();
 
-      const resultTx = await gitcoinAttester.addPassport(gitcoinVCSchema, [
-        attestationRequest,
-        attestationRequest,
-        attestationRequest,
-      ]);
+      const resultTx = await gitcoinAttester.addPassport(
+        gitcoinVCSchema,
+        attestationRequests
+      );
       console.log("resultTx", resultTx);
       const result = await resultTx.wait();
       console.log("result", result);
@@ -184,20 +149,84 @@ describe("GitcoinAttester", function () {
       console.log("result.logs[0]", result.logs[0]);
       console.log("result.logs[0].data", result.logs[0].data);
 
-      const attestation_1 = await gitcoinAttester.getAttestation(
-        result.logs[0].data
+      expect(result.events?.length).to.equal(attestationRequests.length);
+    });
+
+    it("Should not allow non-whitelisted verifier to write attestations", async function () {
+      await gitcoinAttester.setEASAddress(EASContractAddress);
+      try {
+        await gitcoinAttester
+          .connect(iamAccount)
+          .addPassport(gitcoinVCSchema, [
+            attestationRequest,
+            attestationRequest,
+            attestationRequest,
+          ]);
+      } catch (e: any) {
+        expect(e.message).to.include(
+          "Only authorized verifiers can call this function"
+        );
+      }
+    });
+
+    it("Should fail when non-owner tries to add a verifier", async function () {
+      try {
+        await gitcoinAttester
+          .connect(iamAccount)
+          .addVerifier(recipient.address);
+      } catch (e: any) {
+        expect(e.message).to.include("Ownable: caller is not the owner");
+      }
+    });
+
+    it("Should fail when non-owner tries to remove a verifier", async function () {
+      try {
+        await gitcoinAttester.connect(iamAccount).removeVerifier(owner.address);
+      } catch (e: any) {
+        expect(e.message).to.include("Ownable: caller is not the owner");
+      }
+    });
+
+    it("Should allow owner add and remove verifier", async function () {
+      const addTx = await gitcoinAttester
+        .connect(owner)
+        .addVerifier(recipient.address);
+      addTx.wait();
+
+      expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(true);
+
+      const removeTx = await gitcoinAttester
+        .connect(owner)
+        .removeVerifier(recipient.address);
+      removeTx.wait();
+
+      expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(
+        false
       );
-      const attestation_2 = await gitcoinAttester.getAttestation(
-        result.logs[1].data
-      );
-      const attestation_3 = await gitcoinAttester.getAttestation(
-        result.logs[2].data
-      );
-      console.log("attestation", attestation_1);
-      console.log("attestation", attestation_2);
-      console.log("attestation", attestation_3);
-      console.log("gitcoinAttester.address", gitcoinAttester.address);
+    });
+
+    it("Should revert when adding an existing verifier", async function () {
+      const tx = await gitcoinAttester
+        .connect(owner)
+        .addVerifier(recipient.address);
+      tx.wait();
+
+      expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(true);
+
+      try {
+        await gitcoinAttester.connect(owner).addVerifier(recipient.address);
+      } catch (e: any) {
+        expect(e.message).to.include("Verifier already added");
+      }
+    });
+
+    it("Should revert when remove a verifier not in the allow-list", async function () {
+      try {
+        await gitcoinAttester.connect(owner).removeVerifier(iamAccount.address);
+      } catch (e: any) {
+        console.log(e.message);
+        expect(e.message).to.include("Verifier does not exist");
+      }
     });
   });
-
 });

@@ -14,24 +14,17 @@ contract GitcoinAttester is Ownable {
 
     IEAS eas; // The instance of the EAS contract.
 
-    /**
-     * @dev Checks if the given address is a Gnosis Safe contract.
-     * @param addr The address to check.
-     * @return A boolean indicating whether the address is a Gnosis Safe contract or not.
-     */
-    function _isGnosisSafe(address addr) internal view returns (bool) {
-        // TODO: Check if the address is a Gnosis Safe contract.
-        return true;
-    }
+    event VerifierAdded(address verifier); // Emitted when a verifier is added to the allow-list.
+    event VerifierRemoved(address verifier); // Emitted when a verifier is removed from the allow-list.
 
     /**
      * @dev Adds a verifier to the allow-list.
      * @param _verifier The address of the verifier to add. It must be a Gnosis Safe contract.
      */
     function addVerifier(address _verifier) public onlyOwner {
-        require(_isGnosisSafe(_verifier), "Verifier address is not a Gnosis Safe contract");
-        require(!verifiers[_verifier], "Verifier already exists");
+        require(!verifiers[_verifier], "Verifier already added");
         verifiers[_verifier] = true;
+        emit VerifierAdded(_verifier);
     }
 
     /**
@@ -41,6 +34,7 @@ contract GitcoinAttester is Ownable {
     function removeVerifier(address _verifier) public onlyOwner {
         require(verifiers[_verifier], "Verifier does not exist");
         verifiers[_verifier] = false;
+        emit VerifierRemoved(_verifier);
     }
 
     /**
@@ -72,16 +66,5 @@ contract GitcoinAttester is Ownable {
             });
             ret[i] = eas.attest(attestationRequest);
         }
-    }
-
-    /**
-     * @dev Retrieves an attestation for a given unique identifier from EAS.
-     * @param uid The unique identifier of the attestation to retrieve.
-     * @return An `Attestation` structure representing the attestation.
-     */
-    function getAttestation(
-        bytes32 uid
-    ) external view returns (Attestation memory) {
-        return eas.getAttestation(uid);
     }
 }
