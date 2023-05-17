@@ -43,6 +43,7 @@ contract GitcoinVerifier {
         bytes32 refUID;
         uint256 value;
         uint256 nonce;
+        uint256 fee;
     }
 
     // Define the type hashes
@@ -51,7 +52,7 @@ contract GitcoinVerifier {
     );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)");
     bytes32 private constant PASSPORT_TYPEHASH = keccak256(
-        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
+        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce,uint256 fee)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
     );
 
     /**
@@ -137,7 +138,8 @@ contract GitcoinVerifier {
             passport.revocable,
             passport.refUID,
             passport.value,
-            passport.nonce
+            passport.nonce,
+            passport.fee
         ));
     }
 
@@ -191,6 +193,13 @@ contract GitcoinVerifier {
     ) public payable virtual {
         if (_verify(v, r, s, passport) == false) {
             revert("Invalid signature");
+        }
+
+        // TODO: check if this is causing more gas usage
+        uint256 fee = uint256(passport.fee);
+
+        if (msg.value <= fee) {
+            revert("Insufficient fee");
         }
 
         AttestationRequestData[] memory attestationRequestData = new AttestationRequestData[](passport.stamps.length);
