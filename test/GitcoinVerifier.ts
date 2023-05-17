@@ -1,9 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import {
-  NO_EXPIRATION,
-  ZERO_BYTES32,
-} from "@ethereum-attestation-service/eas-sdk";
+import { NO_EXPIRATION, ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeData } from "./GitcoinAttester";
 
 const googleStamp = {
@@ -40,9 +37,7 @@ describe("GitcoinVerifier", function () {
     );
 
     // Add verifier to GitcoinAttester allow-list
-    const tx = await this.gitcoinAttester.addVerifier(
-      this.gitcoinVerifier.address
-    );
+    const tx = await this.gitcoinAttester.addVerifier(this.gitcoinVerifier.address);
     await tx.wait();
 
     const chainId = await this.iamAccount.getChainId();
@@ -68,6 +63,7 @@ describe("GitcoinVerifier", function () {
         { name: "revocable", type: "bool" },
         { name: "refUID", type: "bytes32" },
         { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
       ],
     };
 
@@ -92,6 +88,10 @@ describe("GitcoinVerifier", function () {
       refUID: ZERO_BYTES32,
       value: 0,
     };
+  });
+
+  this.beforeEach(async function () {
+    this.passport.nonce = await this.verifier.recipientNonces(this.passport.recipient);
   });
 
   it("should verify signature and make attestations for each stamp", async function () {
@@ -119,6 +119,7 @@ describe("GitcoinVerifier", function () {
         { name: "revocable", type: "bool" },
         { name: "refUID", type: "bytes32" },
         { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
       ],
     };
 
@@ -144,22 +145,17 @@ describe("GitcoinVerifier", function () {
       value: 0,
     };
 
-    const signature = await this.iamAccount._signTypedData(
-      domain,
-      types,
-      passport
-    );
+    const signature = await this.iamAccount._signTypedData(domain, types, passport);
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const verifiedPassportTx =
-      await this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
-        passport,
-        v,
-        r,
-        s
-      );
+    const verifiedPassportTx = await this.gitcoinVerifier.addPassportWithSignature(
+      GITCOIN_VC_SCHEMA,
+      passport,
+      v,
+      r,
+      s
+    );
     const verifiedPassport = await verifiedPassportTx.wait();
     expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
   });
@@ -195,5 +191,26 @@ describe("GitcoinVerifier", function () {
       expect(e.message).to.include("Invalid signature");
       return;
     }
+  });
+
+  it("should be false if verify is called twice with the same parameters", async function () {
+    const signature = await this.iamAccount._signTypedData(
+      this.domain,
+      this.types,
+      this.passport
+    );
+
+    const { v, r, s } = ethers.utils.splitSignature(signature);
+
+    //running verify function once
+    const verifyCall1 = await (await this.verifier.verify(v, r, s, this.passport)).wait();
+    console.log("verifyCall1", verifyCall1);
+
+    //running verify function again!
+    const verifyCall2 = await this.verifier.callStatic.verify(v, r, s, this.passport);
+    console.log("verifyCall2", verifyCall2);
+
+    //If replay protection works verifyCall2 shouldn't work!
+    expect(verifyCall2).to.equal(false);
   });
 });
