@@ -203,11 +203,18 @@ describe("GitcoinVerifier", function () {
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     //running verify function once
-    const verifyCall1 = await (await this.verifier.verify(v, r, s, this.passport)).wait();
+    const verifyCall1 = await (
+      await this.gitcoinVerifier.verify(v, r, s, this.passport)
+    ).wait();
     console.log("verifyCall1", verifyCall1);
 
     //running verify function again!
-    const verifyCall2 = await this.verifier.callStatic.verify(v, r, s, this.passport);
+    const verifyCall2 = await this.gitcoinVerifier.callStatic.verify(
+      v,
+      r,
+      s,
+      this.passport
+    );
     console.log("verifyCall2", verifyCall2);
 
     //If replay protection works verifyCall2 shouldn't work!
