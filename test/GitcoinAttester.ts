@@ -14,7 +14,7 @@ import {
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester } from "../typechain-types";
-import {utils} from "ethers";
+import { utils } from "ethers";
 
 const googleStamp = {
   provider: "Google",
@@ -35,7 +35,6 @@ type Stamp = {
 };
 
 export const easEncodeData = (stamp: Stamp) => {
-
   const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
 
   let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
@@ -123,8 +122,7 @@ describe("GitcoinAttester", function () {
       await loadFixture(deployGitcoinAttester);
     });
 
-
-    it.only("should verify signature and make attestations for each stamp", async function () {
+    it("should verify signature and make attestations for each stamp", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
       const chainId = await iamAccount.getChainId();
 
@@ -166,12 +164,24 @@ describe("GitcoinAttester", function () {
             // expirationDate: facebookStamp.expirationDate,
             encodedData: easEncodeData(facebookStamp),
           },
+          {
+            // provider: facebookStamp.provider,
+            // stampHash: facebookStamp.stampHash,
+            // expirationDate: facebookStamp.expirationDate,
+            encodedData: easEncodeData(facebookStamp),
+          },
+          {
+            // provider: facebookStamp.provider,
+            // stampHash: facebookStamp.stampHash,
+            // expirationDate: facebookStamp.expirationDate,
+            encodedData: easEncodeData(facebookStamp),
+          },
         ],
         recipient: recipient.address,
         expirationTime: NO_EXPIRATION,
         revocable: true,
         refUID: ZERO_BYTES32,
-        value: 0,
+        value: "0",
       };
 
       const signature = await iamAccount._signTypedData(
@@ -181,6 +191,16 @@ describe("GitcoinAttester", function () {
       );
 
       const { v, r, s } = ethers.utils.splitSignature(signature);
+
+      const gasFees =
+        await gitcoinAttester.estimateGas.addPassportWithSignature(
+          gitcoinVCSchema,
+          passport,
+          v,
+          r,
+          s
+        );
+      console.log("gasFees", gasFees);
 
       const verifiedPassportTx = await gitcoinAttester.addPassportWithSignature(
         gitcoinVCSchema,
@@ -192,6 +212,73 @@ describe("GitcoinAttester", function () {
       const verifiedPassport = await verifiedPassportTx.wait();
       // expect(verifiedPassport.length).to.equal(2);
       expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
+    });
+
+    it("check gas", async function () {
+      await gitcoinAttester.setEASAddress(EASContractAddress);
+      const chainId = await iamAccount.getChainId();
+
+      const domain = {
+        name: "Attester",
+        version: "1",
+        chainId,
+        verifyingContract: gitcoinAttester.address,
+      };
+
+      const types = {
+        Stamp: [
+          // { name: "provider", type: "string" },
+          // { name: "stampHash", type: "string" },
+          // { name: "expirationDate", type: "string" },
+          { name: "encodedData", type: "bytes" },
+        ],
+        Passport: [
+          { name: "stamps", type: "Stamp[]" },
+          { name: "recipient", type: "address" },
+          { name: "expirationTime", type: "uint64" },
+          { name: "revocable", type: "bool" },
+          { name: "refUID", type: "bytes32" },
+          { name: "value", type: "uint256" },
+        ],
+      };
+
+      for (let i = 4; i <= 4; i++) {
+        const multiRequest = {
+          schema: gitcoinVCSchema,
+          data: [],
+        };
+
+        for (let j = 0; j < i; j++) {
+          multiRequest.data.push({
+            recipient: recipient.address,
+            data: easEncodeData(facebookStamp),
+            expirationTime: NO_EXPIRATION, // The time when the attestation expires (Unix timestamp).
+            revocable: true, // Whether the attestation is revocable.   ==> TODO: use revocable from Passport
+            refUID: ZERO_BYTES32, // The UID of the related attestation.
+            value: 0,
+          });
+        }
+
+        // const signature = await iamAccount._signTypedData(
+        //   domain,
+        //   types,
+        //   passport
+        // );
+
+        // const { v, r, s } = ethers.utils.splitSignature(signature);
+
+        // const helloTx = await gitcoinAttester.sayHello();
+        // console.log("hello", helloTx);
+
+        const gasFees =
+          await gitcoinAttester.estimateGas.addPassportWithSignatureDirect(
+            [multiRequest]
+            // v,
+            // r,
+            // s
+          );
+        console.log("gasFees", gasFees);
+      }
     });
 
     it("Should write multiple attestations", async function () {
