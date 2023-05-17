@@ -91,7 +91,9 @@ describe("GitcoinVerifier", function () {
   });
 
   this.beforeEach(async function () {
-    this.passport.nonce = await this.verifier.recipientNonces(this.passport.recipient);
+    this.passport.nonce = await this.gitcoinVerifier.recipientNonces(
+      this.passport.recipient
+    );
   });
 
   it("should verify signature and make attestations for each stamp", async function () {
