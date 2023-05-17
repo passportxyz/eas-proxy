@@ -16,6 +16,7 @@ contract GitcoinVerifier {
     GitcoinAttester public attester;
     address public issuer;
     string public name;
+    mapping(address => uint) public recipientNonces;
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 private DOMAIN_SEPARATOR;
@@ -41,6 +42,7 @@ contract GitcoinVerifier {
         bool revocable;
         bytes32 refUID;
         uint256 value;
+        uint256 nonce;
     }
 
     // Define the type hashes
@@ -49,7 +51,7 @@ contract GitcoinVerifier {
     );
     bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)");
     bytes32 private constant PASSPORT_TYPEHASH = keccak256(
-        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
+        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
     );
 
     /**
@@ -134,7 +136,8 @@ contract GitcoinVerifier {
             passport.expirationTime,
             passport.revocable,
             passport.refUID,
-            passport.value
+            passport.value,
+            passport.nonce
         ));
     }
 
@@ -151,14 +154,24 @@ contract GitcoinVerifier {
         bytes32 r,
         bytes32 s,
         Passport calldata passport
-    ) internal view returns (bool) {
+    ) internal returns (bool) {
         bytes32 passportHash = _hashPassport(passport);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
         // Recover signer from the signature
         address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
-        return recoveredSigner == issuer;
+         bool validSigner = recoveredSigner == issuer;
+
+        // Check the nonce
+        bool validNonce = passport.nonce == recipientNonces[passport.recipient];
+        if (validNonce) {
+            // Increment the nonce for this recipient
+            recipientNonces[passport.recipient]++;
+        }   
+
+        // Only return true if the signer and nonce are both valid
+        return validSigner && validNonce;
     }
 
     /**
