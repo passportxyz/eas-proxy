@@ -206,7 +206,7 @@ describe("GitcoinVerifier", function () {
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     //calling addPassportWithSignature 1st time
-    await (
+    const result = await (
       await this.gitcoinVerifier.addPassportWithSignature(
         GITCOIN_VC_SCHEMA,
         this.passport,
@@ -215,6 +215,8 @@ describe("GitcoinVerifier", function () {
         s
       )
     ).wait();
+
+    expect(result.events?.length).to.equal(this.passport.stamps.length);
 
     //calling addPassportWithSignature 2nd time
     await expect(
