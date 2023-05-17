@@ -145,6 +145,7 @@ describe("GitcoinVerifier", function () {
       revocable: true,
       refUID: ZERO_BYTES32,
       value: 0,
+      nonce: 0,
     };
 
     const signature = await this.iamAccount._signTypedData(domain, types, passport);
@@ -195,7 +196,7 @@ describe("GitcoinVerifier", function () {
     }
   });
 
-  it("should be false if verify is called twice with the same parameters", async function () {
+  it("should revert if addPassportWithSignature is called twice with the same parameters", async function () {
     const signature = await this.iamAccount._signTypedData(
       this.domain,
       this.types,
@@ -204,22 +205,26 @@ describe("GitcoinVerifier", function () {
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    //running verify function once
-    const verifyCall1 = await (
-      await this.gitcoinVerifier.verify(v, r, s, this.passport)
+    //calling addPassportWithSignature 1st time
+    await (
+      await this.gitcoinVerifier.addPassportWithSignature(
+        GITCOIN_VC_SCHEMA,
+        this.passport,
+        v,
+        r,
+        s
+      )
     ).wait();
-    console.log("verifyCall1", verifyCall1);
 
-    //running verify function again!
-    const verifyCall2 = await this.gitcoinVerifier.callStatic.verify(
-      v,
-      r,
-      s,
-      this.passport
-    );
-    console.log("verifyCall2", verifyCall2);
-
-    //If replay protection works verifyCall2 shouldn't work!
-    expect(verifyCall2).to.equal(false);
+    //calling addPassportWithSignature 2nd time
+    await expect(
+      this.gitcoinVerifier.callStatic.addPassportWithSignature(
+        GITCOIN_VC_SCHEMA,
+        this.passport,
+        v,
+        r,
+        s
+      )
+    ).to.be.revertedWith("Invalid signature");
   });
 });
