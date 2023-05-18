@@ -40,6 +40,7 @@ const passportTypes = {
     { name: "revocable", type: "bool" },
     { name: "refUID", type: "bytes32" },
     { name: "value", type: "uint256" },
+    { name: "nonce", type: "uint256" },
     { name: "fee", type: "uint256" },
   ],
 };
@@ -111,7 +112,6 @@ describe("GitcoinVerifier", function () {
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
     const chainId = await this.iamAccount.getChainId();
 
-
     const passport = {
       stamps: [
         {
@@ -131,8 +131,8 @@ describe("GitcoinVerifier", function () {
       expirationTime: NO_EXPIRATION,
       revocable: true,
       refUID: ZERO_BYTES32,
-      value: 0, 
-      nonce: 0,
+      value: 0,
+      nonce: this.passport.nonce,
       fee: fee1,
     };
 
@@ -192,11 +192,8 @@ describe("GitcoinVerifier", function () {
     }
   });
 
-
-
   it("should revert if addPassportWithSignature is called twice with the same parameters", async function () {
     const signature = await this.iamAccount._signTypedData(
-
       this.domain,
       this.types,
       this.passport
@@ -258,6 +255,7 @@ describe("GitcoinVerifier", function () {
       )
     ).to.be.revertedWith("Insufficient fee");
   });
+
   it("should accept BigNumber fee", async function () {
     const modifiedPassport = {
       ...this.passport,
