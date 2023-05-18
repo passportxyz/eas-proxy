@@ -52,9 +52,12 @@ contract GitcoinAttester is Ownable {
      */
     function addPassport(
         MultiAttestationRequest[] calldata multiAttestationRequest
-    ) public payable virtual returns(bytes32[] memory){
-        require(verifiers[msg.sender], "Only authorized verifiers can call this function");
+    ) public payable virtual returns (bytes32[] memory) {
+        require(
+            verifiers[msg.sender],
+            "Only authorized verifiers can call this function"
+        );
 
-       return eas.multiAttest(multiAttestationRequest);
+        return eas.multiAttest(multiAttestationRequest);
     }
 }
