@@ -15,30 +15,38 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester } from "../typechain-types";
 
+const utils = ethers.utils;
+
 const googleStamp = {
   provider: "Google",
   stampHash: "234567890",
-  expirationDate: "2023-12-31",
 };
 
 const facebookStamp = {
   provider: "Facebook",
   stampHash: "234567891",
-  expirationDate: "2023-12-31",
 };
 
 type Stamp = {
   provider: string;
   stampHash: string;
-  expirationDate: string;
 };
 
-const schemaEncoder = new SchemaEncoder("string provider, string hash");
+export const easEncodeData = (stamp: Stamp) => {
+  const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
+  let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
 
-const encodedData = schemaEncoder.encodeData([
-  { name: "provider", value: "TestProvider", type: "string" },
-  { name: "hash", value: "234567890", type: "string" },
-]);
+  const encodedData = schemaEncoder.encodeData([
+    { name: "provider", value: providerValue, type: "bytes32" },
+    { name: "hash", value: providerValue, type: "bytes32" }, // TODO decode hash here
+  ]);
+  return encodedData;
+};
+
+const encodedData = easEncodeData({
+  provider: "TestProvider",
+  stampHash: "234567890",
+});
 
 const attestationRequest = {
   recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
@@ -48,15 +56,6 @@ const attestationRequest = {
   data: encodedData,
   refUID: ZERO_BYTES32,
   value: 0,
-};
-
-export const easEncodeData = (stamp: Stamp) => {
-  const schemaEncoder = new SchemaEncoder("string provider, string hash");
-  const encodedData = schemaEncoder.encodeData([
-    { name: "provider", value: stamp.provider, type: "string" },
-    { name: "hash", value: stamp.stampHash, type: "string" },
-  ]);
-  return encodedData;
 };
 
 describe("GitcoinAttester", function () {
@@ -124,19 +123,15 @@ describe("GitcoinAttester", function () {
     it("Should write multiple attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
-      const attestationRequests = [
-        attestationRequest,
-        attestationRequest,
-        attestationRequest,
-      ];
+      const multiAttestationRequests = {
+        schema: gitcoinVCSchema,
+        data: [attestationRequest, attestationRequest, attestationRequest],
+      };
 
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
-      const resultTx = await gitcoinAttester.addPassport(
-        gitcoinVCSchema,
-        attestationRequests
-      );
+      const resultTx = await gitcoinAttester.addPassport([multiAttestationRequests]);
       console.log("resultTx", resultTx);
       const result = await resultTx.wait();
       console.log("result", result);
@@ -144,19 +139,17 @@ describe("GitcoinAttester", function () {
       console.log("result.logs[0]", result.logs[0]);
       console.log("result.logs[0].data", result.logs[0].data);
 
-      expect(result.events?.length).to.equal(attestationRequests.length);
+      expect(result.events?.length).to.equal(multiAttestationRequests.data.length);
     });
 
     it("Should not allow non-whitelisted verifier to write attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
+      const multiAttestationRequests = {
+        schema: gitcoinVCSchema,
+        data: [attestationRequest, attestationRequest, attestationRequest],
+      };
       try {
-        await gitcoinAttester
-          .connect(iamAccount)
-          .addPassport(gitcoinVCSchema, [
-            attestationRequest,
-            attestationRequest,
-            attestationRequest,
-          ]);
+        await gitcoinAttester.connect(iamAccount).addPassport([multiAttestationRequests]);
       } catch (e: any) {
         expect(e.message).to.include("Only authorized verifiers can call this function");
       }
