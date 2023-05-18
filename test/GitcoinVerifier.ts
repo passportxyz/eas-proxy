@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { NO_EXPIRATION, ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeData } from "./GitcoinAttester";
 
-const { BigNumber } = ethers;
+const { BigNumber, utils } = ethers;
 
 const googleStamp = {
   provider: "Google",
@@ -21,8 +21,28 @@ const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 const GITCOIN_VC_SCHEMA =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
 
-const hex1 = ethers.utils.hexZeroPad(BigNumber.from(1).toHexString(), 32);
-const hex2 = ethers.utils.hexZeroPad(BigNumber.from(2).toHexString(), 32);
+const fee1 = utils.parseEther("0.001").toHexString();
+const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
+const fee2 = utils.parseEther("0.002").toHexString();
+
+
+const passportTypes = {
+  Stamp: [
+    { name: "provider", type: "string" },
+    { name: "stampHash", type: "string" },
+    { name: "expirationDate", type: "string" },
+    { name: "encodedData", type: "bytes" },
+  ],
+  Passport: [
+    { name: "stamps", type: "Stamp[]" },
+    { name: "recipient", type: "address" },
+    { name: "expirationTime", type: "uint64" },
+    { name: "revocable", type: "bool" },
+    { name: "refUID", type: "bytes32" },
+    { name: "value", type: "uint256" },
+    { name: "fee", type: "uint256" },
+  ],
+};
 
 describe("GitcoinVerifier", function () {
   this.beforeAll(async function () {
@@ -54,24 +74,8 @@ describe("GitcoinVerifier", function () {
       verifyingContract: this.gitcoinVerifier.address,
     };
 
-    this.types = {
-      Stamp: [
-        { name: "provider", type: "string" },
-        { name: "stampHash", type: "string" },
-        { name: "expirationDate", type: "string" },
-        { name: "encodedData", type: "bytes" },
-      ],
-      Passport: [
-        { name: "stamps", type: "Stamp[]" },
-        { name: "recipient", type: "address" },
-        { name: "expirationTime", type: "uint64" },
-        { name: "revocable", type: "bool" },
-        { name: "refUID", type: "bytes32" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "fee", type: "uint256" },
-      ],
-    };
+    this.types = passportTypes;
+
 
     this.passport = {
       stamps: [
@@ -93,7 +97,7 @@ describe("GitcoinVerifier", function () {
       revocable: true,
       refUID: ZERO_BYTES32,
       value: 0,
-      fee: hex1,
+      fee: fee1,
     };
   });
 
@@ -107,31 +111,6 @@ describe("GitcoinVerifier", function () {
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
     const chainId = await this.iamAccount.getChainId();
 
-    const domain = {
-      name: "GitcoinVerifier",
-      version: "1",
-      chainId,
-      verifyingContract: this.gitcoinVerifier.address,
-    };
-
-    const types = {
-      Stamp: [
-        { name: "provider", type: "string" },
-        { name: "stampHash", type: "string" },
-        { name: "expirationDate", type: "string" },
-        { name: "encodedData", type: "bytes" },
-      ],
-      Passport: [
-        { name: "stamps", type: "Stamp[]" },
-        { name: "recipient", type: "address" },
-        { name: "expirationTime", type: "uint64" },
-        { name: "revocable", type: "bool" },
-        { name: "refUID", type: "bytes32" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "fee", type: "uint256" },
-      ],
-    };
 
     const passport = {
       stamps: [
@@ -152,12 +131,16 @@ describe("GitcoinVerifier", function () {
       expirationTime: NO_EXPIRATION,
       revocable: true,
       refUID: ZERO_BYTES32,
-      value: 0,
+      value: 0, 
       nonce: 0,
-      fee: hex1,
+      fee: fee1,
     };
 
-    const signature = await this.iamAccount._signTypedData(domain, types, passport);
+    const signature = await this.iamAccount._signTypedData(
+      this.domain,
+      this.types,
+      passport
+    );
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
@@ -169,7 +152,7 @@ describe("GitcoinVerifier", function () {
         r,
         s,
         {
-          value: hex2,
+          value: fee1,
         }
       );
     const verifiedPassport = await verifiedPassportTx.wait();
@@ -270,7 +253,7 @@ describe("GitcoinVerifier", function () {
         r,
         s,
         {
-          value: hex1,
+          value: fee1Less1Wei,
         }
       )
     ).to.be.revertedWith("Insufficient fee");
@@ -278,7 +261,7 @@ describe("GitcoinVerifier", function () {
   it("should accept BigNumber fee", async function () {
     const modifiedPassport = {
       ...this.passport,
-      fee: hex1,
+      fee: fee1,
     };
     const signature = await this.iamAccount._signTypedData(
       this.domain,
@@ -304,7 +287,7 @@ describe("GitcoinVerifier", function () {
         r,
         s,
         {
-          value: hex2,
+          value: fee2,
         }
       );
     const receipt = await verifiedPassport.wait();

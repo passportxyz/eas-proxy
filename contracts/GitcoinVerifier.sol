@@ -195,10 +195,7 @@ contract GitcoinVerifier {
             revert("Invalid signature");
         }
 
-        // TODO: check if this is causing more gas usage
-        uint256 fee = uint256(passport.fee);
-
-        if (msg.value <= fee) {
+        if (msg.value < passport.fee) {
             revert("Insufficient fee");
         }
 
