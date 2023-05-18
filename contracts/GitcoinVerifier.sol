@@ -2,7 +2,7 @@
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 import "./GitcoinAttester.sol";
 
@@ -170,6 +170,32 @@ contract GitcoinVerifier {
         return validSigner && validNonce;
     }
 
+        function getMultiAttestRequest(
+        bytes32 schema,
+        Passport calldata passport
+    ) public pure returns (MultiAttestationRequest[] memory) {
+        MultiAttestationRequest[]
+            memory multiAttestationRequest = new MultiAttestationRequest[](1);
+        multiAttestationRequest[0].schema = schema;
+        multiAttestationRequest[0].data = new AttestationRequestData[](
+            passport.stamps.length
+        );
+
+        for (uint i = 0; i < passport.stamps.length; i++) {
+            Stamp memory stamp = passport.stamps[i];
+            multiAttestationRequest[0].data[i] = AttestationRequestData({
+                recipient: passport.recipient, // The recipient of the attestation.
+                expirationTime: 0, // The time when the attestation expires (Unix timestamp).
+                revocable: true, // Whether the attestation is revocable.   ==> TODO: use revocable from Passport
+                refUID: 0, // The UID of the related attestation.
+                data: stamp.encodedData, // Custom attestation data.
+                value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
+            });
+        }
+
+        return multiAttestationRequest;
+    }
+
     /**
      * @dev Adds a passport to the attester contract, verifying it using the provided signature.
      * @param schema The schema to use.
@@ -192,26 +218,7 @@ contract GitcoinVerifier {
         if (msg.value < passport.fee) {
             revert("Insufficient fee");
         }
-
-        AttestationRequestData[] memory attestationRequestData = new AttestationRequestData[](passport.stamps.length);
-
-        for (
-            uint i = 0;
-            i < passport.stamps.length;
-            i++
-        ) {
-            Stamp memory stamp = passport.stamps[i];
-
-            attestationRequestData[i] = AttestationRequestData({
-                recipient: passport.recipient, // The recipient of the attestation.
-                expirationTime: 0, // The time when the attestation expires (Unix timestamp).
-                revocable: true, // Whether the attestation is revocable.
-                refUID: 0, // The UID of the related attestation.
-                data: stamp.encodedData, // Custom attestation data.
-                value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
-            });
-        }
-
-        attester.addPassport(schema, attestationRequestData);
+        
+        attester.addPassport(getMultiAttestRequest(schema, passport));
     }
 }

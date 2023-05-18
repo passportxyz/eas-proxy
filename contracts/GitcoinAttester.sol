@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {AttestationRequest, AttestationRequestData, IEAS, Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 /**
  * @title GitcoinAttester
@@ -47,24 +47,14 @@ contract GitcoinAttester is Ownable {
     }
 
     /**
-     * @dev Adds passport information for a user using EAS.
-     * @param schema The ID of the schema to use.
-     * @param attestationRequestData An array of `AttestationRequestData` structures containing the user's passport information.
-     * @return ret An array of `bytes32` values representing the unique identifiers of the attestations.
+     * @dev Adds passport information for a user using EAS
+     * @param multiAttestationRequest An array of `MultiAttestationRequest` structures containing the user's passport information.
      */
     function addPassport(
-        bytes32 schema,
-        AttestationRequestData[] calldata attestationRequestData
-    ) public payable virtual returns (bytes32[] memory ret) {
+        MultiAttestationRequest[] calldata multiAttestationRequest
+    ) public payable virtual returns(bytes32[] memory){
         require(verifiers[msg.sender], "Only authorized verifiers can call this function");
 
-        ret = new bytes32[](attestationRequestData.length);
-        for (uint i = 0; i < attestationRequestData.length; i++) {
-            AttestationRequest memory attestationRequest = AttestationRequest({
-                schema: schema,
-                data: attestationRequestData[i]
-            });
-            ret[i] = eas.attest(attestationRequest);
-        }
+       return eas.multiAttest(multiAttestationRequest);
     }
 }
