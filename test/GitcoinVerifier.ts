@@ -1,6 +1,9 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { NO_EXPIRATION, ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
+import {
+  NO_EXPIRATION,
+  ZERO_BYTES32,
+} from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeData } from "./GitcoinAttester";
 
 const { BigNumber, utils } = ethers;
@@ -8,13 +11,16 @@ const { BigNumber, utils } = ethers;
 const googleStamp = {
   provider: "Google",
   stampHash: "234567890",
-  expirationDate: "2023-12-31",
 };
 
 const facebookStamp = {
   provider: "Facebook",
   stampHash: "234567891",
-  expirationDate: "2023-12-31",
+};
+
+const twitterStamp = {
+  provider: "Twitter",
+  stampHash: "234567891",
 };
 
 const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
@@ -25,14 +31,10 @@ const fee1 = utils.parseEther("0.001").toHexString();
 const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
 const fee2 = utils.parseEther("0.002").toHexString();
 
+const badStampHash = utils.keccak256(utils.toUtf8Bytes("badStampHash"));
 
 const passportTypes = {
-  Stamp: [
-    { name: "provider", type: "string" },
-    { name: "stampHash", type: "string" },
-    { name: "expirationDate", type: "string" },
-    { name: "encodedData", type: "bytes" },
-  ],
+  Stamp: [{ name: "encodedData", type: "bytes" }],
   Passport: [
     { name: "stamps", type: "Stamp[]" },
     { name: "recipient", type: "address" },
@@ -54,6 +56,7 @@ describe("GitcoinVerifier", function () {
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
     this.gitcoinAttester = await GitcoinAttester.deploy();
+    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
@@ -63,7 +66,9 @@ describe("GitcoinVerifier", function () {
     );
 
     // Add verifier to GitcoinAttester allow-list
-    const tx = await this.gitcoinAttester.addVerifier(this.gitcoinVerifier.address);
+    const tx = await this.gitcoinAttester.addVerifier(
+      this.gitcoinVerifier.address
+    );
     await tx.wait();
 
     const chainId = await this.iamAccount.getChainId();
@@ -77,20 +82,22 @@ describe("GitcoinVerifier", function () {
 
     this.types = passportTypes;
 
+    this.getNonce = async () => {
+      return await this.gitcoinVerifier.recipientNonces(
+        this.passport.recipient
+      );
+    };
 
     this.passport = {
       stamps: [
         {
-          provider: googleStamp.provider,
-          stampHash: googleStamp.stampHash,
-          expirationDate: googleStamp.expirationDate,
           encodedData: easEncodeData(googleStamp),
         },
         {
-          provider: facebookStamp.provider,
-          stampHash: facebookStamp.stampHash,
-          expirationDate: facebookStamp.expirationDate,
           encodedData: easEncodeData(googleStamp),
+        },
+        {
+          encodedData: easEncodeData(twitterStamp),
         },
       ],
       recipient: this.recipientAccount.address,
@@ -99,6 +106,26 @@ describe("GitcoinVerifier", function () {
       refUID: ZERO_BYTES32,
       value: 0,
       fee: fee1,
+    };
+
+    this.getOtherPassport = async () => {
+      return {
+        stamps: [
+          {
+            encodedData: easEncodeData(googleStamp),
+          },
+          {
+            encodedData: easEncodeData(twitterStamp),
+          },
+        ],
+        recipient: this.recipientAccount.address,
+        expirationTime: NO_EXPIRATION,
+        revocable: true,
+        refUID: ZERO_BYTES32,
+        value: 0,
+        fee: fee1,
+        nonce: await this.getNonce(),
+      };
     };
   });
 
@@ -109,21 +136,14 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should verify signature and make attestations for each stamp", async function () {
-    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
     const chainId = await this.iamAccount.getChainId();
 
     const passport = {
       stamps: [
         {
-          provider: googleStamp.provider,
-          stampHash: googleStamp.stampHash,
-          expirationDate: googleStamp.expirationDate,
           encodedData: easEncodeData(googleStamp),
         },
         {
-          provider: facebookStamp.provider,
-          stampHash: facebookStamp.stampHash,
-          expirationDate: facebookStamp.expirationDate,
           encodedData: easEncodeData(facebookStamp),
         },
       ],
@@ -176,20 +196,19 @@ describe("GitcoinVerifier", function () {
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    this.passport.stamps[0].stampHash = "0x00000000";
-
-    try {
-      await this.gitcoinVerifier.addPassportWithSignature(
+    const otherPassport = await this.getOtherPassport();
+    await expect(
+      this.gitcoinVerifier.addPassportWithSignature(
         GITCOIN_VC_SCHEMA,
-        this.passport,
+        otherPassport,
         v,
         r,
-        s
-      );
-    } catch (e: any) {
-      expect(e.message).to.include("Invalid signature");
-      return;
-    }
+        s,
+        {
+          value: fee1,
+        }
+      )
+    ).to.be.revertedWith("Invalid signature");
   });
 
   it("should revert if addPassportWithSignature is called twice with the same parameters", async function () {
@@ -207,20 +226,25 @@ describe("GitcoinVerifier", function () {
         this.passport,
         v,
         r,
-        s
+        s,
+        {
+          value: fee1,
+        }
       )
     ).wait();
 
     expect(result.events?.length).to.equal(this.passport.stamps.length);
 
-    //calling addPassportWithSignature 2nd time
     await expect(
       this.gitcoinVerifier.callStatic.addPassportWithSignature(
         GITCOIN_VC_SCHEMA,
         this.passport,
         v,
         r,
-        s
+        s,
+        {
+          value: fee1,
+        }
       )
     ).to.be.revertedWith("Invalid signature");
   });

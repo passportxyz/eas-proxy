@@ -29,9 +29,6 @@ contract GitcoinVerifier {
     }
 
     struct Stamp {
-        string provider;
-        string stampHash;
-        string expirationDate;
         bytes encodedData;
     }
 
@@ -50,9 +47,9 @@ contract GitcoinVerifier {
     bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256(
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
-    bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)");
+    bytes32 private constant STAMP_TYPEHASH = keccak256("Stamp(bytes encodedData)");
     bytes32 private constant PASSPORT_TYPEHASH = keccak256(
-        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce,uint256 fee)Stamp(string provider,string stampHash,string expirationDate,bytes encodedData)"
+        "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce,uint256 fee)Stamp(bytes encodedData)"
     );
 
     /**
@@ -96,9 +93,6 @@ contract GitcoinVerifier {
     function _hashStamp(Stamp memory stamp) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             STAMP_TYPEHASH,
-            keccak256(bytes(stamp.provider)),
-            keccak256(bytes(stamp.stampHash)),
-            keccak256(bytes(stamp.expirationDate)),
             keccak256(stamp.encodedData)
         ));
     }
