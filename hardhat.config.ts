@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
+import "hardhat-gas-reporter";
 
 dotenv.config();
 
@@ -23,6 +24,9 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS ? true : false,
   },
 };
 
