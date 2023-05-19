@@ -119,12 +119,13 @@ contract GitcoinVerifier {
      * @return The hash of the passport.
      */
     function _hashPassport(
-        Passport memory passport
+        Passport calldata passport
     ) internal pure returns (bytes32) {
         bytes32[] memory _array = new bytes32[](passport.stamps.length);
 
-        for (uint256 i = 0; i < passport.stamps.length; ++i) {
+        for (uint i; i < passport.stamps.length;) {
             _array[i] = _hashStamp(passport.stamps[i]);
+            unchecked { i++; }
         }
 
         bytes32 hashedArray = keccak256(abi.encodePacked(_array));
@@ -151,31 +152,27 @@ contract GitcoinVerifier {
      * @param r The r component of the signature.
      * @param s The s component of the signature.
      * @param passport The passport to verify.
-     * @return true if the signature is valid, false otherwise.
      */
     function _verify(
         uint8 v,
         bytes32 r,
         bytes32 s,
         Passport calldata passport
-    ) internal returns (bool) {
+    ) internal {
+        if (passport.nonce != recipientNonces[passport.recipient]){
+          revert("Invalid nonce");
+        }
+
         bytes32 passportHash = _hashPassport(passport);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
 
-        // Recover signer from the signature
-        address recoveredSigner = ECDSA.recover(digest, v, r, s);
         // Compare the recovered signer with the expected signer
-        bool validSigner = recoveredSigner == issuer;
-
-        // Check the nonce
-        bool validNonce = passport.nonce == recipientNonces[passport.recipient];
-        if (validNonce) {
-            // Increment the nonce for this recipient
-            recipientNonces[passport.recipient]++;
+        if(ECDSA.recover(digest, v, r, s) != issuer) {
+          revert("Invalid signature");
         }
 
-        // Only return true if the signer and nonce are both valid
-        return validSigner && validNonce;
+        // Increment the nonce for this recipient
+        recipientNonces[passport.recipient]++;
     }
 
     function getMultiAttestRequest(
@@ -189,7 +186,7 @@ contract GitcoinVerifier {
             passport.stamps.length
         );
 
-        for (uint i = 0; i < passport.stamps.length; i++) {
+        for (uint i; i < passport.stamps.length;) {
             Stamp memory stamp = passport.stamps[i];
             multiAttestationRequest[0].data[i] = AttestationRequestData({
                 recipient: passport.recipient, // The recipient of the attestation.
@@ -199,6 +196,8 @@ contract GitcoinVerifier {
                 data: stamp.encodedData, // Custom attestation data.
                 value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
             });
+
+            unchecked { i++; }
         }
 
         return multiAttestationRequest;
@@ -218,14 +217,12 @@ contract GitcoinVerifier {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public payable virtual {
-        if (_verify(v, r, s, passport) == false) {
-            revert("Invalid signature");
-        }
-
+    ) public payable {
         if (msg.value < passport.fee) {
             revert("Insufficient fee");
         }
+
+        _verify(v, r, s, passport);
 
         attester.addPassport(getMultiAttestRequest(schema, passport));
     }

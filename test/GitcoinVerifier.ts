@@ -246,7 +246,7 @@ describe("GitcoinVerifier", function () {
           value: fee1,
         }
       )
-    ).to.be.revertedWith("Invalid signature");
+    ).to.be.revertedWith("Invalid nonce");
   });
 
   it("should revert if fee is insufficient", async function () {
