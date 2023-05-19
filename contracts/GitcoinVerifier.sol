@@ -125,7 +125,7 @@ contract GitcoinVerifier {
 
         for (uint i; i < passport.stamps.length;) {
             _array[i] = _hashStamp(passport.stamps[i]);
-            unchecked { i++; }
+            unchecked { ++i; }
         }
 
         bytes32 hashedArray = keccak256(abi.encodePacked(_array));
@@ -197,7 +197,7 @@ contract GitcoinVerifier {
                 value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
             });
 
-            unchecked { i++; }
+            unchecked { ++i; }
         }
 
         return multiAttestationRequest;
