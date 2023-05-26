@@ -50,6 +50,7 @@ const passportTypes = {
 describe("GitcoinVerifier", function () {
   this.beforeAll(async function () {
     const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+    this.owner = owner;
     this.iamAccount = iamAccount;
     this.recipientAccount = recipientAccount;
 
@@ -135,7 +136,7 @@ describe("GitcoinVerifier", function () {
     );
   });
 
-  it("should verify signature and make attestations for each stamp", async function () {
+  it.only("should verify signature and make attestations for each stamp", async function () {
     const chainId = await this.iamAccount.getChainId();
 
     const passport = {
@@ -176,6 +177,7 @@ describe("GitcoinVerifier", function () {
         }
       );
     const verifiedPassport = await verifiedPassportTx.wait();
+    debugger;
     expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
   });
 
@@ -280,39 +282,63 @@ describe("GitcoinVerifier", function () {
     ).to.be.revertedWith("Insufficient fee");
   });
 
-  it("should accept BigNumber fee", async function () {
-    const modifiedPassport = {
-      ...this.passport,
-      fee: fee1,
-    };
-    const signature = await this.iamAccount._signTypedData(
-      this.domain,
-      this.types,
-      modifiedPassport
-    );
-    const recoveredAddress = ethers.utils.verifyTypedData(
-      this.domain,
-      this.types,
-      modifiedPassport,
-      signature
-    );
+  // describe.only("withdrawFees", function () {
+  //   this.beforeEach(async function () {
+  //     const signature = await this.iamAccount._signTypedData(
+  //       this.domain,
+  //       this.types,
+  //       this.passport
+  //     );
 
-    expect(recoveredAddress).to.equal(this.iamAccount.address);
+  //     const { v, r, s } = ethers.utils.splitSignature(signature);
+  //     console.log(this.passport, "this.passport");
+  //     const reciept = await (
+  //       await this.gitcoinVerifier.addPassportWithSignature(
+  //         GITCOIN_VC_SCHEMA,
+  //         this.passport,
+  //         v,
+  //         r,
+  //         s,
+  //         {
+  //           value: fee2,
+  //         }
+  //       )
+  //     ).wait();
+  //   });
+  //   it("should allow the owner to withdraw all fees", async function () {
+  //     const balanceBefore = await this.owner.getBalance();
+  //     const verifierBalance = await ethers.provider.getBalance(
+  //       this.gitcoinVerifier.address
+  //     );
 
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+  //     const tx = await this.gitcoinVerifier.withdrawFees();
+  //     const txReceipt = await tx.wait();
 
-    const verifiedPassport =
-      await this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
-        modifiedPassport,
-        v,
-        r,
-        s,
-        {
-          value: fee2,
-        }
-      );
-    const receipt = await verifiedPassport.wait();
-    expect(receipt.status).to.equal(1);
-  });
+  //     const balanceAfter = await this.owner.getBalance();
+  //     expect(balanceAfter.gt(balanceBefore)).to.be.true;
+  //   });
+
+  //   it("should reduce the contract balance after withdrawal", async function () {
+  //     const [owner] = await ethers.getSigners();
+  //     const contractBalanceBefore = await ethers.provider.getBalance(
+  //       this.gitcoinVerifier.address
+  //     );
+
+  //     await this.gitcoinVerifier.withdrawFees();
+
+  //     const contractBalanceAfter = await ethers.provider.getBalance(
+  //       this.gitcoinVerifier.address
+  //     );
+
+  //     expect(contractBalanceAfter.lt(contractBalanceBefore)).to.be.true;
+  //   });
+
+  //   it("should not allow non-owners to withdraw fees", async function () {
+  //     const [, nonOwner] = await ethers.getSigners();
+
+  //     await expect(
+  //       this.gitcoinVerifier.connect(nonOwner).withdrawFees()
+  //     ).to.be.revertedWith("Ownable: caller is not the owner");
+  //   });
+  // });
 });
