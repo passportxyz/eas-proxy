@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL
-pragma solidity >=0.8.4;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -16,10 +16,10 @@ contract GitcoinVerifier is Ownable {
     using ECDSA for bytes32;
 
     // Instance of the GitcoinAttester contract
-    GitcoinAttester public attester;
+    GitcoinAttester public immutable attester;
 
     // Address of the issuer of the passport
-    address public issuer;
+    address public immutable issuer;
 
     // Name of the contract
     string public name;
@@ -28,7 +28,7 @@ contract GitcoinVerifier is Ownable {
     mapping(address => uint) public recipientNonces;
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
-    bytes32 private DOMAIN_SEPARATOR;
+    bytes32 private immutable DOMAIN_SEPARATOR;
 
     /**
      * @dev EIP712Domain represents the domain separator struct for EIP-712 typed data hashing.
@@ -125,21 +125,6 @@ contract GitcoinVerifier is Ownable {
     function _hashStamp(Stamp memory stamp) internal pure returns (bytes32) {
         return
             keccak256(abi.encode(STAMP_TYPEHASH, keccak256(stamp.encodedData)));
-    }
-
-    /**
-     * @dev Calculates the hash of an array of strings.
-     * @param array The array of strings to hash.
-     * @return result The hash of the array of strings.
-     */
-    function _hashArray(
-        string[] calldata array
-    ) internal pure returns (bytes32 result) {
-        bytes32[] memory _array = new bytes32[](array.length);
-        for (uint256 i = 0; i < array.length; ++i) {
-            _array[i] = keccak256(bytes(array[i]));
-        }
-        result = keccak256(abi.encodePacked(_array));
     }
 
     /**
@@ -264,5 +249,13 @@ contract GitcoinVerifier is Ownable {
         _verify(v, r, s, passport);
 
         attester.addPassport(getMultiAttestRequest(schema, passport));
+    }
+
+    /**
+     * @dev Allows the contract owner to withdraw the contract's balance.
+     */
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        payable(owner()).transfer(balance);
     }
 }
