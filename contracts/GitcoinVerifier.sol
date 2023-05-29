@@ -15,14 +15,24 @@ import "./GitcoinAttester.sol";
 contract GitcoinVerifier is Ownable {
     using ECDSA for bytes32;
 
+    // Instance of the GitcoinAttester contract
     GitcoinAttester public attester;
+
+    // Address of the issuer of the passport
     address public issuer;
+
+    // Name of the contract
     string public name;
+
+    // Nonces for each recipient address
     mapping(address => uint) public recipientNonces;
 
     // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
     bytes32 private DOMAIN_SEPARATOR;
 
+    /**
+     * @dev EIP712Domain represents the domain separator struct for EIP-712 typed data hashing.
+     */
     struct EIP712Domain {
         string name;
         string version;
@@ -30,10 +40,16 @@ contract GitcoinVerifier is Ownable {
         address verifyingContract;
     }
 
+    /**
+     * @dev Stamp represents an attestation stamp with encoded data.
+     */
     struct Stamp {
         bytes encodedData;
     }
 
+    /**
+     * @dev Passport represents a passport object with multiple stamps and associated information.
+     */
     struct Passport {
         Stamp[] stamps;
         address recipient;
@@ -45,13 +61,17 @@ contract GitcoinVerifier is Ownable {
         uint256 fee;
     }
 
-    // Define the type hashes
+    // Hash type for the EIP712 domain separator
     bytes32 private constant EIP712DOMAIN_TYPEHASH =
         keccak256(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
         );
+    
+    // Hash type for the Stamp struct
     bytes32 private constant STAMP_TYPEHASH =
         keccak256("Stamp(bytes encodedData)");
+
+    // Hash type for the Passport struct
     bytes32 private constant PASSPORT_TYPEHASH =
         keccak256(
             "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce,uint256 fee)Stamp(bytes encodedData)"
@@ -186,6 +206,12 @@ contract GitcoinVerifier is Ownable {
         recipientNonces[passport.recipient]++;
     }
 
+    /**
+     * @dev Creates a multi-attestation request based on the given schema and passport.
+     * @param schema The schema to use for the attestation request.
+     * @param passport The passport containing the stamps for the attestation request.
+     * @return The array of multi-attestation requests.
+     */
     function getMultiAttestRequest(
         bytes32 schema,
         Passport calldata passport

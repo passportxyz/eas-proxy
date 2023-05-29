@@ -8,7 +8,7 @@ import "hardhat-gas-reporter";
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.18",
+  solidity: ">=0.8.4 <0.9.0",
   networks: {
     hardhat: {
       forking: {
