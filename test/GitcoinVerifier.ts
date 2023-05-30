@@ -136,7 +136,7 @@ describe("GitcoinVerifier", function () {
     );
   });
 
-  it.only("should verify signature and make attestations for each stamp", async function () {
+  it("should verify signature and make attestations for each stamp", async function () {
     const chainId = await this.iamAccount.getChainId();
 
     const passport = {
@@ -177,7 +177,6 @@ describe("GitcoinVerifier", function () {
         }
       );
     const verifiedPassport = await verifiedPassportTx.wait();
-    debugger;
     expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
   });
 
@@ -282,63 +281,88 @@ describe("GitcoinVerifier", function () {
     ).to.be.revertedWith("Insufficient fee");
   });
 
-  // describe.only("withdrawFees", function () {
-  //   this.beforeEach(async function () {
-  //     const signature = await this.iamAccount._signTypedData(
-  //       this.domain,
-  //       this.types,
-  //       this.passport
-  //     );
+  describe("withdrawFees", function () {
+    this.beforeEach(async function () {
+      const signature = await this.iamAccount._signTypedData(
+        this.domain,
+        this.types,
+        this.passport
+      );
 
-  //     const { v, r, s } = ethers.utils.splitSignature(signature);
-  //     console.log(this.passport, "this.passport");
-  //     const reciept = await (
-  //       await this.gitcoinVerifier.addPassportWithSignature(
-  //         GITCOIN_VC_SCHEMA,
-  //         this.passport,
-  //         v,
-  //         r,
-  //         s,
-  //         {
-  //           value: fee2,
-  //         }
-  //       )
-  //     ).wait();
-  //   });
-  //   it("should allow the owner to withdraw all fees", async function () {
-  //     const balanceBefore = await this.owner.getBalance();
-  //     const verifierBalance = await ethers.provider.getBalance(
-  //       this.gitcoinVerifier.address
-  //     );
+      const { v, r, s } = ethers.utils.splitSignature(signature);
+      await (
+        await this.gitcoinVerifier.addPassportWithSignature(
+          GITCOIN_VC_SCHEMA,
+          this.passport,
+          v,
+          r,
+          s,
+          {
+            value: fee2,
+          }
+        )
+      ).wait();
+    });
+    it("should allow the owner to withdraw all fees", async function () {
+      const balanceBefore = await this.owner.getBalance();
+      const verifierBalance = await ethers.provider.getBalance(
+        this.gitcoinVerifier.address
+      );
 
-  //     const tx = await this.gitcoinVerifier.withdrawFees();
-  //     const txReceipt = await tx.wait();
+      const tx = await this.gitcoinVerifier.withdrawFees();
+      await tx.wait();
 
-  //     const balanceAfter = await this.owner.getBalance();
-  //     expect(balanceAfter.gt(balanceBefore)).to.be.true;
-  //   });
+      const ownerBalanceAfter = await this.owner.getBalance();
 
-  //   it("should reduce the contract balance after withdrawal", async function () {
-  //     const [owner] = await ethers.getSigners();
-  //     const contractBalanceBefore = await ethers.provider.getBalance(
-  //       this.gitcoinVerifier.address
-  //     );
+      const contractBalanceAfter = await ethers.provider.getBalance(
+        this.gitcoinVerifier.address
+      );
 
-  //     await this.gitcoinVerifier.withdrawFees();
+      expect(ownerBalanceAfter.gt(balanceBefore)).to.be.true;
+      expect(contractBalanceAfter.eq(0)).to.be.true;
+    });
 
-  //     const contractBalanceAfter = await ethers.provider.getBalance(
-  //       this.gitcoinVerifier.address
-  //     );
+    it("should reduce the contract balance after withdrawal", async function () {
+      const [owner] = await ethers.getSigners();
+      const contractBalanceBefore = await ethers.provider.getBalance(
+        this.gitcoinVerifier.address
+      );
 
-  //     expect(contractBalanceAfter.lt(contractBalanceBefore)).to.be.true;
-  //   });
+      await this.gitcoinVerifier.withdrawFees();
 
-  //   it("should not allow non-owners to withdraw fees", async function () {
-  //     const [, nonOwner] = await ethers.getSigners();
+      const contractBalanceAfter = await ethers.provider.getBalance(
+        this.gitcoinVerifier.address
+      );
 
-  //     await expect(
-  //       this.gitcoinVerifier.connect(nonOwner).withdrawFees()
-  //     ).to.be.revertedWith("Ownable: caller is not the owner");
-  //   });
-  // });
+      expect(contractBalanceAfter.lt(contractBalanceBefore)).to.be.true;
+      expect(contractBalanceAfter.eq(0)).to.be.true;
+    });
+
+    it("should not allow non-owners to withdraw fees", async function () {
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(
+        this.gitcoinVerifier.connect(nonOwner).withdrawFees()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
+  describe("Ownership", function () {
+    it("should not allow non owners to transfer ownership", async function () {
+      const [, nonOwner] = await ethers.getSigners();
+
+      await expect(
+        this.gitcoinVerifier
+          .connect(nonOwner)
+          .transferOwnership(nonOwner.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("should allow owner to transfer ownership", async function () {
+      await this.gitcoinVerifier.transferOwnership(this.iamAccount.address);
+      expect(await this.gitcoinVerifier.owner()).to.equal(
+        this.iamAccount.address
+      );
+    });
+  });
 });
