@@ -9,7 +9,7 @@ import 'solidity-coverage'
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: ">=0.8.4 <0.9.0",
+  // solidity: ">=0.8.4 <0.9.0",
   networks: {
     hardhat: {
       forking: {
@@ -28,6 +28,27 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
+  },
+  solidity: {
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      viaIR: true,
+    },
+
+    compilers: [
+      {
+        version: "0.8.0",
+      },
+      {
+        version: "0.8.9",
+      },
+      {
+        version: "0.8.19",
+      },
+    ],
   },
 };
 
