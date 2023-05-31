@@ -58,6 +58,14 @@ const attestationRequest = {
   value: 0,
 };
 
+const gitcoinVCSchema =
+  "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
+
+const multiAttestationRequests = {
+  schema: gitcoinVCSchema,
+  data: [attestationRequest, attestationRequest, attestationRequest],
+};
+
 describe("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
@@ -66,7 +74,6 @@ describe("GitcoinAttester", function () {
   describe("Deployment", function () {
     let gitcoinAttester: GitcoinAttester,
       eas,
-      gitcoinVCSchema: string,
       EASContractAddress: string,
       owner: any,
       iamAccount: any,
@@ -87,17 +94,18 @@ describe("GitcoinAttester", function () {
         // Contract: 0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0
         // Deployment and ABI: SchemaRegistry.json
         EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
-        gitcoinVCSchema =
-          "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
 
         // Contracts are deployed using the first signer/account by default
-        const [ownerAccount, otherAccount, recipientAccount] = await ethers.getSigners();
+        const [ownerAccount, otherAccount, recipientAccount] =
+          await ethers.getSigners();
 
         owner = ownerAccount;
         iamAccount = otherAccount;
         recipient = recipientAccount;
 
-        const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+        const GitcoinAttester = await ethers.getContractFactory(
+          "GitcoinAttester"
+        );
         gitcoinAttester = await GitcoinAttester.connect(owner).deploy();
 
         const provider = ethers.getDefaultProvider();
@@ -110,7 +118,9 @@ describe("GitcoinAttester", function () {
         // MUST be a signer to do write operations!
         eas.connect(provider);
 
-        const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
+        const GitcoinVerifier = await ethers.getContractFactory(
+          "GitcoinVerifier"
+        );
         gitcoinVerifier = await GitcoinVerifier.deploy(
           iamAccount.address,
           gitcoinAttester.address
@@ -123,15 +133,12 @@ describe("GitcoinAttester", function () {
     it("Should write multiple attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
 
-      const multiAttestationRequests = {
-        schema: gitcoinVCSchema,
-        data: [attestationRequest, attestationRequest, attestationRequest],
-      };
-
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
-      const resultTx = await gitcoinAttester.addPassport([multiAttestationRequests]);
+      const resultTx = await gitcoinAttester.addPassport([
+        multiAttestationRequests,
+      ]);
       console.log("resultTx", resultTx);
       const result = await resultTx.wait();
       console.log("result", result);
@@ -139,25 +146,29 @@ describe("GitcoinAttester", function () {
       console.log("result.logs[0]", result.logs[0]);
       console.log("result.logs[0].data", result.logs[0].data);
 
-      expect(result.events?.length).to.equal(multiAttestationRequests.data.length);
+      expect(result.events?.length).to.equal(
+        multiAttestationRequests.data.length
+      );
     });
 
     it("Should not allow non-whitelisted verifier to write attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
-      const multiAttestationRequests = {
-        schema: gitcoinVCSchema,
-        data: [attestationRequest, attestationRequest, attestationRequest],
-      };
       try {
-        await gitcoinAttester.connect(iamAccount).addPassport([multiAttestationRequests]);
+        await gitcoinAttester
+          .connect(iamAccount)
+          .addPassport([multiAttestationRequests]);
       } catch (e: any) {
-        expect(e.message).to.include("Only authorized verifiers can call this function");
+        expect(e.message).to.include(
+          "Only authorized verifiers can call this function"
+        );
       }
     });
 
     it("Should fail when non-owner tries to add a verifier", async function () {
       try {
-        await gitcoinAttester.connect(iamAccount).addVerifier(recipient.address);
+        await gitcoinAttester
+          .connect(iamAccount)
+          .addVerifier(recipient.address);
       } catch (e: any) {
         expect(e.message).to.include("Ownable: caller is not the owner");
       }
@@ -172,7 +183,9 @@ describe("GitcoinAttester", function () {
     });
 
     it("Should allow owner add and remove verifier", async function () {
-      const addTx = await gitcoinAttester.connect(owner).addVerifier(recipient.address);
+      const addTx = await gitcoinAttester
+        .connect(owner)
+        .addVerifier(recipient.address);
       addTx.wait();
 
       expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(true);
@@ -182,11 +195,15 @@ describe("GitcoinAttester", function () {
         .removeVerifier(recipient.address);
       removeTx.wait();
 
-      expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(false);
+      expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(
+        false
+      );
     });
 
     it("Should revert when adding an existing verifier", async function () {
-      const tx = await gitcoinAttester.connect(owner).addVerifier(recipient.address);
+      const tx = await gitcoinAttester
+        .connect(owner)
+        .addVerifier(recipient.address);
       tx.wait();
 
       expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(true);
