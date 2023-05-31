@@ -9,9 +9,6 @@ import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAtte
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
 contract GitcoinAttester is Ownable {
-    // The address of the EAS contract.
-    address private easContractAddress;
-
     // An allow-list of Verifiers that are authorized and trusted to call the addPassport function.
     mapping(address => bool) public verifiers;
 
@@ -49,8 +46,7 @@ contract GitcoinAttester is Ownable {
      * @param _easContractAddress The address of the EAS contract.
      */
     function setEASAddress(address _easContractAddress) public onlyOwner {
-        easContractAddress = _easContractAddress;
-        eas = IEAS(easContractAddress);
+        eas = IEAS(_easContractAddress);
     }
 
     /**

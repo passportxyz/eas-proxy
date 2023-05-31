@@ -4,6 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-gas-reporter";
+import 'solidity-coverage'
 
 dotenv.config();
 
