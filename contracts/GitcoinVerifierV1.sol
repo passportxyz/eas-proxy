@@ -8,9 +8,9 @@ import "./GitcoinAttester.sol";
 
 /**
  * @title GitcoinVerifier
- * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
+ * @notice Evaluation for writing stamps into an attestation of this form:  "bytes32[] providers, bytes32[] hashes", where providers is a bit array and hashes the array of bytes32 hashes
  */
-contract GitcoinVerifier {
+contract GitcoinVerifierV1 {
     using ECDSA for bytes32;
 
     GitcoinAttester public attester;

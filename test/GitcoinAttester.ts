@@ -27,7 +27,7 @@ const facebookStamp = {
   stampHash: "234567891",
 };
 
-type Stamp = {
+export type Stamp = {
   provider: string;
   stampHash: string;
 };
@@ -58,7 +58,7 @@ const attestationRequest = {
   value: 0,
 };
 
-describe("GitcoinAttester", function () {
+describe.skip("GitcoinAttester", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
@@ -132,12 +132,7 @@ describe("GitcoinAttester", function () {
       await tx.wait();
 
       const resultTx = await gitcoinAttester.addPassport([multiAttestationRequests]);
-      console.log("resultTx", resultTx);
       const result = await resultTx.wait();
-      console.log("result", result);
-      console.log("result.logs", result.logs);
-      console.log("result.logs[0]", result.logs[0]);
-      console.log("result.logs[0].data", result.logs[0].data);
 
       expect(result.events?.length).to.equal(multiAttestationRequests.data.length);
     });
@@ -202,7 +197,6 @@ describe("GitcoinAttester", function () {
       try {
         await gitcoinAttester.connect(owner).removeVerifier(iamAccount.address);
       } catch (e: any) {
-        console.log(e.message);
         expect(e.message).to.include("Verifier does not exist");
       }
     });

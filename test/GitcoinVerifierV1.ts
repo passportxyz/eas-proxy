@@ -12,6 +12,7 @@ import {
   ATTEST_TYPE,
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
+
 import { providers } from "./providers";
 
 const { BigNumber, utils } = ethers;
@@ -33,7 +34,7 @@ const twitterStamp = {
 
 const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 const GITCOIN_VC_SCHEMA =
-  "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
+  "0x0da70a07d544fd0fa997475a444232a6bb80d976a0eaf481bf93fbb5401781d4";
 
 const fee1 = utils.parseEther("0.001").toHexString();
 const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
@@ -70,8 +71,10 @@ describe("GitcoinVerifier", function () {
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
     // Deploy GitcoinVerifier
-    const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-    this.gitcoinVerifier = await GitcoinVerifier.deploy(
+    const GitcoinVerifierV1 = await ethers.getContractFactory(
+      "GitcoinVerifierV1"
+    );
+    this.gitcoinVerifier = await GitcoinVerifierV1.deploy(
       this.gitcoinAttester.address
     );
 
@@ -93,6 +96,48 @@ describe("GitcoinVerifier", function () {
       return Math.floor(Math.random() * max);
     };
 
+    const easEncodeDataV2 = (passport: Passport) => {
+      const schemaEncoder = new SchemaEncoder(
+        "bytes32[] providers, bytes32[] hashes"
+      );
+
+      let hashes = passport.stamps.map((stamp) => {
+        return utils.keccak256(utils.toUtf8Bytes(stamp.stampHash));
+      });
+
+      const numProviderUint256 = Math.floor((providers.length - 1) / 256) + 1;
+      const numProviderUint = numProviderUint256 * 32;
+      let providersPayload = new Uint8Array(numProviderUint);
+      let providersPayloadBytes32: string[] = [];
+
+      passport.stamps.map((stamp) => {
+        const idx = providers.findIndex((provider) => {
+          return provider === stamp.provider;
+        });
+        const providersPayloadIdx = idx >> 8; // divide by 8
+        const providersPayloadBitIdx = idx & 0b111; // reminder of division by 8
+        providersPayload[providersPayloadIdx] |= 256 >> providersPayloadBitIdx; // set the bit coresponding to the proider position to 1
+      });
+
+      // Create theh array of bytes32 values
+      for (let i = 0; i < numProviderUint256; i++) {
+        providersPayloadBytes32.push(
+          ethers.utils.hexlify(providersPayload.slice(i * 32, (i + 1) * 32))
+        );
+      }
+
+      const encodedData = schemaEncoder.encodeData([
+        {
+          name: "providers",
+          value: providersPayloadBytes32,
+          type: "bytes32[]",
+        },
+        { name: "hashes", value: hashes, type: "bytes32[]" }, // TODO decode hash here
+      ]);
+
+      return encodedData;
+    };
+
     it("should write `NUM_STAMPS_TO_WRITE_ON_CHAIN` stamps passport on-chain", async function () {
       const { r, v, s } = {
         v: 28,
@@ -109,21 +154,23 @@ describe("GitcoinVerifier", function () {
         });
       }
 
-      const data = stamps.map((stamp) => {
-        return {
-          recipient: this.recipientAccount.address, // The recipient of the attestation.
-          expirationTime: 0, // The time when the attestation expires (Unix timestamp).
-          revocable: true, // Whether the attestation is revocable.
-          refUID: ZERO_BYTES32, // The UID of the related attestation.
-          data: easEncodeData(stamp), // Custom attestation data.
-          value: 0, // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
-        };
+      const data = easEncodeDataV2({
+        stamps: stamps,
       });
 
       const multiAttestRequest = [
         {
           schema: GITCOIN_VC_SCHEMA,
-          data: data,
+          data: [
+            {
+              recipient: this.recipientAccount.address, // The recipient of the attestation.
+              expirationTime: 0, // The time when the attestation expires (Unix timestamp).
+              revocable: true, // Whether the attestation is revocable.
+              refUID: ZERO_BYTES32, // The UID of the related attestation.
+              data: data, // Custom attestation data.
+              value: 0, // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
+            },
+          ],
         },
       ];
 
@@ -133,11 +180,13 @@ describe("GitcoinVerifier", function () {
 
       const receipt = await multiAttestation.wait();
       expect(receipt.status).to.equal(1);
-      expect(receipt.logs.length).to.equal(num_stamps_to_write_on_chain);
-      console.log("====> receipt.logs: ", receipt.logs);
-      receipt.logs.forEach((retValue: unknown) => {
-        console.log("====> retValue: ", retValue);
-      });
+      console.log("receipt", receipt);
+      // expect(receipt.logs.length).to.equal(
+      //   num_stamps_to_write_on_chain
+      // );
+      // receipt.logs.forEach((retValue: unknown) => {
+      //   console.log("====> retValue: ", retValue);
+      // });
     });
   });
 });

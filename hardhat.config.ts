@@ -27,6 +27,8 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
+    gasPrice: 64,
+    gasPriceApi: "https://api.etherscan.io/api?module=proxy&action=eth_gasPrice",
   },
 };
 
