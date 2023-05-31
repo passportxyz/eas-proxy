@@ -50,6 +50,7 @@ const passportTypes = {
 describe("GitcoinVerifier", function () {
   this.beforeAll(async function () {
     const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+    this.owner = owner;
     this.iamAccount = iamAccount;
     this.owner = owner;
     this.recipientAccount = recipientAccount;
@@ -220,7 +221,7 @@ describe("GitcoinVerifier", function () {
     );
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    //calling addPassportWithSignature 1st time
+    // calling addPassportWithSignature 1st time
     const result = await (
       await this.gitcoinVerifier.addPassportWithSignature(
         GITCOIN_VC_SCHEMA,
@@ -316,6 +317,7 @@ describe("GitcoinVerifier", function () {
     const receipt = await verifiedPassport.wait();
     expect(receipt.status).to.equal(1);
   });
+
   describe("withdrawFees", function () {
     this.beforeEach(async function () {
       const signature = await this.iamAccount._signTypedData(
