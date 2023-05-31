@@ -2,6 +2,8 @@
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 import "./GitcoinAttester.sol";
@@ -10,7 +12,7 @@ import "./GitcoinAttester.sol";
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
  */
-contract GitcoinVerifier {
+contract GitcoinVerifier is Ownable {
     using ECDSA for bytes32;
 
     GitcoinAttester public attester;
@@ -89,6 +91,13 @@ contract GitcoinVerifier {
     }
 
     /**
+    * @notice Allow owner of the contract to withdraw earned fees
+    */
+    function withdrawFees() public onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    /**
      * @dev Calculates the hash of a stamp using the STAMP_TYPEHASH.
      * @param stamp The stamp to be hashed.
      * @return The hash of the stamp.
@@ -123,9 +132,11 @@ contract GitcoinVerifier {
     ) internal pure returns (bytes32) {
         bytes32[] memory _array = new bytes32[](passport.stamps.length);
 
-        for (uint i; i < passport.stamps.length;) {
+        for (uint i; i < passport.stamps.length; ) {
             _array[i] = _hashStamp(passport.stamps[i]);
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         bytes32 hashedArray = keccak256(abi.encodePacked(_array));
@@ -159,8 +170,8 @@ contract GitcoinVerifier {
         bytes32 s,
         Passport calldata passport
     ) internal {
-        if (passport.nonce != recipientNonces[passport.recipient]){
-          revert("Invalid nonce");
+        if (passport.nonce != recipientNonces[passport.recipient]) {
+            revert("Invalid nonce");
         }
 
         bytes32 passportHash = _hashPassport(passport);
@@ -168,7 +179,7 @@ contract GitcoinVerifier {
 
         // Compare the recovered signer with the expected signer
         if(ECDSA.recover(digest, v, r, s) != issuer) {
-          revert("Invalid signature");
+            revert("Invalid signature");
         }
 
         // Increment the nonce for this recipient
@@ -186,7 +197,7 @@ contract GitcoinVerifier {
             passport.stamps.length
         );
 
-        for (uint i; i < passport.stamps.length;) {
+        for (uint i; i < passport.stamps.length; ) {
             Stamp memory stamp = passport.stamps[i];
             multiAttestationRequest[0].data[i] = AttestationRequestData({
                 recipient: passport.recipient, // The recipient of the attestation.
@@ -197,7 +208,9 @@ contract GitcoinVerifier {
                 value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
             });
 
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         return multiAttestationRequest;
