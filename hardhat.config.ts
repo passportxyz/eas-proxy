@@ -4,12 +4,11 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-gas-reporter";
-import 'solidity-coverage'
+import "solidity-coverage";
 
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  // solidity: ">=0.8.4 <0.9.0",
   networks: {
     hardhat: {
       forking: {
