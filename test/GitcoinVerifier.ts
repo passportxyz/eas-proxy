@@ -149,35 +149,39 @@ describe("GitcoinVerifier", function () {
         { name: "data", type: "bytes" },
         { name: "value", type: "uint256" },
       ],
-      // MultiAttestationRequest: [
-
-      // ],
+      MultiAttestationRequest: [
+        { name: "schema", type: "bytes32" },
+        { name: "data", type: "AttestationRequestData[]" },
+      ],
       Passport: [
-        { name: "datas", type: "AttestationRequestData[]" },
+        { name: "multiAttestationRequest", type: "MultiAttestationRequest" },
         { name: "nonce", type: "uint256" },
         { name: "fee", type: "uint256" },
       ],
     };
 
     const passport = {
-      datas: [
-        {
-          recipient: this.recipientAccount.address,
-          expirationTime: NO_EXPIRATION,
-          revocable: true,
-          refUID: ZERO_BYTES32,
-          data: easEncodeData(googleStamp),
-          value: 0,
-        },
-        {
-          recipient: this.recipientAccount.address,
-          expirationTime: NO_EXPIRATION,
-          revocable: true,
-          refUID: ZERO_BYTES32,
-          data: easEncodeData(facebookStamp),
-          value: 0,
-        },
-      ],
+      multiAttestationRequest: {
+        schema: GITCOIN_VC_SCHEMA,
+        data: [
+          {
+            recipient: this.recipientAccount.address,
+            expirationTime: NO_EXPIRATION,
+            revocable: true,
+            refUID: ZERO_BYTES32,
+            data: easEncodeData(googleStamp),
+            value: 0,
+          },
+          {
+            recipient: this.recipientAccount.address,
+            expirationTime: NO_EXPIRATION,
+            revocable: true,
+            refUID: ZERO_BYTES32,
+            data: easEncodeData(facebookStamp),
+            value: 0,
+          },
+        ],
+      },
       nonce: this.passport.nonce,
       fee: fee1,
     };
@@ -187,6 +191,15 @@ describe("GitcoinVerifier", function () {
       passportTypes,
       passport
     );
+
+    const recoveredAddress = ethers.utils.verifyTypedData(
+      this.domain,
+      passportTypes,
+      passport,
+      signature
+    );
+
+    expect(recoveredAddress).to.equal(this.iamAccount.address);
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 

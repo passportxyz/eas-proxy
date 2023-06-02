@@ -58,7 +58,7 @@ contract GitcoinVerifier is Ownable {
    * @dev Passport represents a passport object with multiple stamps and associated information.
    */
   struct Passport {
-    AttestationRequestData[] datas;
+    MultiAttestationRequest multiAttestationRequest;
     uint256 nonce;
     uint256 fee;
   }
@@ -73,10 +73,13 @@ contract GitcoinVerifier is Ownable {
   bytes32 private constant STAMP_TYPEHASH =
     keccak256("AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)");
 
+  bytes32 private constant MULTI_ATTESTATION_REQUEST_TYPEHASH =
+    keccak256("MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)");    
+
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
     keccak256(
-      "Passport(AttestationRequestData[] datas,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)"
+      "Passport(MultiAttestationRequest multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
     );
 
   /**
@@ -112,53 +115,38 @@ contract GitcoinVerifier is Ownable {
     );
   }
 
-  /**
-   * @dev Calculates the hash of a stamp using the STAMP_TYPEHASH.
-   * @param data The stamp to be hashed.
-   * @return The hash of the stamp.
-   */
-  function _hashStamp(AttestationRequestData memory data) internal pure returns (bytes32) {
-    return keccak256(
-        abi.encode(
-            STAMP_TYPEHASH,
-            data.recipient,
-            data.expirationTime,
-            data.revocable,
-            data.refUID,
-            keccak256(data.data),
-            data.value
-        )
-    );
+  function hashAttestationRequestData(AttestationRequestData memory _data) private pure returns (bytes32) {
+    return keccak256(abi.encode(
+      STAMP_TYPEHASH,
+      _data.recipient,
+      _data.expirationTime,
+      _data.revocable,
+      _data.refUID,
+      keccak256(_data.data),
+      _data.value
+    ));
   }
 
-  /**
-   * @dev Calculates the hash of a passport.
-   * @param passport The passport to hash.
-   * @return The hash of the passport.
-   */
-  function _hashPassport(
-    Passport calldata passport
-  ) internal pure returns (bytes32) {
-    bytes32[] memory _array = new bytes32[](passport.datas.length);
-
-    for (uint i; i < passport.datas.length; ) {
-      _array[i] = _hashStamp(passport.datas[i]);
-      unchecked {
-        ++i;
-      }
+  function hashMultiAttestationRequest(MultiAttestationRequest memory _request) private pure returns (bytes32) {
+    bytes32[] memory dataHashes = new bytes32[](_request.data.length);
+    for (uint i = 0; i < _request.data.length; i++) {
+      dataHashes[i] = hashAttestationRequestData(_request.data[i]);
     }
 
-    bytes32 hashedArray = keccak256(abi.encodePacked(_array));
+    return keccak256(abi.encode(
+      MULTI_ATTESTATION_REQUEST_TYPEHASH,
+      _request.schema,
+      keccak256(abi.encodePacked(dataHashes))
+    ));
+  }
 
-    return
-      keccak256(
-        abi.encode(
-          PASSPORT_TYPEHASH,
-          hashedArray,
-          passport.nonce,
-          passport.fee
-        )
-      );
+  function _hashPassport(Passport memory _passport) private pure returns (bytes32) {
+    return keccak256(abi.encode(
+      PASSPORT_TYPEHASH,
+      hashMultiAttestationRequest(_passport.multiAttestationRequest),
+      _passport.nonce,
+      _passport.fee
+    ));
   }
 
   /**
