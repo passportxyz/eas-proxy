@@ -32,7 +32,21 @@ type Stamp = {
   stampHash: string;
 };
 
-export const easEncodeData = (stamp: Stamp) => {
+type Score = {
+  score: number;
+  scorer_id: number;
+};
+
+export const easEncodeScore = (score: Score) => {
+  const schemaEncoder = new SchemaEncoder("uint32 score,uint32 scorer_id");
+  const encodedData = schemaEncoder.encodeData([
+    { name: "score", value: score.score, type: "uint32" },
+    { name: "scorer_id", value: score.scorer_id, type: "uint32" },
+  ]);
+  return encodedData;
+};
+
+export const easEncodeStamp = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
   let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
 
@@ -43,7 +57,7 @@ export const easEncodeData = (stamp: Stamp) => {
   return encodedData;
 };
 
-const encodedData = easEncodeData({
+const encodedData = easEncodeStamp({
   provider: "TestProvider",
   stampHash: "234567890",
 });

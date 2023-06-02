@@ -4,7 +4,7 @@ import {
   NO_EXPIRATION,
   ZERO_BYTES32,
 } from "@ethereum-attestation-service/eas-sdk";
-import { easEncodeData } from "./GitcoinAttester";
+import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
 
 const { BigNumber, utils } = ethers;
 
@@ -23,9 +23,12 @@ const twitterStamp = {
   stampHash: "234567891",
 };
 
+// SEPOLIA SPECIFIC
 const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
-const GITCOIN_VC_SCHEMA =
+const GITCOIN_STAMP_SCHEMA =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
+const GITCOIN_SCORE_SCHEMA =
+  "0x0f2928937d46e9ec78b350750185d2f495e708f79b383cef23b903fe120d9a2e";
 
 const fee1 = utils.parseEther("0.001").toHexString();
 const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
@@ -60,6 +63,8 @@ describe("GitcoinVerifier", function () {
     this.gitcoinAttester = await GitcoinAttester.deploy();
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
+    console.log(this.gitcoinAttester.address, "this.gitcoinAttester.address");
+
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
     this.gitcoinVerifier = await GitcoinVerifier.deploy(
@@ -93,13 +98,13 @@ describe("GitcoinVerifier", function () {
     this.passport = {
       stamps: [
         {
-          encodedData: easEncodeData(googleStamp),
+          encodedData: easEncodeStamp(googleStamp),
         },
         {
-          encodedData: easEncodeData(googleStamp),
+          encodedData: easEncodeStamp(googleStamp),
         },
         {
-          encodedData: easEncodeData(twitterStamp),
+          encodedData: easEncodeStamp(twitterStamp),
         },
       ],
       recipient: this.recipientAccount.address,
@@ -114,10 +119,10 @@ describe("GitcoinVerifier", function () {
       return {
         stamps: [
           {
-            encodedData: easEncodeData(googleStamp),
+            encodedData: easEncodeStamp(googleStamp),
           },
           {
-            encodedData: easEncodeData(twitterStamp),
+            encodedData: easEncodeStamp(twitterStamp),
           },
         ],
         recipient: this.recipientAccount.address,
@@ -137,7 +142,7 @@ describe("GitcoinVerifier", function () {
     );
   });
 
-  it.only("should verify signature and make attestations for each stamp", async function () {
+  it("should verify signature and make attestations for each stamp", async function () {
     const chainId = await this.iamAccount.getChainId();
 
     const passportTypes = {
@@ -160,17 +165,27 @@ describe("GitcoinVerifier", function () {
       ],
     };
 
+    const scorer1Score = {
+      score: 100,
+      scorer_id: 420,
+    };
+
+    const scorer2Score = {
+      score: 200,
+      scorer_id: 240,
+    };
+
     const passport = {
       multiAttestationRequest: [
         {
-          schema: GITCOIN_VC_SCHEMA,
+          schema: GITCOIN_STAMP_SCHEMA,
           data: [
             {
               recipient: this.recipientAccount.address,
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodeData(googleStamp),
+              data: easEncodeStamp(googleStamp),
               value: 0,
             },
             {
@@ -178,20 +193,20 @@ describe("GitcoinVerifier", function () {
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodeData(facebookStamp),
+              data: easEncodeStamp(facebookStamp),
               value: 0,
             },
           ],
         },
         {
-          schema: GITCOIN_VC_SCHEMA,
+          schema: GITCOIN_SCORE_SCHEMA,
           data: [
             {
               recipient: this.recipientAccount.address,
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodeData(googleStamp),
+              data: easEncodeScore(scorer1Score),
               value: 0,
             },
             {
@@ -199,7 +214,15 @@ describe("GitcoinVerifier", function () {
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodeData(facebookStamp),
+              data: easEncodeScore(scorer2Score),
+              value: 0,
+            },
+            {
+              recipient: this.recipientAccount.address,
+              expirationTime: NO_EXPIRATION,
+              revocable: true,
+              refUID: ZERO_BYTES32,
+              data: easEncodeScore(scorer2Score),
               value: 0,
             },
           ],
@@ -228,7 +251,7 @@ describe("GitcoinVerifier", function () {
 
     const verifiedPassportTx =
       await this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         passport,
         v,
         r,
@@ -238,7 +261,16 @@ describe("GitcoinVerifier", function () {
         }
       );
     const verifiedPassport = await verifiedPassportTx.wait();
-    // expect(verifiedPassport.events?.length).to.equal(passport.stamps.length);
+    function sumDataLengths(requests: { data: any[] }[]): number {
+      return requests.reduce(
+        (total, request) => total + request.data.length,
+        0
+      );
+    }
+
+    expect(verifiedPassport.events?.length).to.equal(
+      sumDataLengths(passport.multiAttestationRequest)
+    );
   });
 
   it("should revert if the signature is invalid", async function () {
@@ -261,7 +293,7 @@ describe("GitcoinVerifier", function () {
     const otherPassport = await this.getOtherPassport();
     await expect(
       this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         otherPassport,
         v,
         r,
@@ -284,7 +316,7 @@ describe("GitcoinVerifier", function () {
     // calling addPassportWithSignature 1st time
     const result = await (
       await this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         this.passport,
         v,
         r,
@@ -299,7 +331,7 @@ describe("GitcoinVerifier", function () {
 
     await expect(
       this.gitcoinVerifier.callStatic.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         this.passport,
         v,
         r,
@@ -330,7 +362,7 @@ describe("GitcoinVerifier", function () {
 
     await expect(
       this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         this.passport,
         v,
         r,
@@ -365,7 +397,7 @@ describe("GitcoinVerifier", function () {
 
     const verifiedPassport =
       await this.gitcoinVerifier.addPassportWithSignature(
-        GITCOIN_VC_SCHEMA,
+        GITCOIN_STAMP_SCHEMA,
         modifiedPassport,
         v,
         r,
@@ -389,7 +421,7 @@ describe("GitcoinVerifier", function () {
       const { v, r, s } = ethers.utils.splitSignature(signature);
       await (
         await this.gitcoinVerifier.addPassportWithSignature(
-          GITCOIN_VC_SCHEMA,
+          GITCOIN_STAMP_SCHEMA,
           this.passport,
           v,
           r,

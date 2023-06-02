@@ -187,42 +187,6 @@ contract GitcoinVerifier is Ownable {
     // recipientNonces[passport.recipient]++;
   }
 
-//   /**
-//    * @dev Creates a multi-attestation request based on the given schema and passport.
-//    * @param schema The schema to use for the attestation request.
-//    * @param passport The passport containing the stamps for the attestation request.
-//    * @return The array of multi-attestation requests.
-//    */
-//   function getMultiAttestRequest(
-//     bytes32 schema,
-//     Passport calldata passport
-//   ) public pure returns (MultiAttestationRequest[] memory) {
-//     MultiAttestationRequest[]
-//       memory multiAttestationRequest = new MultiAttestationRequest[](1);
-//     multiAttestationRequest[0].schema = schema;
-//     multiAttestationRequest[0].data = new AttestationRequestData[](
-//       passport.stamps.length
-//     );
-
-//     for (uint i; i < passport.stamps.length; ) {
-//       Stamp memory stamp = passport.stamps[i];
-//       multiAttestationRequest[0].data[i] = AttestationRequestData({
-//         recipient: passport.recipient, // The recipient of the attestation.
-//         expirationTime: 0, // The time when the attestation expires (Unix timestamp).
-//         revocable: true, // Whether the attestation is revocable.   ==> TODO: use revocable from Passport
-//         refUID: 0, // The UID of the related attestation.
-//         data: stamp.data, // Custom attestation data.
-//         value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
-//       });
-
-//       unchecked {
-//         ++i;
-//       }
-//     }
-
-//     return multiAttestationRequest;
-//   }
-
   /**
    * @dev Adds a passport to the attester contract, verifying it using the provided signature.
    * @param schema The schema to use.
@@ -244,7 +208,7 @@ contract GitcoinVerifier is Ownable {
 
     _verify(v, r, s, passport);
 
-    // attester.addPassport(getMultiAttestRequest(schema, passport));
+    attester.addPassport(passport.multiAttestationRequest);
   }
 
   /**
