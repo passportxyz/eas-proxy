@@ -228,15 +228,9 @@ describe("GitcoinVerifier", function () {
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     const verifiedPassport = await (
-      await this.gitcoinVerifier.addPassportWithSignature(
-        this.passport,
-        v,
-        r,
-        s,
-        {
-          value: fee1,
-        }
-      )
+      await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
+        value: fee1,
+      })
     ).wait();
 
     expect(verifiedPassport.events?.length).to.equal(
@@ -264,13 +258,13 @@ describe("GitcoinVerifier", function () {
 
     const otherPassport = await this.getOtherPassport();
     await expect(
-      this.gitcoinVerifier.addPassportWithSignature(otherPassport, v, r, s, {
+      this.gitcoinVerifier.verifyAndAttest(otherPassport, v, r, s, {
         value: fee1,
       })
     ).to.be.revertedWith("Invalid signature");
   });
 
-  it("should revert if addPassportWithSignature is called twice with the same parameters", async function () {
+  it("should revert if verifyAndAttest is called twice with the same parameters", async function () {
     const signature = await this.iamAccount._signTypedData(
       this.domain,
       passportTypes,
@@ -278,17 +272,11 @@ describe("GitcoinVerifier", function () {
     );
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    // calling addPassportWithSignature 1st time
+    // calling verifyAndAttest 1st time
     const result = await (
-      await this.gitcoinVerifier.addPassportWithSignature(
-        this.passport,
-        v,
-        r,
-        s,
-        {
-          value: fee1,
-        }
-      )
+      await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
+        value: fee1,
+      })
     ).wait();
 
     expect(result.events?.length).to.equal(
@@ -296,7 +284,7 @@ describe("GitcoinVerifier", function () {
     );
 
     await expect(
-      this.gitcoinVerifier.addPassportWithSignature(this.passport, v, r, s, {
+      this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
         value: fee1,
       })
     ).to.be.revertedWith("Invalid nonce");
@@ -320,7 +308,7 @@ describe("GitcoinVerifier", function () {
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     await expect(
-      this.gitcoinVerifier.addPassportWithSignature(this.passport, v, r, s, {
+      this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
         value: fee1Less1Wei,
       })
     ).to.be.revertedWith("Insufficient fee");
@@ -343,16 +331,15 @@ describe("GitcoinVerifier", function () {
 
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const verifiedPassport =
-      await this.gitcoinVerifier.addPassportWithSignature(
-        this.passport,
-        v,
-        r,
-        s,
-        {
-          value: fee2,
-        }
-      );
+    const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+      this.passport,
+      v,
+      r,
+      s,
+      {
+        value: fee2,
+      }
+    );
     const receipt = await verifiedPassport.wait();
     expect(receipt.status).to.equal(1);
   });
@@ -367,15 +354,9 @@ describe("GitcoinVerifier", function () {
 
       const { v, r, s } = ethers.utils.splitSignature(signature);
       await (
-        await this.gitcoinVerifier.addPassportWithSignature(
-          this.passport,
-          v,
-          r,
-          s,
-          {
-            value: fee2,
-          }
-        )
+        await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
+          value: fee2,
+        })
       ).wait();
     });
     it("should allow the owner to withdraw all fees", async function () {

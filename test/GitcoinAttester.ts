@@ -149,7 +149,7 @@ describe("GitcoinAttester", function () {
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
-      const resultTx = await gitcoinAttester.addPassport([
+      const resultTx = await gitcoinAttester.submitAttestations([
         multiAttestationRequests,
       ]);
 
@@ -165,7 +165,7 @@ describe("GitcoinAttester", function () {
       try {
         await gitcoinAttester
           .connect(iamAccount)
-          .addPassport([multiAttestationRequests]);
+          .submitAttestations([multiAttestationRequests]);
       } catch (e: any) {
         expect(e.message).to.include(
           "Only authorized verifiers can call this function"

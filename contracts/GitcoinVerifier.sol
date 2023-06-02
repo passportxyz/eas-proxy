@@ -10,7 +10,7 @@ import "./GitcoinAttester.sol";
 
 /**
  * @title GitcoinVerifier
- * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
+ * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
 contract GitcoinVerifier is Ownable {
   using ECDSA for bytes32;
@@ -209,7 +209,7 @@ contract GitcoinVerifier is Ownable {
    * @param r The r component of the signature.
    * @param s The s component of the signature.
    */
-  function addPassportWithSignature(
+  function verifyAndAttest(
     PassportAttestationRequest calldata attestationRequest,
     uint8 v,
     bytes32 r,
@@ -221,7 +221,7 @@ contract GitcoinVerifier is Ownable {
       revert("Insufficient fee");
     }
 
-    attester.addPassport(attestationRequest.multiAttestationRequest);
+    attester.submitAttestations(attestationRequest.multiAttestationRequest);
   }
 
   /**

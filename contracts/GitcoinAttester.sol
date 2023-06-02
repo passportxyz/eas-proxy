@@ -9,7 +9,7 @@ import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAtt
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
 contract GitcoinAttester is Ownable {
-  // An allow-list of Verifiers that are authorized and trusted to call the addPassport function.
+  // An allow-list of Verifiers that are authorized and trusted to call the submitAttestations function.
   mapping(address => bool) public verifiers;
 
   // The instance of the EAS contract.
@@ -53,7 +53,7 @@ contract GitcoinAttester is Ownable {
    * @dev Adds passport information for a user using EAS
    * @param multiAttestationRequest An array of `MultiAttestationRequest` structures containing the user's passport information.
    */
-  function addPassport(
+  function submitAttestations(
     MultiAttestationRequest[] calldata multiAttestationRequest
   ) public payable virtual returns (bytes32[] memory) {
     require(
