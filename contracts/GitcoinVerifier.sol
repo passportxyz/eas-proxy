@@ -43,7 +43,7 @@ contract GitcoinVerifier is Ownable {
   /**
    * @dev Passport represents a passport object with multiple stamps and associated information.
    */
-  struct Passport {
+  struct PassportAttestationRequest {
     MultiAttestationRequest[] multiAttestationRequest;
     // NOTE: recipient could be pulled from MultiAttestationRequest but would have to dig into the data structure and compare multuiple recipients
     // not sure which is more efficient
@@ -68,7 +68,7 @@ contract GitcoinVerifier is Ownable {
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
     keccak256(
-      "Passport(MultiAttestationRequest[] multiAttestationRequest,address recipient,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
+      "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,address recipient,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
     );
 
   /**
@@ -132,10 +132,10 @@ contract GitcoinVerifier is Ownable {
     ));
   }
 
-  function _hashPassport(Passport memory _passport) private pure returns (bytes32) {
-    bytes32[] memory multiAttestHashes = new bytes32[](_passport.multiAttestationRequest.length);
-    for (uint i = 0; i < _passport.multiAttestationRequest.length; ) {
-      multiAttestHashes[i] = hashMultiAttestationRequest(_passport.multiAttestationRequest[i]);
+  function _hashPassport(PassportAttestationRequest calldata attestationRequest) private pure returns (bytes32) {
+    bytes32[] memory multiAttestHashes = new bytes32[](attestationRequest.multiAttestationRequest.length);
+    for (uint i = 0; i < attestationRequest.multiAttestationRequest.length; ) {
+      multiAttestHashes[i] = hashMultiAttestationRequest(attestationRequest.multiAttestationRequest[i]);
       unchecked {
         ++i;
       }
@@ -144,9 +144,9 @@ contract GitcoinVerifier is Ownable {
     return keccak256(abi.encode(
       PASSPORT_TYPEHASH,
       keccak256(abi.encodePacked(multiAttestHashes)),
-      _passport.recipient,
-      _passport.nonce,
-      _passport.fee
+      attestationRequest.recipient,
+      attestationRequest.nonce,
+      attestationRequest.fee
     ));
   }
 
@@ -155,20 +155,20 @@ contract GitcoinVerifier is Ownable {
    * @param v The v component of the signature.
    * @param r The r component of the signature.
    * @param s The s component of the signature.
-   * @param passport The passport to verify.
+   * @param attestationRequest The attestation data to verify.
    */
   function _verify(
     uint8 v,
     bytes32 r,
     bytes32 s,
-    Passport calldata passport
+    PassportAttestationRequest calldata attestationRequest
   ) internal {
-    if (passport.nonce != recipientNonces[passport.recipient]) {
+    if (attestationRequest.nonce != recipientNonces[attestationRequest.recipient]) {
       revert("Invalid nonce");
     }
 
-    bytes32 passportHash = _hashPassport(passport);
-    bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
+    bytes32 attestationHash = _hashPassport(attestationRequest);
+    bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, attestationHash);
 
 
     // Compare the recovered signer with the expected signer
@@ -177,29 +177,29 @@ contract GitcoinVerifier is Ownable {
     }
 
     // Increment the nonce for this recipient
-    recipientNonces[passport.recipient]++;
+    recipientNonces[attestationRequest.recipient]++;
   }
 
   /**
    * @dev Adds a passport to the attester contract, verifying it using the provided signature.
-   * @param passport The passport to add.
+   * @param attestationRequest The passport to add.
    * @param v The v component of the signature.
    * @param r The r component of the signature.
    * @param s The s component of the signature.
    */
   function addPassportWithSignature(
-    Passport calldata passport,
+    PassportAttestationRequest calldata attestationRequest,
     uint8 v,
     bytes32 r,
     bytes32 s
   ) public payable {
-    _verify(v, r, s, passport);
+    _verify(v, r, s, attestationRequest);
 
-    if (msg.value < passport.fee) {
+    if (msg.value < attestationRequest.fee) {
       revert("Insufficient fee");
     }
 
-    attester.addPassport(passport.multiAttestationRequest);
+    attester.addPassport(attestationRequest.multiAttestationRequest);
   }
 
   /**

@@ -158,7 +158,7 @@ describe("GitcoinVerifier", function () {
         { name: "schema", type: "bytes32" },
         { name: "data", type: "AttestationRequestData[]" },
       ],
-      Passport: [
+      PassportAttestationRequest: [
         { name: "multiAttestationRequest", type: "MultiAttestationRequest[]" },
         { name: "recipient", type: "address" },
         { name: "nonce", type: "uint256" },
