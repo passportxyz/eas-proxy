@@ -141,37 +141,40 @@ describe("GitcoinVerifier", function () {
     const chainId = await this.iamAccount.getChainId();
 
     const passportTypes = {
-      Stamp: [
-        { name: "data", type: "bytes" },
+      AttestationRequestData: [
         { name: "recipient", type: "address" },
         { name: "expirationTime", type: "uint64" },
         { name: "revocable", type: "bool" },
         { name: "refUID", type: "bytes32" },
+        { name: "data", type: "bytes" },
         { name: "value", type: "uint256" },
       ],
+      // MultiAttestationRequest: [
+
+      // ],
       Passport: [
-        { name: "stamps", type: "Stamp[]" },
+        { name: "datas", type: "AttestationRequestData[]" },
         { name: "nonce", type: "uint256" },
         { name: "fee", type: "uint256" },
       ],
     };
 
     const passport = {
-      stamps: [
+      datas: [
         {
-          data: easEncodeData(googleStamp),
           recipient: this.recipientAccount.address,
           expirationTime: NO_EXPIRATION,
           revocable: true,
           refUID: ZERO_BYTES32,
+          data: easEncodeData(googleStamp),
           value: 0,
         },
         {
-          data: easEncodeData(facebookStamp),
           recipient: this.recipientAccount.address,
           expirationTime: NO_EXPIRATION,
           revocable: true,
           refUID: ZERO_BYTES32,
+          data: easEncodeData(facebookStamp),
           value: 0,
         },
       ],
