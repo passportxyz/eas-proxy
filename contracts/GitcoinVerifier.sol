@@ -41,7 +41,7 @@ contract GitcoinVerifier is Ownable {
   }
 
   /**
-   * @dev Passport represents a passport object with multiple stamps and associated information.
+   * @dev PassportAttestationRequest represents a signed data structure that once verified will be written to EAS.
    */
   struct PassportAttestationRequest {
     MultiAttestationRequest[] multiAttestationRequest;
@@ -104,6 +104,14 @@ contract GitcoinVerifier is Ownable {
     );
   }
 
+  /**
+  * @dev Hashes the provided AttestationRequestData object. This function creates 
+  * a keccak256 hash from the recipient, expirationTime, revocable, refUID, data and value
+  * fields of the _data object. The data field is hashed separately and included 
+  * in the final hash.
+  * @param _data The AttestationRequestData object that will be hashed
+  * @return bytes32 The keccak256 hash of the _data
+  */
   function hashAttestationRequestData(AttestationRequestData memory _data) private pure returns (bytes32) {
     return keccak256(abi.encode(
       STAMP_TYPEHASH,
@@ -116,6 +124,13 @@ contract GitcoinVerifier is Ownable {
     ));
   }
 
+  /**
+  * @dev Creates a hash for the provided MultiAttestationRequest object. This function 
+  * hashes each AttestationRequestData item in the data array, then generates and returns 
+  * a final keccak256 hash combining these hashes with the schema from the _request.
+  * @param _request The MultiAttestationRequest object that will be hashed
+  * @return bytes32 The keccak256 hash of the _request
+  */
   function hashMultiAttestationRequest(MultiAttestationRequest memory _request) private pure returns (bytes32) {
     bytes32[] memory dataHashes = new bytes32[](_request.data.length);
     for (uint i = 0; i < _request.data.length; ) {
@@ -132,6 +147,13 @@ contract GitcoinVerifier is Ownable {
     ));
   }
 
+  /**
+  * @dev Creates a hash for the provided PassportAttestationRequest object. This function 
+  * hashes each multiAttestationRequest, then generates and returns a final keccak256 hash 
+  * combining these hashes with additional data from the attestationRequest.
+  * @param attestationRequest The PassportAttestationRequest object that will be hashed
+  * @return bytes32 The keccak256 hash of the attestationRequest
+  */
   function _hashPassport(PassportAttestationRequest calldata attestationRequest) private pure returns (bytes32) {
     bytes32[] memory multiAttestHashes = new bytes32[](attestationRequest.multiAttestationRequest.length);
     for (uint i = 0; i < attestationRequest.multiAttestationRequest.length; ) {
