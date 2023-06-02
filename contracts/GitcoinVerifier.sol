@@ -154,7 +154,7 @@ contract GitcoinVerifier is Ownable {
   * @param attestationRequest The PassportAttestationRequest object that will be hashed
   * @return bytes32 The keccak256 hash of the attestationRequest
   */
-  function _hashPassport(PassportAttestationRequest calldata attestationRequest) private pure returns (bytes32) {
+  function _hashAttestations(PassportAttestationRequest calldata attestationRequest) private pure returns (bytes32) {
     bytes32[] memory multiAttestHashes = new bytes32[](attestationRequest.multiAttestationRequest.length);
     for (uint i = 0; i < attestationRequest.multiAttestationRequest.length; ) {
       multiAttestHashes[i] = hashMultiAttestationRequest(attestationRequest.multiAttestationRequest[i]);
@@ -189,7 +189,7 @@ contract GitcoinVerifier is Ownable {
       revert("Invalid nonce");
     }
 
-    bytes32 attestationHash = _hashPassport(attestationRequest);
+    bytes32 attestationHash = _hashAttestations(attestationRequest);
     bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, attestationHash);
 
 
