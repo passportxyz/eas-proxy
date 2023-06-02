@@ -58,7 +58,7 @@ contract GitcoinVerifier is Ownable {
    * @dev Passport represents a passport object with multiple stamps and associated information.
    */
   struct Passport {
-    MultiAttestationRequest multiAttestationRequest;
+    MultiAttestationRequest[] multiAttestationRequest;
     uint256 nonce;
     uint256 fee;
   }
@@ -79,7 +79,7 @@ contract GitcoinVerifier is Ownable {
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
     keccak256(
-      "Passport(MultiAttestationRequest multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
+      "Passport(MultiAttestationRequest[] multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
     );
 
   /**
@@ -141,9 +141,14 @@ contract GitcoinVerifier is Ownable {
   }
 
   function _hashPassport(Passport memory _passport) private pure returns (bytes32) {
+    bytes32[] memory multiAttestHashes = new bytes32[](_passport.multiAttestationRequest.length);
+    for (uint i = 0; i < _passport.multiAttestationRequest.length; i++) {
+      multiAttestHashes[i] = hashMultiAttestationRequest(_passport.multiAttestationRequest[i]);
+    }
+
     return keccak256(abi.encode(
       PASSPORT_TYPEHASH,
-      hashMultiAttestationRequest(_passport.multiAttestationRequest),
+      keccak256(abi.encodePacked(multiAttestHashes)),
       _passport.nonce,
       _passport.fee
     ));
