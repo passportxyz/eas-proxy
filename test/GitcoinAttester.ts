@@ -124,7 +124,6 @@ describe("GitcoinAttester", function () {
 
         const provider = ethers.getDefaultProvider();
 
-        console.log("provider", provider);
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);
 
@@ -153,12 +152,8 @@ describe("GitcoinAttester", function () {
       const resultTx = await gitcoinAttester.addPassport([
         multiAttestationRequests,
       ]);
-      console.log("resultTx", resultTx);
+
       const result = await resultTx.wait();
-      console.log("result", result);
-      console.log("result.logs", result.logs);
-      console.log("result.logs[0]", result.logs[0]);
-      console.log("result.logs[0].data", result.logs[0].data);
 
       expect(result.events?.length).to.equal(
         multiAttestationRequests.data.length
