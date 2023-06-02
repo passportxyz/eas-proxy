@@ -8,8 +8,6 @@ import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAtte
 
 import "./GitcoinAttester.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
@@ -120,8 +118,11 @@ contract GitcoinVerifier is Ownable {
 
   function hashMultiAttestationRequest(MultiAttestationRequest memory _request) private pure returns (bytes32) {
     bytes32[] memory dataHashes = new bytes32[](_request.data.length);
-    for (uint i = 0; i < _request.data.length; i++) {
+    for (uint i = 0; i < _request.data.length; ) {
       dataHashes[i] = hashAttestationRequestData(_request.data[i]);
+      unchecked {
+        ++i;
+      }
     }
 
     return keccak256(abi.encode(
@@ -133,8 +134,11 @@ contract GitcoinVerifier is Ownable {
 
   function _hashPassport(Passport memory _passport) private pure returns (bytes32) {
     bytes32[] memory multiAttestHashes = new bytes32[](_passport.multiAttestationRequest.length);
-    for (uint i = 0; i < _passport.multiAttestationRequest.length; i++) {
+    for (uint i = 0; i < _passport.multiAttestationRequest.length; ) {
       multiAttestHashes[i] = hashMultiAttestationRequest(_passport.multiAttestationRequest[i]);
+      unchecked {
+        ++i;
+      }
     }
 
     return keccak256(abi.encode(
@@ -165,9 +169,6 @@ contract GitcoinVerifier is Ownable {
 
     bytes32 passportHash = _hashPassport(passport);
     bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
-
-    console.log(issuer);
-    console.log(ECDSA.recover(digest, v, r, s));
 
 
     // Compare the recovered signer with the expected signer
