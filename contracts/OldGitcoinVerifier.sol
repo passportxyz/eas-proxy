@@ -8,13 +8,11 @@ import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAtte
 
 import "./GitcoinAttester.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the addPassportWithSignature() function.
  */
-contract GitcoinVerifier is Ownable {
+contract OldGitcoinVerifier is Ownable {
   using ECDSA for bytes32;
 
   // Instance of the GitcoinAttester contract
@@ -43,15 +41,10 @@ contract GitcoinVerifier is Ownable {
   }
 
   /**
-   * @dev Stamp represents an attestation stamp with data.
+   * @dev Stamp represents an attestation stamp with encoded data.
    */
   struct Stamp {
-    bytes data;
-    address recipient;
-    uint64 expirationTime;
-    bool revocable;
-    bytes32 refUID;
-    uint256 value;
+    bytes encodedData;
   }
 
   /**
@@ -59,6 +52,11 @@ contract GitcoinVerifier is Ownable {
    */
   struct Passport {
     Stamp[] stamps;
+    address recipient;
+    uint64 expirationTime;
+    bool revocable;
+    bytes32 refUID;
+    uint256 value;
     uint256 nonce;
     uint256 fee;
   }
@@ -71,12 +69,12 @@ contract GitcoinVerifier is Ownable {
 
   // Hash type for the Stamp struct
   bytes32 private constant STAMP_TYPEHASH =
-    keccak256("Stamp(bytes data,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value)");
+    keccak256("Stamp(bytes encodedData)");
 
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
     keccak256(
-      "Passport(Stamp[] stamps,uint256 nonce,uint256 fee)Stamp(bytes data,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value)"
+      "Passport(Stamp[] stamps,address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,uint256 value,uint256 nonce,uint256 fee)Stamp(bytes encodedData)"
     );
 
   /**
@@ -118,17 +116,7 @@ contract GitcoinVerifier is Ownable {
    * @return The hash of the stamp.
    */
   function _hashStamp(Stamp memory stamp) internal pure returns (bytes32) {
-    return keccak256(
-        abi.encode(
-            STAMP_TYPEHASH,
-            keccak256(stamp.data),
-            stamp.recipient,
-            stamp.expirationTime,
-            stamp.revocable,
-            stamp.refUID,
-            stamp.value
-        )
-    );
+    return keccak256(abi.encode(STAMP_TYPEHASH, keccak256(stamp.encodedData)));
   }
 
   /**
@@ -155,6 +143,11 @@ contract GitcoinVerifier is Ownable {
         abi.encode(
           PASSPORT_TYPEHASH,
           hashedArray,
+          passport.recipient,
+          passport.expirationTime,
+          passport.revocable,
+          passport.refUID,
+          passport.value,
           passport.nonce,
           passport.fee
         )
@@ -174,16 +167,12 @@ contract GitcoinVerifier is Ownable {
     bytes32 s,
     Passport calldata passport
   ) internal {
-    // if (passport.nonce != recipientNonces[passport.recipient]) {
-    //   revert("Invalid nonce");
-    // }
+    if (passport.nonce != recipientNonces[passport.recipient]) {
+      revert("Invalid nonce");
+    }
 
     bytes32 passportHash = _hashPassport(passport);
     bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, passportHash);
-
-    console.log(issuer);
-    console.log(ECDSA.recover(digest, v, r, s));
-
 
     // Compare the recovered signer with the expected signer
     if (ECDSA.recover(digest, v, r, s) != issuer) {
@@ -191,44 +180,44 @@ contract GitcoinVerifier is Ownable {
     }
 
     // Increment the nonce for this recipient
-    // recipientNonces[passport.recipient]++;
+    recipientNonces[passport.recipient]++;
   }
 
-//   /**
-//    * @dev Creates a multi-attestation request based on the given schema and passport.
-//    * @param schema The schema to use for the attestation request.
-//    * @param passport The passport containing the stamps for the attestation request.
-//    * @return The array of multi-attestation requests.
-//    */
-//   function getMultiAttestRequest(
-//     bytes32 schema,
-//     Passport calldata passport
-//   ) public pure returns (MultiAttestationRequest[] memory) {
-//     MultiAttestationRequest[]
-//       memory multiAttestationRequest = new MultiAttestationRequest[](1);
-//     multiAttestationRequest[0].schema = schema;
-//     multiAttestationRequest[0].data = new AttestationRequestData[](
-//       passport.stamps.length
-//     );
+  /**
+   * @dev Creates a multi-attestation request based on the given schema and passport.
+   * @param schema The schema to use for the attestation request.
+   * @param passport The passport containing the stamps for the attestation request.
+   * @return The array of multi-attestation requests.
+   */
+  function getMultiAttestRequest(
+    bytes32 schema,
+    Passport calldata passport
+  ) public pure returns (MultiAttestationRequest[] memory) {
+    MultiAttestationRequest[]
+      memory multiAttestationRequest = new MultiAttestationRequest[](1);
+    multiAttestationRequest[0].schema = schema;
+    multiAttestationRequest[0].data = new AttestationRequestData[](
+      passport.stamps.length
+    );
 
-//     for (uint i; i < passport.stamps.length; ) {
-//       Stamp memory stamp = passport.stamps[i];
-//       multiAttestationRequest[0].data[i] = AttestationRequestData({
-//         recipient: passport.recipient, // The recipient of the attestation.
-//         expirationTime: 0, // The time when the attestation expires (Unix timestamp).
-//         revocable: true, // Whether the attestation is revocable.   ==> TODO: use revocable from Passport
-//         refUID: 0, // The UID of the related attestation.
-//         data: stamp.data, // Custom attestation data.
-//         value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
-//       });
+    for (uint i; i < passport.stamps.length; ) {
+      Stamp memory stamp = passport.stamps[i];
+      multiAttestationRequest[0].data[i] = AttestationRequestData({
+        recipient: passport.recipient, // The recipient of the attestation.
+        expirationTime: 0, // The time when the attestation expires (Unix timestamp).
+        revocable: true, // Whether the attestation is revocable.   ==> TODO: use revocable from Passport
+        refUID: 0, // The UID of the related attestation.
+        data: stamp.encodedData, // Custom attestation data.
+        value: 0 // An explicit ETH amount to send to the resolver. This is important to prevent accidental user errors.
+      });
 
-//       unchecked {
-//         ++i;
-//       }
-//     }
+      unchecked {
+        ++i;
+      }
+    }
 
-//     return multiAttestationRequest;
-//   }
+    return multiAttestationRequest;
+  }
 
   /**
    * @dev Adds a passport to the attester contract, verifying it using the provided signature.
@@ -251,7 +240,7 @@ contract GitcoinVerifier is Ownable {
 
     _verify(v, r, s, passport);
 
-    // attester.addPassport(getMultiAttestRequest(schema, passport));
+    attester.addPassport(getMultiAttestRequest(schema, passport));
   }
 
   /**
