@@ -45,9 +45,6 @@ contract GitcoinVerifier is Ownable {
    */
   struct PassportAttestationRequest {
     MultiAttestationRequest[] multiAttestationRequest;
-    // NOTE: recipient could be pulled from MultiAttestationRequest but would have to dig into the data structure and compare multuiple recipients
-    // not sure which is more efficient
-    address recipient;
     uint256 nonce;
     uint256 fee;
   }
@@ -68,7 +65,7 @@ contract GitcoinVerifier is Ownable {
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
     keccak256(
-      "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,address recipient,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
+      "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
     );
 
   /**
@@ -166,7 +163,6 @@ contract GitcoinVerifier is Ownable {
     return keccak256(abi.encode(
       PASSPORT_TYPEHASH,
       keccak256(abi.encodePacked(multiAttestHashes)),
-      attestationRequest.recipient,
       attestationRequest.nonce,
       attestationRequest.fee
     ));
@@ -185,7 +181,8 @@ contract GitcoinVerifier is Ownable {
     bytes32 s,
     PassportAttestationRequest calldata attestationRequest
   ) internal {
-    if (attestationRequest.nonce != recipientNonces[attestationRequest.recipient]) {
+    address recipient = attestationRequest.multiAttestationRequest[0].data[0].recipient;
+    if (attestationRequest.nonce != recipientNonces[recipient]) {
       revert("Invalid nonce");
     }
 
@@ -199,7 +196,7 @@ contract GitcoinVerifier is Ownable {
     }
 
     // Increment the nonce for this recipient
-    recipientNonces[attestationRequest.recipient]++;
+    recipientNonces[recipient]++;
   }
 
   /**

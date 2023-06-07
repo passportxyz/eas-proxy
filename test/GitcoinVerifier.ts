@@ -49,7 +49,6 @@ const passportTypes = {
   ],
   PassportAttestationRequest: [
     { name: "multiAttestationRequest", type: "MultiAttestationRequest[]" },
-    { name: "recipient", type: "address" },
     { name: "nonce", type: "uint256" },
     { name: "fee", type: "uint256" },
   ],
@@ -161,7 +160,6 @@ describe("GitcoinVerifier", function () {
           ],
         },
       ],
-      recipient: this.recipientAccount.address,
       nonce: await this.getNonce(this.recipientAccount.address),
       fee: fee1,
     };
@@ -196,7 +194,6 @@ describe("GitcoinVerifier", function () {
             ],
           },
         ],
-        recipient: this.recipientAccount.address,
         nonce: await this.getNonce(this.recipientAccount.address),
         fee: fee1,
       };
@@ -205,7 +202,7 @@ describe("GitcoinVerifier", function () {
 
   this.beforeEach(async function () {
     this.passport.nonce = await this.gitcoinVerifier.recipientNonces(
-      this.passport.recipient
+      this.passport.multiAttestationRequest[0].data[0].recipient
     );
   });
 
@@ -224,7 +221,6 @@ describe("GitcoinVerifier", function () {
     );
 
     expect(recoveredAddress).to.equal(this.iamAccount.address);
-
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     const verifiedPassport = await (
