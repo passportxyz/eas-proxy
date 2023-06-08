@@ -1,6 +1,6 @@
 # Bringing Passport Data On-Chain
 
-In order to store passport (and potentially passport scorer data) on-chain we have chosen the [Ethereum Attestation Service](https://attest.sh/) (EAS). Stamps (and in the future potentially also scores and other data) will be written as attestations on-chain, using the EAS protocol. 
+In order to store passport (and potentially passport scorer data) on-chain we have chosen the [Ethereum Attestation Service](https://attest.sh/) (EAS). Stamps (and in the future potentially also scores and other data) will be written as attestations on-chain, using the EAS protocol.
 
 EAS is a protocol that allows storing attestations on chain.
 
@@ -9,9 +9,9 @@ How does this work?
 1. You define a schema for your attestation. Each schema is identified by a unique UUID.
 2. Once the schema was created, you can write data to it by calling one of the EAS smart contracts functions, like `attest(AttestationRequest calldata request)` (see [https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169](https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169) )
 3. The following data will be registered in the attestion:
-    1. the attester (this will be the`msg.sender`) 
-    2. the recipient (an ETH address)
-    3. other data like: creation date, expiration, is _revocable, a referenced attestation
+   1. the attester (this will be the`msg.sender`)
+   2. the recipient (an ETH address)
+   3. other data like: creation date, expiration, is \_revocable, a referenced attestation
 
 The Passport concept for bringing data on-chain contains the following:
 
@@ -29,11 +29,11 @@ None of the smart contracts are upgradeable or pauseable
 Here are the main features:
 
 - the attester is an own able smart contract
-- It implements an function that will forward attestation data to the EAS smart contract: `function addPassport(MultiAttestationRequest[] calldata multiAttestationRequest)`
-- only registered verifiers are allowed to call the `addPassport` function
+- It implements an function that will forward attestation data to the EAS smart contract: `function submitAttestations(MultiAttestationRequest[] calldata multiAttestationRequest)`
+- only registered verifiers are allowed to call the `submitAttestations` function
 - the registration list can be managed using the following function (both of which can only be invoked by the owner):
-    - `function addVerifier(address _verifier)` - add a new verifier
-    - `function removeVerifier(address _verifier)` - remove an existing verifier
+  - `function addVerifier(address _verifier)` - add a new verifier
+  - `function removeVerifier(address _verifier)` - remove an existing verifier
 - allows settings the address of the EAS smart contract to which data will be forwarded (this function is also only invocable by the owner): `function setEASAddress(address _easContractAddress)`
 
 # GitcoinVerifier
@@ -45,8 +45,8 @@ The flow when the user triggers the process to bring his data on-chain from the 
 
 1. the Passport App creates a payload with the data to be written on-chain (a list of stamps) and sends this to the IAM Service
 2. The IAM service validates that data and signs it with the EIP-712 procedure
-3. The Passport App will call the `GitcoinVerifier` function `addPassportWithSignature`
-4. The signature of the data will be validated, and validation passes the `function addPassport(MultiAttestationRequest[] calldata multiAttestationRequest)` in the `GitcoinAttester` will be called to write the data to the EAS protocol
+3. The Passport App will call the `GitcoinVerifier` function `verifyAndAttest`
+4. The signature of the data will be validated, and validation passes the `function submitAttestations(MultiAttestationRequest[] calldata multiAttestationRequest)` in the `GitcoinAttester` will be called to write the data to the EAS protocol
 
 ## Open points
 
@@ -59,15 +59,15 @@ Following items are in our backlog:
 
 ## Fee
 
-It was a requirement that a small fee shall be collected by the verifier for each data set that is written on-chain. For this purposed when the `addPassportWithSignature` method is called, it will check if the expected amount (in ETH) has been sent to the smart contract, and will revert with the message “*Insufficient fee*” if this is not the case. 
+It was a requirement that a small fee shall be collected by the verifier for each data set that is written on-chain. For this purposed when the `verifyAndAttest` method is called, it will check if the expected amount (in ETH) has been sent to the smart contract, and will revert with the message “_Insufficient fee_” if this is not the case.
 
 The amount of the fee is determined by the IAM server, and it is the equivalent of 2 USD in ETH.
 The fee is part of the data structure that is signed with the EIP-712 procedure, so that it cannot be changed during the process of writing stamps on-chain.
 
 ## Replay protection
 
-In order to prevent against replay attacks, the `Passport` structure that is passed in the `addPassportWithSignature` function call, also must contain a `nonce`.
+In order to prevent against replay attacks, the `Passport` structure that is passed in the `verifyAndAttest` function call, also must contain a `nonce`.
 
-This nonce is unique per recipient. The nonce will start from 0 and the correct nonce, and it will be incremented by 1 for each each call that is made to the `addPassportWithSignature` function for the specified recipient.
+This nonce is unique per recipient. The nonce will start from 0 and the correct nonce, and it will be incremented by 1 for each each call that is made to the `verifyAndAttest` function for the specified recipient.
 
-The `Passport` structure must contain the correct (the next) nonce for the recipient, in order for the call to `addPassportWithSignature` to get through. It will be reverted otherwise.
+The `Passport` structure must contain the correct (the next) nonce for the recipient, in order for the call to `verifyAndAttest` to get through. It will be reverted otherwise.

@@ -32,7 +32,21 @@ type Stamp = {
   stampHash: string;
 };
 
-export const easEncodeData = (stamp: Stamp) => {
+type Score = {
+  score: number;
+  scorer_id: number;
+};
+
+export const easEncodeScore = (score: Score) => {
+  const schemaEncoder = new SchemaEncoder("uint32 score,uint32 scorer_id");
+  const encodedData = schemaEncoder.encodeData([
+    { name: "score", value: score.score, type: "uint32" },
+    { name: "scorer_id", value: score.scorer_id, type: "uint32" },
+  ]);
+  return encodedData;
+};
+
+export const easEncodeStamp = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
   let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
 
@@ -43,7 +57,7 @@ export const easEncodeData = (stamp: Stamp) => {
   return encodedData;
 };
 
-const encodedData = easEncodeData({
+const encodedData = easEncodeStamp({
   provider: "TestProvider",
   stampHash: "234567890",
 });
@@ -110,7 +124,6 @@ describe("GitcoinAttester", function () {
 
         const provider = ethers.getDefaultProvider();
 
-        console.log("provider", provider);
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);
 
@@ -136,15 +149,11 @@ describe("GitcoinAttester", function () {
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
-      const resultTx = await gitcoinAttester.addPassport([
+      const resultTx = await gitcoinAttester.submitAttestations([
         multiAttestationRequests,
       ]);
-      console.log("resultTx", resultTx);
+
       const result = await resultTx.wait();
-      console.log("result", result);
-      console.log("result.logs", result.logs);
-      console.log("result.logs[0]", result.logs[0]);
-      console.log("result.logs[0].data", result.logs[0].data);
 
       expect(result.events?.length).to.equal(
         multiAttestationRequests.data.length
@@ -156,7 +165,7 @@ describe("GitcoinAttester", function () {
       try {
         await gitcoinAttester
           .connect(iamAccount)
-          .addPassport([multiAttestationRequests]);
+          .submitAttestations([multiAttestationRequests]);
       } catch (e: any) {
         expect(e.message).to.include(
           "Only authorized verifiers can call this function"
