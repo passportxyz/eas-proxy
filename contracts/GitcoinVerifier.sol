@@ -181,6 +181,7 @@ contract GitcoinVerifier is Ownable {
     bytes32 s,
     PassportAttestationRequest calldata attestationRequest
   ) internal {
+    // TODO: Check that all recipients are equivalent(We can currently trust this is true becuase it is being enforced when passport signs the request, but would be good to verify here as well)
     address recipient = attestationRequest.multiAttestationRequest[0].data[0].recipient;
     if (attestationRequest.nonce != recipientNonces[recipient]) {
       revert("Invalid nonce");
