@@ -7,7 +7,7 @@ EAS is a protocol that allows storing attestations on chain.
 How does this work?
 
 1. You define a schema for your attestation. Each schema is identified by a unique UUID.
-2. Once the schema was created, you can write data to it by calling one of the EAS smart contracts functions, like `attest(AttestationRequest calldata request)` (see [https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169](https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169) )
+2. Once the schema was created, you can write data to it by calling one of the EAS smart contracts functions, for example `attest(AttestationRequest calldata request)` (see [https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169](https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169) )
 3. The following data will be registered in the attestion:
    1. the attester (this will be the`msg.sender`)
    2. the recipient (an ETH address)
@@ -17,12 +17,48 @@ The Passport concept for bringing data on-chain contains the following:
 
 - GitcoinAttester - this is a smart contract that is designed to act as a proxy. Its purpose is to relay any potential attestations, coming from trusted resources, to the EAS smart contract so that it is registered as the attester.
 - GitcoinVerifier - this is designed to be trusted resource for the Attester. This smart contract will be called from the Passport App ( [https://passport.gitcoin.co](https://passport.gitcoin.co/) ), whenever a user desires to bring their stamps on-chain.
+- Resolver - this is an optional smart contract that can be registered for an EAS schema. We will use a resolver smart contract to record the latest state of a users passport related attestations.
 
 For the moment there is only 1 GitcoinVerifier smart contracts available (and only 1 will be deployed), but it is possible that in the future more verifier smart contracts will be created, and added to the allowlist in GitcoinAttester.
 
 Both smart contracts implement access control, by extending from OpenZeppelins `Ownable`.
 
 None of the smart contracts are upgradeable or pauseable
+
+The flow:
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as Passport App
+    participant IAM as IAM Service
+    participant Verifier as Verifier (gitcoin, on-chain)
+    participant Attester as Attester (gitcoin, on-chain)
+    participant EAS
+    participant Resolver as Resolver (gitcoin, on-chain)
+    User->>App: "Write stamps on-chain"
+    App->>IAM: "Verify and attest payload"
+    IAM-->>App: PassportAttestationRequest
+    activate Verifier
+    App->>Verifier: PassportAttestationRequest
+    Verifier->>Verifier : validate
+    Verifier->>Attester : submitAttestations
+    activate Attester
+    Attester->>Attester : validate sender
+    activate EAS
+    Attester->>EAS : multiAttest
+    activate Resolver
+    EAS->>Resolver : multiAttest
+    Resolver-->>EAS : 
+    deactivate Resolver
+    EAS-->>Attester : UUIDs: bytes32[]
+    deactivate EAS
+    Attester-->>Verifier : 
+    deactivate Attester
+    Verifier-->>App : 
+    deactivate Verifier
+    App-->>User : display on-chain status
+```
+
 
 # GitcoinAttester
 
@@ -71,3 +107,7 @@ In order to prevent against replay attacks, the `Passport` structure that is pas
 This nonce is unique per recipient. The nonce will start from 0 and the correct nonce, and it will be incremented by 1 for each each call that is made to the `verifyAndAttest` function for the specified recipient.
 
 The `Passport` structure must contain the correct (the next) nonce for the recipient, in order for the call to `verifyAndAttest` to get through. It will be reverted otherwise.
+
+
+# GitcoinResolver
+TODO: add content
