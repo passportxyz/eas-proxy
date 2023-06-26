@@ -109,5 +109,10 @@ This nonce is unique per recipient. The nonce will start from 0 and the correct 
 The `Passport` structure must contain the correct (the next) nonce for the recipient, in order for the call to `verifyAndAttest` to get through. It will be reverted otherwise.
 
 
-# GitcoinResolver
-TODO: add content
+# Resolver smart contract
+
+EAS provides a mechanism to perform additional validations for stamps and implement additional smart contract functionality related to attestations using [resolver contracts](https://docs.attest.sh/docs/tutorials/resolver-contracts).
+For our use-case we will use resolver contracts to track which attestation a given recipient owns (this information is not provided by the EAS smart contract by default).
+How exactly this will be achieved depends may be different for each attestation:
+- if we store the entire passport in an attestation the resolver contract would sore a map like "recipient" => "passport attestation UUID"
+- if we store individual stamps, we will need to track multiple attestations for any given recipient, so the resolver smart contract would store information in a nested map like "recipient" => ("provider" => "passport attestation UUID")
