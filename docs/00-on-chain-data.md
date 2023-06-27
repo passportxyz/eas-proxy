@@ -112,7 +112,11 @@ The `Passport` structure must contain the correct (the next) nonce for the recip
 # Resolver smart contract
 
 EAS provides a mechanism to perform additional validations for stamps and implement additional smart contract functionality related to attestations using [resolver contracts](https://docs.attest.sh/docs/tutorials/resolver-contracts).
-For our use-case we will use resolver contracts to track which attestation a given recipient owns (this information is not provided by the EAS smart contract by default).
-How exactly this will be achieved depends may be different for each attestation:
+For our use-case we will use resolver contracts to track which attestations a given recipient owns (this information is not provided by the EAS smart contract by default).
+How exactly this will be achieved may be different for each attestation:
 - if we store the entire passport in an attestation the resolver contract would sore a map like "recipient" => "passport attestation UUID"
 - if we store individual stamps, we will need to track multiple attestations for any given recipient, so the resolver smart contract would store information in a nested map like "recipient" => ("provider" => "passport attestation UUID")
+
+In order to ensure the integrity of the data that a resolver stores, resolver smart contract shall only validate and store date from trusted sources:
+- a trusted EAS contract
+- a trusted Attester
