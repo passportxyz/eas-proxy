@@ -6,7 +6,8 @@ The purpose of this document is to describe the EAS schema used to store Gitcoin
 For details about the process of bringing passport data in chain please see: [On Chain Data](./00-on-chain-data.md).
 
 # EAS Schema
-Following is the EAS schema to store a passport on-chain 
+Following is the EAS schema to store a passport on-chain.
+This will allow capturing a snapshot of a users passport on-chain.
 
 ```js
 new SchemaEncoder(
@@ -51,10 +52,11 @@ In solidity this would translate to:
 
     mapping(address => bytes32) public passports;
 
-Given this structure, we would be able to retrieve the UUID for any passport attestation of a particular recipient.
+Given this structure, we would be able to retrieve the UUID for the latest passport attestation of a particular recipient.
 
 
 # Updating passport
+A passport attestation wil always record a snapshot of a users passport.
 Whenever the user makes changes to his passport (deleting, renewing or claiming new stamps) in the Passport App, a new attestation needs to be created in EAS in order to record the latest state of the passport on-chain.
 Optionally, the previous attestation can be revoked.
 

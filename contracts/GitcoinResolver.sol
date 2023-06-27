@@ -10,9 +10,57 @@ import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contr
 import "./GitcoinAttester.sol";
 
 /**
- * @title GitcoinVerifier
- * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
+ * @title GitcoinResolver
+ * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
-contract GitcoinResolver {
+contract GitcoinResolver is ISchemaResolver {
+    /**
+     * @inheritdoc ISchemaResolver
+     */
+    function isPayable() external pure returns (bool) {
+        // TODO: implement this
+        return false;
+    }
 
+    /**
+     * @inheritdoc ISchemaResolver
+     */
+    function attest(
+        Attestation calldata attestation
+    ) external payable returns (bool) {
+        // TODO: implement this
+        return false;
+    }
+
+    /**
+     * @inheritdoc ISchemaResolver
+     */
+    function multiAttest(
+        Attestation[] calldata attestations,
+        uint256[] calldata values
+    ) external payable returns (bool) {
+        // TODO: implement this
+        return false;
+    }
+
+    /**
+     * @inheritdoc ISchemaResolver
+     */
+    function revoke(
+        Attestation calldata attestation
+    ) external payable returns (bool) {
+        // TODO: implement this
+        return false;
+    }
+
+    /**
+     * @inheritdoc ISchemaResolver
+     */
+    function multiRevoke(
+        Attestation[] calldata attestations,
+        uint256[] calldata values
+    ) external payable returns (bool) {
+        // TODO: implement this
+        return false;
+    }
 }

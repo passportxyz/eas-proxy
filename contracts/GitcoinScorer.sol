@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 contract GitcoinScorer is Ownable {
     // The instance of the EAS contract.
     IEAS eas;
-
+    
     /**
      * @dev Store the weights for each stamp. This should be used for scoring.
      * This is a nested array. Firs index is the index of the provider in the providers array of the passport attestation.
@@ -28,6 +28,14 @@ contract GitcoinScorer is Ownable {
         eas = IEAS(_easContractAddress);
     }
 
+    /**
+     * @dev Sets the scoring weights
+     * @param _weights The new weights to be set
+     */
+    function setWeights(uint256[][] memory _weights) public onlyOwner {
+        weights = _weights;
+    }
+
     function getAttestation(
         bytes32 uuid
     ) public payable virtual returns (Attestation memory) {
@@ -41,8 +49,8 @@ contract GitcoinScorer is Ownable {
     ) public payable virtual returns (uint256 score) {
         score = 0;
 
-        bytes32 uuid = resolver.getAttestationUUID(recipient);
-        
+        bytes32 uuid = 0x0; // resolver.getAttestationUUID(recipient);
+
         // First we decode the attestation, we need the providers and the hashes arrays
         Attestation memory attestation = eas.getAttestation(uuid);
 
