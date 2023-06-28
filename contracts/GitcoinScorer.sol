@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 contract GitcoinScorer is Ownable {
     // The instance of the EAS contract.
     IEAS eas;
-    
+
     /**
      * @dev Store the weights for each stamp. This should be used for scoring.
      * This is a nested array. Firs index is the index of the provider in the providers array of the passport attestation.
@@ -66,10 +66,10 @@ contract GitcoinScorer is Ownable {
         // Now we iterate over the providers array and check each bit that is set
         // If a bit is set, we get the has and the issuance date for the respective provider
         // and we add the weight to the score
-        for (uint256 i = 0; i < providers.length; i++) {
+        for (uint256 i = 0; i < providers.length; ) {
             bit = 1;
             uint256 provider = uint256(providers[i]);
-            for (uint256 j = 0; j < 256; j++) {
+            for (uint256 j = 0; j < 256; ) {
                 // Check that the provider bit is set
                 if (provider & bit > 0) {
                     // The provider bit is set, get the hash and the issuance date
@@ -85,6 +85,12 @@ contract GitcoinScorer is Ownable {
                     hashIndex += 1;
                 }
                 bit <<= 1;
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
     }

@@ -60,7 +60,7 @@ Given this structure, we would be able to retrieve the UUID for the latest passp
 
 As also mentioned in [On Chain Data](./00-on-chain-data.md), the resolver smart contract will:
 - only allow calls from a trusted EAS smart contract
-- data coming from a trusted Attester
+- only accept data coming from a trusted attester
 
 # Updating passport
 A passport attestation wil always record a snapshot of a users passport.
