@@ -38,7 +38,7 @@ new SchemaEncoder(
 Considering the list of providers above if a user has the `BrightId`, `CommunityStakingSilver` and `Discord` stamps, their attestation will look like:
 ```json
 {
-    "providers": ["0x0000000000000019"],  
+    "providers": ["0x0000000000000029"],  
     "hashes": ["0x0000000000000001", "0x0000000000000002", "0x0000000000000003"],  
     "issuanceDates": ["123456789", "123456789", "123456789"],  
 }
