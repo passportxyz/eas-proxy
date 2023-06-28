@@ -32,7 +32,7 @@ new SchemaEncoder(
 - this field will only record the hashes for the stamps that a user owns, meaning we will skip any elements where the provider bit is set to 0 in the `providers` field
 
 **issuanceDates**
-- (unix timestamp) individual issuance dates for the stamps. Similar to the hashes field, this is a ordered array. The issuance date can be different form the EAS creation timestamp.
+- (unix timestamp - the number of seconds since epoch, the beginning of January 1, 1970, UTC) individual issuance dates for the stamps. Similar to the hashes field, this is a ordered array. The issuance date can be different form the EAS creation timestamp.
 
 
 Considering the list of providers above if a user has the `BrightId`, `CommunityStakingSilver` and `Discord` stamps, their attestation will look like:
