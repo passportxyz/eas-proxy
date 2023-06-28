@@ -22,7 +22,7 @@ new SchemaEncoder(
     - position 0, bit 1 (`0x0000000000000002`): unityStakingBronze
     - position 0, bit 2 (`0x0000000000000004`): CommunityStakingGold
     - position 0, bit 3 (`0x0000000000000008`): CommunityStakingSilver
-    - position 0, bit 4 (`0x000000000000000f`): Coinbase
+    - position 0, bit 4 (`0x0000000000000010`): Coinbase
     - position 0, bit 5 (`0x0000000000000010`): Discord
 - we will set the coresponding bit of the element in the `providers` field to 0, if a user does have the stamp for the providers who is assigned that bit
 
