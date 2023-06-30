@@ -11,12 +11,12 @@ This will allow capturing a snapshot of a users passport on-chain.
 
 ```js
 new SchemaEncoder(
-   "bytes32[] providers, bytes32[] hashes, uint64[] issuanceDates"
+   "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates"
 );
 ```
 
 **providers**
-- this field shall indicate which stamps (i. e. which providers) a user has in their passport. This field is declared as an array of `bytes32` but it shall be used as a array of bits, meaning:
+- this field shall indicate which stamps (i. e. which providers) a user has in their passport. This field is declared as an array of `uint256` but it shall be used as a array of bits, meaning:
 - we will use an ordered list of providers, and we will assign each of the providers a position in the bytes32 array and a bit, for example: 
     - position 0, bit 0 (`0x0000000000000001`): Brightid
     - position 0, bit 1 (`0x0000000000000002`): unityStakingBronze
@@ -32,15 +32,18 @@ new SchemaEncoder(
 - this field will only record the hashes for the stamps that a user owns, meaning we will skip any elements where the provider bit is set to 0 in the `providers` field
 
 **issuanceDates**
-- (unix timestamp - the number of seconds since epoch, the beginning of January 1, 1970, UTC) individual issuance dates for the stamps. Similar to the hashes field, this is a ordered array. The issuance date can be different form the EAS creation timestamp.
+- (unix timestamp - the number of seconds since epoch, the beginning of January 1, 1970, UTC) individual issuance dates for the stamps. Similar to the hashes field, this is an ordered array. The issuance date can be different form the EAS creation timestamp.
 
+**expirationDates**
+- (unix timestamp) individual expiration dates for the stamps. Similar to the hashes field, this is an ordered array, containing th expiration date for each stamp.
 
 Considering the list of providers above if a user has the `BrightId`, `CommunityStakingSilver` and `Discord` stamps, their attestation will look like:
 ```json
 {
-    "providers": ["0x0000000000000029"],  
+    "providers": ["12983612785124"],  
     "hashes": ["0x0000000000000001", "0x0000000000000002", "0x0000000000000003"],  
     "issuanceDates": ["123456789", "123456789", "123456789"],  
+    "expirationDates": ["123456789", "123456789", "123456789"],  
 }
 ```
 The 3 bits coresponding to each position of the providers will be set to 1 in the first element in providers, and we record the 3 hashes in the `hashes` field.
