@@ -13,7 +13,7 @@ import {
   ATTEST_TYPE,
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinAttester } from "../typechain-types";
+import { GitcoinScorer } from "../typechain-types";
 
 const utils = ethers.utils;
 
