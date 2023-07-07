@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
+import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest, MultiRevocationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 /**
  * @title GitcoinAttester
@@ -23,7 +23,7 @@ contract GitcoinAttester is Ownable {
 
   /**
    * @dev Adds a verifier to the allow-list.
-   * @param _verifier The address of the verifier to add. It must be a Gnosis Safe contract.
+   * @param _verifier The address of the verifier to add.
    */
   function addVerifier(address _verifier) public onlyOwner {
     require(!verifiers[_verifier], "Verifier already added");
@@ -62,5 +62,15 @@ contract GitcoinAttester is Ownable {
     );
 
     return eas.multiAttest(multiAttestationRequest);
+  }
+
+  /**
+   * @dev Revoke an attestations by schema and uid
+   * @param multiRevocationRequest An array of `MultiRevocationRequest` structures containing the attestations to revoke.
+   */
+  function revokeAttestations(
+    MultiRevocationRequest[] calldata multiRevocationRequest
+  ) public payable virtual onlyOwner {
+    eas.multiRevoke(multiRevocationRequest);
   }
 }

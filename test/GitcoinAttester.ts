@@ -1,6 +1,5 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
-import { expect } from "chai";
+import { expect, util } from "chai";
 import { ethers } from "hardhat";
 import {
   EAS,
@@ -12,10 +11,11 @@ import {
   NO_EXPIRATION,
   ATTEST_TYPE,
   ATTEST_PRIMARY_TYPE,
+  MultiRevocationRequest,
 } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinScorer } from "../typechain-types";
+import { GitcoinAttester } from "../typechain-types";
 
-const utils = ethers.utils;
+const { utils, BigNumber } = ethers;
 
 const googleStamp = {
   provider: "Google",
@@ -85,9 +85,9 @@ describe("GitcoinAttester", function () {
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
 
-  describe("Deployment", function () {
+  describe.only("Deployment", function () {
     let gitcoinAttester: GitcoinAttester,
-      eas,
+      eas: EAS,
       EASContractAddress: string,
       owner: any,
       iamAccount: any,
@@ -191,7 +191,7 @@ describe("GitcoinAttester", function () {
       }
     });
 
-    it("Should allow owner add and remove verifier", async function () {
+    it("Should allow owner to add and remove verifier", async function () {
       const addTx = await gitcoinAttester
         .connect(owner)
         .addVerifier(recipient.address);
@@ -231,6 +231,62 @@ describe("GitcoinAttester", function () {
         console.log(e.message);
         expect(e.message).to.include("Verifier does not exist");
       }
+    });
+    describe("Revocation", function () {
+      let multiRevocationRequest: MultiRevocationRequest[] = [];
+      beforeEach(async function () {
+        multiRevocationRequest = [];
+        const tx = await gitcoinAttester
+          .connect(owner)
+          .submitAttestations([multiAttestationRequests]);
+        const attestationResult = await tx.wait();
+
+        attestationResult.logs?.forEach((log) => {
+          const decodedLog = eas.contract.interface.parseLog(log);
+          const { schema, uid } = decodedLog.args;
+          const value = BigNumber.from(0);
+          const existingRevocationRequest = multiRevocationRequest.find(
+            (r) => r.schema === schema
+          );
+          if (existingRevocationRequest) {
+            existingRevocationRequest.data.push({
+              uid,
+              value,
+            });
+          } else {
+            multiRevocationRequest.push({
+              schema,
+              data: [
+                {
+                  uid,
+                  value,
+                },
+              ],
+            });
+          }
+        });
+      });
+      it("should allow owner to revoke attestations", async function () {
+        const revocationTx = await gitcoinAttester
+          .connect(owner)
+          .revokeAttestations(multiRevocationRequest);
+
+        const revocationResult = await revocationTx.wait();
+        revocationResult.logs?.forEach((log, i) => {
+          const parsedLogs = eas.contract.interface.parseLog(log);
+          const { schema, uid } = parsedLogs.args;
+          expect(schema).to.equal(multiRevocationRequest[0].schema);
+          expect(uid).to.equal(multiRevocationRequest[0].data[i].uid);
+        });
+      });
+      it("should not allow non-owner to revoke attestations", async function () {
+        await expect(
+          gitcoinAttester
+            .connect(recipient)
+            .revokeAttestations(multiRevocationRequest)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+      // TODO: check the chain to see if the attestations were revoked
     });
   });
 });
