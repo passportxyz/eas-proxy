@@ -270,9 +270,12 @@ describe("GitcoinAttester", function () {
           gitcoinAttester
             .connect(recipient)
             .revokeAttestations(multiRevocationRequest)
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        ).to.be.revertedWith(
+          "Only authorized verifiers or owner can call this function"
+        );
       });
       // TODO: check the chain to see if the attestations were revoked
+      // TODO: check that verifier can call revokeAttestations
     });
   });
 });
