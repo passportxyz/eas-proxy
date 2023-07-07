@@ -85,7 +85,8 @@ describe("GitcoinAttester", function () {
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
 
-  describe.only("Deployment", function () {
+  describe("Deployment", function () {
+    // TODO: move tests out of "Deployment" describe block
     let gitcoinAttester: GitcoinAttester,
       eas: EAS,
       EASContractAddress: string,
@@ -162,33 +163,23 @@ describe("GitcoinAttester", function () {
 
     it("Should not allow non-whitelisted verifier to write attestations", async function () {
       await gitcoinAttester.setEASAddress(EASContractAddress);
-      try {
-        await gitcoinAttester
+      await expect(
+        gitcoinAttester
           .connect(iamAccount)
-          .submitAttestations([multiAttestationRequests]);
-      } catch (e: any) {
-        expect(e.message).to.include(
-          "Only authorized verifiers can call this function"
-        );
-      }
+          .submitAttestations([multiAttestationRequests])
+      ).to.be.revertedWith("Only authorized verifiers can call this function");
     });
 
     it("Should fail when non-owner tries to add a verifier", async function () {
-      try {
-        await gitcoinAttester
-          .connect(iamAccount)
-          .addVerifier(recipient.address);
-      } catch (e: any) {
-        expect(e.message).to.include("Ownable: caller is not the owner");
-      }
+      await expect(
+        gitcoinAttester.connect(iamAccount).addVerifier(recipient.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Should fail when non-owner tries to remove a verifier", async function () {
-      try {
-        await gitcoinAttester.connect(iamAccount).removeVerifier(owner.address);
-      } catch (e: any) {
-        expect(e.message).to.include("Ownable: caller is not the owner");
-      }
+      await expect(
+        gitcoinAttester.connect(iamAccount).removeVerifier(owner.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Should allow owner to add and remove verifier", async function () {
@@ -217,20 +208,15 @@ describe("GitcoinAttester", function () {
 
       expect(await gitcoinAttester.verifiers(recipient.address)).to.equal(true);
 
-      try {
-        await gitcoinAttester.connect(owner).addVerifier(recipient.address);
-      } catch (e: any) {
-        expect(e.message).to.include("Verifier already added");
-      }
+      await expect(
+        gitcoinAttester.connect(owner).addVerifier(recipient.address)
+      ).to.be.revertedWith("Verifier already added");
     });
 
     it("Should revert when remove a verifier not in the allow-list", async function () {
-      try {
-        await gitcoinAttester.connect(owner).removeVerifier(iamAccount.address);
-      } catch (e: any) {
-        console.log(e.message);
-        expect(e.message).to.include("Verifier does not exist");
-      }
+      await expect(
+        gitcoinAttester.connect(owner).removeVerifier(iamAccount.address)
+      ).to.be.revertedWith("Verifier does not exist");
     });
     describe("Revocation", function () {
       let multiRevocationRequest: MultiRevocationRequest[] = [];
