@@ -71,7 +71,7 @@ contract GitcoinAttester is Ownable {
   function revokeAttestations(
     MultiRevocationRequest[] calldata multiRevocationRequest
   ) public payable virtual {
-    require(verifiers[msg.sender] && msg.sender == owner(), "Only authorized verifiers or owner can call this function");
+    require(verifiers[msg.sender] || msg.sender == owner(), "Only authorized verifiers or owner can call this function");
     eas.multiRevoke(multiRevocationRequest);
   }
 }
