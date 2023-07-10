@@ -65,7 +65,7 @@ contract GitcoinAttester is Ownable {
   }
 
   /**
-   * @dev Revoke an attestations by schema and uid
+   * @dev Revoke attestations by schema and uid
    * @param multiRevocationRequest An array of `MultiRevocationRequest` structures containing the attestations to revoke.
    */
   function revokeAttestations(
