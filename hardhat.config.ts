@@ -21,9 +21,25 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       from: process.env.DEPLOYER_ADDRESS as string,
     },
+    baseGoerli: {
+      url: process.env.CB_PROVIDER_URL as string,
+      accounts: [process.env.CB_PRIVATE_KEY as string],
+      chainId: 84531,
+      from: process.env.CB_ADDRESS as string,
+    },
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY as string,
+    apiKey: process.env.BASE_ETHERSCAN_API_KEY as string,
+    customChains: [
+      {
+        network: "baseGoerli",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org/",
+        },
+      },
+    ],
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
