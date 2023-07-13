@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-contracts": "^0.26.1",
-    "@openzeppelin/contracts": "^4.8.2"
+    "@openzeppelin/contracts": "^4.8.2",
+    "@openzeppelin/contracts-upgradeable": "^4.9.2"
   }
 }

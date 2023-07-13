@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
@@ -12,23 +13,23 @@ import "./GitcoinAttester.sol";
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
-contract GitcoinVerifier is Ownable {
+contract GitcoinVerifier is Ownable, Initializable {
   using ECDSA for bytes32;
 
   // Instance of the GitcoinAttester contract
-  GitcoinAttester public immutable attester;
+  GitcoinAttester public attester;
 
   // Address of the issuer of the passport
-  address public immutable issuer;
+  address public issuer;
+
+  // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
+  bytes32 private DOMAIN_SEPARATOR;
 
   // Name of the contract
   string public name;
 
   // Nonces for each recipient address
   mapping(address => uint) public recipientNonces;
-
-  // Domain Separator, as defined by EIP-712 (`hashstruct(eip712Domain)`)
-  bytes32 private immutable DOMAIN_SEPARATOR;
 
   /**
    * @dev EIP712Domain represents the domain separator struct for EIP-712 typed data hashing.
@@ -83,7 +84,7 @@ contract GitcoinVerifier is Ownable {
    * @param _issuer The address of the issuer of the passport.
    * @param _attester The address of the GitcoinAttester contract.
    */
-  constructor(address _issuer, address _attester) {
+  function initialize(address _issuer, address _attester) public onlyOwner initializer {
     attester = GitcoinAttester(_attester);
     issuer = _issuer;
     name = "GitcoinVerifier";
