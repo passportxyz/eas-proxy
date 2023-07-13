@@ -14,6 +14,26 @@ import "./GitcoinAttester.sol";
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
 contract GitcoinResolver is ISchemaResolver {
+    mapping(address => bytes32) public passports;
+    mapping(bytes32 => address) public uuids;
+    uint256 private counter = 0;
+
+    function createUUID() public returns (bytes32) {
+        counter++;
+        return keccak256(abi.encodePacked(msg.sender, counter));
+    }
+
+    function setUUID() public {
+        require(passports[msg.sender] == bytes32(0), "Address already has a UUID.");
+        recipientUUID = createUUID();
+        uuids[recipientUUID] = msg.sender;
+        passports[msg.sender] = recipientUUID;
+    }
+
+    function getUUID() public returns (bytes32) {
+        return passports[msg.sender];
+    }
+
     /**
      * @inheritdoc ISchemaResolver
      */
