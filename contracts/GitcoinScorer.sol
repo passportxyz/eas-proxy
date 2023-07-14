@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest} from "./IEAS.sol";
+import {AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest} from "./EAS/IEAS.sol";
 import "hardhat/console.sol";
 
 /**

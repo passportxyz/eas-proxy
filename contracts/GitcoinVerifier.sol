@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "./EAS.sol";
+import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "./EAS/EAS.sol";
 
 import "./GitcoinAttester.sol";
 
