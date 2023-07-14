@@ -83,16 +83,6 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@ethereum-attestation-service/eas-contracts@^0.26.1":
-  version "0.26.3"
-  resolved "https://registry.yarnpkg.com/@ethereum-attestation-service/eas-contracts/-/eas-contracts-0.26.3.tgz#46c3dcf6c62daa043ea4ff46fe401a23b7de31ec"
-  integrity sha512-Rf2fM2i9pFlC+DntonWj84MYCxTdndwZrILFZgACLSH0EcO7pDQYvaH2r04aq/uy6HDlu33n0r6NFaS40aKrfw==
-  dependencies:
-    "@typechain/ethers-v5" "^10.2.0"
-    "@typechain/hardhat" "^6.1.5"
-    hardhat "2.13.1"
-    typechain "^8.1.1"
-
 "@ethereum-attestation-service/eas-contracts@^0.27.1":
   version "0.27.1"
   resolved "https://registry.yarnpkg.com/@ethereum-attestation-service/eas-contracts/-/eas-contracts-0.27.1.tgz#399164fb6841264a8b949cac3b6ef598e9847741"

@@ -7,7 +7,7 @@ const GITCOIN_STAMP_SCHEMA =
 const GITCOIN_SCORE_SCHEMA =
   "0x0f2928937d46e9ec78b350750185d2f495e708f79b383cef23b903fe120d9a2e";
 
-describe.only("Upgrading GitcoinVerifier", function () {
+describe("Upgrading GitcoinVerifier", function () {
   this.beforeEach(async function () {
     const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
     this.owner = owner;
