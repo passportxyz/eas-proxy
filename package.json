@@ -1,12 +1,11 @@
 {
   "devDependencies": {
-    "@ethereum-attestation-service/eas-sdk": "^0.27.0",
+    "@ethereum-attestation-service/eas-sdk": "^0.29.1",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
-    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
-    "@openzeppelin/hardhat-upgrades": "^2.0.1",
+    "@openzeppelin/hardhat-upgrades": "^1.28.0",
     "@types/mocha": ">=9.1.0",
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
@@ -19,6 +18,8 @@
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-contracts": "^0.26.1",
+    
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/contracts-upgradeable": "^4.9.2"
   }
