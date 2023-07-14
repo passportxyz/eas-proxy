@@ -6,6 +6,7 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
+    "@openzeppelin/hardhat-upgrades": "^2.0.1",
     "@types/mocha": ">=9.1.0",
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",

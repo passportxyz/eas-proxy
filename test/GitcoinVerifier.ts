@@ -83,10 +83,11 @@ describe("GitcoinVerifier", function () {
 
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-    this.gitcoinVerifier = await GitcoinVerifier.deploy(
-      this.iamAccount.address,
-      this.gitcoinAttester.address
-    );
+    this.gitcoinVerifier = await GitcoinVerifier.deploy();
+
+    const initializTx = await this.gitcoinVerifier
+      .connect(this.owner)
+      .initialize(this.iamAccount.address, this.gitcoinAttester.address);
 
     // Add verifier to GitcoinAttester allow-list
     const tx = await this.gitcoinAttester.addVerifier(

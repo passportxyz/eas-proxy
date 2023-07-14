@@ -2,8 +2,8 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
@@ -13,7 +13,7 @@ import "./GitcoinAttester.sol";
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
-contract GitcoinVerifier is Ownable, Initializable {
+contract GitcoinVerifier is OwnableUpgradeable, PausableUpgradeable {
   using ECDSA for bytes32;
 
   // Instance of the GitcoinAttester contract
@@ -70,21 +70,14 @@ contract GitcoinVerifier is Ownable, Initializable {
     );
 
   /**
-   * @notice Gets the current chain ID.
-   * @return chainId The chain ID.
-   */
-  function _getChainId() private view returns (uint256 chainId) {
-    assembly {
-      chainId := chainid()
-    }
-  }
-
-  /**
-   * @notice Constructor function to set the GitcoinAttester contract address and the contract name.
+   * @notice Initializer function responsible for setting up the contract's initial state.
    * @param _issuer The address of the issuer of the passport.
    * @param _attester The address of the GitcoinAttester contract.
    */
-  function initialize(address _issuer, address _attester) public onlyOwner initializer {
+  function initialize(address _issuer, address _attester) public initializer {
+    __Ownable_init();
+    __Pausable_init();
+
     attester = GitcoinAttester(_attester);
     issuer = _issuer;
     name = "GitcoinVerifier";
@@ -100,6 +93,24 @@ contract GitcoinVerifier is Ownable, Initializable {
         address(this) // verifyingContract
       )
     );
+  }
+
+  function pause() public onlyOwner {
+    _pause();
+  }
+
+  function unpause() public onlyOwner {
+    _unpause();
+  }
+
+  /**
+   * @notice Gets the current chain ID.
+   * @return chainId The chain ID.
+   */
+  function _getChainId() private view returns (uint256 chainId) {
+    assembly {
+      chainId := chainid()
+    }
   }
 
   /**
