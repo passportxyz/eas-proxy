@@ -77,13 +77,14 @@ describe("GitcoinVerifier", function () {
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
     this.gitcoinAttester = await GitcoinAttester.deploy();
+    await this.gitcoinAttester.connect(this.owner).initialize();
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
     this.gitcoinVerifier = await GitcoinVerifier.deploy();
 
-    const initializTx = await this.gitcoinVerifier
+    await this.gitcoinVerifier
       .connect(this.owner)
       .initialize(
         await this.iamAccount.getAddress(),
@@ -234,7 +235,7 @@ describe("GitcoinVerifier", function () {
       })
     ).wait();
 
-    expect(verifiedPassport.events?.length).to.equal(
+    expect(verifiedPassport.logs?.length).to.equal(
       sumDataLengths(this.passport.multiAttestationRequest)
     );
   });
@@ -280,7 +281,7 @@ describe("GitcoinVerifier", function () {
       })
     ).wait();
 
-    expect(result.events?.length).to.equal(
+    expect(result.logs?.length).to.equal(
       sumDataLengths(this.passport.multiAttestationRequest)
     );
 
@@ -361,7 +362,9 @@ describe("GitcoinVerifier", function () {
       ).wait();
     });
     it("should allow the owner to withdraw all fees", async function () {
-      const balanceBefore = await this.owner.getBalance();
+      const balanceBefore = await ethers.provider.getBalance(
+        await this.owner.getAddress()
+      );
       const verifierBalance = await ethers.provider.getBalance(
         await this.gitcoinVerifier.getAddress()
       );
@@ -369,14 +372,17 @@ describe("GitcoinVerifier", function () {
       const tx = await this.gitcoinVerifier.withdrawFees();
       await tx.wait();
 
-      const ownerBalanceAfter = await this.owner.getBalance();
+      const ownerBalanceAfter = await ethers.provider.getBalance(
+        await this.owner.getAddress()
+      );
 
       const contractBalanceAfter = await ethers.provider.getBalance(
         await this.gitcoinVerifier.getAddress()
       );
 
-      expect(ownerBalanceAfter.gt(balanceBefore)).to.be.true;
-      expect(contractBalanceAfter.eq(0)).to.be.true;
+      expect(ownerBalanceAfter > balanceBefore).to.be.true;
+      debugger;
+      expect(contractBalanceAfter === BigInt(0)).to.be.true;
     });
 
     it("should reduce the contract balance after withdrawal", async function () {
@@ -391,8 +397,8 @@ describe("GitcoinVerifier", function () {
         await this.gitcoinVerifier.getAddress()
       );
 
-      expect(contractBalanceAfter.lt(contractBalanceBefore)).to.be.true;
-      expect(contractBalanceAfter.eq(0)).to.be.true;
+      expect(contractBalanceAfter < contractBalanceBefore).to.be.true;
+      expect(contractBalanceAfter === BigInt(0)).to.be.true;
     });
 
     it("should not allow non-owners to withdraw fees", async function () {
