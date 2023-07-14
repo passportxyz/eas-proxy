@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
 import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest, MultiRevocationRequest } from "./IEAS.sol";
 
 /**
  * @title GitcoinAttester
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
-contract GitcoinAttester is Ownable {
+contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
   // An allow-list of Verifiers that are authorized and trusted to call the submitAttestations function.
   mapping(address => bool) public verifiers;
 
@@ -20,6 +22,11 @@ contract GitcoinAttester is Ownable {
 
   // Emitted when a verifier is removed from the allow-list.
   event VerifierRemoved(address verifier);
+
+  function initialize() public initializer {
+    __Ownable_init();
+    __Pausable_init();
+  }
 
   /**
    * @dev Adds a verifier to the allow-list.

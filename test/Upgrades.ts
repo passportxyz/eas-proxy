@@ -17,6 +17,7 @@ describe("Upgrading GitcoinVerifier", function () {
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
     this.gitcoinAttester = await GitcoinAttester.deploy();
+    await this.gitcoinAttester.connect(this.owner).initialize();
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
@@ -24,9 +25,23 @@ describe("Upgrading GitcoinVerifier", function () {
       await this.iamAccount.getAddress(),
       await this.gitcoinAttester.getAddress(),
     ]);
-    // await gitcoinVerifier.waitForDeployment();
-    console.log(
-      `Deployed GitcoinVerifier to ${await gitcoinVerifier.getAddress()}`
-    );
+
+    expect(await gitcoinVerifier.getAddress()).to.not.be.null;
+  });
+});
+
+describe("Upgrading GitcoinAttester", function () {
+  this.beforeEach(async function () {
+    const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+    this.owner = owner;
+    this.iamAccount = iamAccount;
+  });
+  it("Should upgrade GitcoinVerifier", async function () {
+    // Deploy GitcoinAttester
+
+    const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+    const gitcoinAttester = await upgrades.deployProxy(GitcoinAttester);
+
+    expect(await gitcoinAttester.getAddress()).to.not.be.null;
   });
 });

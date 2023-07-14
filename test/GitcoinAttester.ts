@@ -8,9 +8,6 @@ import {
   NO_EXPIRATION,
   MultiRevocationRequest,
 } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinAttester } from "../typechain-types";
-
-const { Interface } = ethers;
 
 type Stamp = {
   provider: string;
@@ -64,7 +61,7 @@ const multiAttestationRequests = {
   data: [attestationRequest, attestationRequest, attestationRequest],
 };
 
-describe.only("GitcoinAttester", function () {
+describe("GitcoinAttester", function () {
   // TODO: move tests out of "Deployment" describe block
   let gitcoinAttester: any,
     eas: any,
@@ -114,6 +111,8 @@ describe.only("GitcoinAttester", function () {
         "GitcoinAttester"
       );
       gitcoinAttester = await GitcoinAttester.connect(owner).deploy();
+
+      await gitcoinAttester.connect(owner).initialize();
 
       const provider = ethers.getDefaultProvider(1);
 
