@@ -21,10 +21,12 @@ describe.only("Upgrading GitcoinVerifier", function () {
 
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
     const gitcoinVerifier = await upgrades.deployProxy(GitcoinVerifier, [
-      this.iamAccount.address,
-      this.gitcoinAttester.address,
+      await this.iamAccount.getAddress(),
+      await this.gitcoinAttester.getAddress(),
     ]);
     // await gitcoinVerifier.waitForDeployment();
-    console.log(`Deployed GitcoinVerifier to ${gitcoinVerifier.getAddress()}`);
+    console.log(
+      `Deployed GitcoinVerifier to ${await gitcoinVerifier.getAddress()}`
+    );
   });
 });

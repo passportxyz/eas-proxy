@@ -57,7 +57,7 @@ describe("GitcoinScorer", function () {
         const GitcoinScorer = await ethers.getContractFactory("GitcoinScorer");
         gitcoinScorer = await GitcoinScorer.connect(owner).deploy();
 
-        const provider = ethers.getDefaultProvider();
+        const provider = ethers.getDefaultProvider(1);
 
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);

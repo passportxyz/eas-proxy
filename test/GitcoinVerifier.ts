@@ -6,8 +6,6 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
 
-const { BigNumber, utils } = ethers;
-
 const googleStamp = {
   provider: "Google",
   stampHash: "234567890",
@@ -30,9 +28,9 @@ const GITCOIN_STAMP_SCHEMA =
 const GITCOIN_SCORE_SCHEMA =
   "0x0f2928937d46e9ec78b350750185d2f495e708f79b383cef23b903fe120d9a2e";
 
-const fee1 = utils.parseEther("0.001").toHexString();
-const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
-const fee2 = utils.parseEther("0.002").toHexString();
+const fee1 = ethers.parseEther("0.001");
+const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
+const fee2 = ethers.parseEther("0.002");
 
 const passportTypes = {
   AttestationRequestData: [
@@ -87,21 +85,25 @@ describe("GitcoinVerifier", function () {
 
     const initializTx = await this.gitcoinVerifier
       .connect(this.owner)
-      .initialize(this.iamAccount.address, this.gitcoinAttester.address);
+      .initialize(
+        await this.iamAccount.getAddress(),
+        await this.gitcoinAttester.getAddress()
+      );
 
     // Add verifier to GitcoinAttester allow-list
     const tx = await this.gitcoinAttester.addVerifier(
-      this.gitcoinVerifier.address
+      await this.gitcoinVerifier.getAddress()
     );
     await tx.wait();
 
-    const chainId = await this.iamAccount.getChainId();
+    const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
 
+    // debugger;
     this.domain = {
       name: "GitcoinVerifier",
       version: "1",
       chainId,
-      verifyingContract: this.gitcoinVerifier.address,
+      verifyingContract: await this.gitcoinVerifier.getAddress(),
     };
 
     this.getNonce = async (address: string) => {
@@ -114,7 +116,7 @@ describe("GitcoinVerifier", function () {
           schema: GITCOIN_STAMP_SCHEMA,
           data: [
             {
-              recipient: this.recipientAccount.address,
+              recipient: await this.recipientAccount.getAddress(),
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
@@ -122,7 +124,7 @@ describe("GitcoinVerifier", function () {
               value: 0,
             },
             {
-              recipient: this.recipientAccount.address,
+              recipient: await this.recipientAccount.getAddress(),
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
@@ -135,7 +137,7 @@ describe("GitcoinVerifier", function () {
           schema: GITCOIN_SCORE_SCHEMA,
           data: [
             {
-              recipient: this.recipientAccount.address,
+              recipient: await this.recipientAccount.getAddress(),
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
@@ -143,7 +145,7 @@ describe("GitcoinVerifier", function () {
               value: 0,
             },
             {
-              recipient: this.recipientAccount.address,
+              recipient: await this.recipientAccount.getAddress(),
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
@@ -151,7 +153,7 @@ describe("GitcoinVerifier", function () {
               value: 0,
             },
             {
-              recipient: this.recipientAccount.address,
+              recipient: await this.recipientAccount.getAddress(),
               expirationTime: NO_EXPIRATION,
               revocable: true,
               refUID: ZERO_BYTES32,
@@ -161,9 +163,11 @@ describe("GitcoinVerifier", function () {
           ],
         },
       ],
-      nonce: await this.getNonce(this.recipientAccount.address),
+      nonce: await this.getNonce(await this.recipientAccount.getAddress()),
       fee: fee1,
     };
+
+    debugger;
 
     this.getOtherPassport = async () => {
       return {
@@ -172,7 +176,7 @@ describe("GitcoinVerifier", function () {
             schema: GITCOIN_STAMP_SCHEMA,
             data: [
               {
-                recipient: this.recipientAccount.address,
+                recipient: await this.recipientAccount.getAddress(),
                 expirationTime: NO_EXPIRATION,
                 revocable: true,
                 refUID: ZERO_BYTES32,
@@ -185,7 +189,7 @@ describe("GitcoinVerifier", function () {
             schema: GITCOIN_SCORE_SCHEMA,
             data: [
               {
-                recipient: this.recipientAccount.address,
+                recipient: await this.recipientAccount.getAddress(),
                 expirationTime: NO_EXPIRATION,
                 revocable: true,
                 refUID: ZERO_BYTES32,
@@ -195,7 +199,7 @@ describe("GitcoinVerifier", function () {
             ],
           },
         ],
-        nonce: await this.getNonce(this.recipientAccount.address),
+        nonce: await this.getNonce(await this.recipientAccount.getAddress()),
         fee: fee1,
       };
     };
@@ -208,21 +212,21 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should verify signature and make attestations for each stamp", async function () {
-    const signature = await this.iamAccount._signTypedData(
+    const signature = await this.iamAccount.signTypedData(
       this.domain,
       passportTypes,
       this.passport
     );
 
-    const recoveredAddress = ethers.utils.verifyTypedData(
+    const recoveredAddress = ethers.verifyTypedData(
       this.domain,
       passportTypes,
       this.passport,
       signature
     );
 
-    expect(recoveredAddress).to.equal(this.iamAccount.address);
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    expect(recoveredAddress).to.equal(await this.iamAccount.getAddress());
+    const { v, r, s } = ethers.Signature.from(signature);
 
     const verifiedPassport = await (
       await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
@@ -236,22 +240,22 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should revert if the signature is invalid", async function () {
-    const signature = await this.iamAccount._signTypedData(
+    const signature = await this.iamAccount.signTypedData(
       this.domain,
       passportTypes,
       this.passport
     );
 
-    const recoveredAddress = ethers.utils.verifyTypedData(
+    const recoveredAddress = ethers.verifyTypedData(
       this.domain,
       passportTypes,
       this.passport,
       signature
     );
 
-    expect(recoveredAddress).to.equal(this.iamAccount.address);
+    expect(recoveredAddress).to.equal(await this.iamAccount.getAddress());
 
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const { v, r, s } = ethers.Signature.from(signature);
 
     const otherPassport = await this.getOtherPassport();
     await expect(
@@ -262,12 +266,12 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should revert if verifyAndAttest is called twice with the same parameters", async function () {
-    const signature = await this.iamAccount._signTypedData(
+    const signature = await this.iamAccount.signTypedData(
       this.domain,
       passportTypes,
       this.passport
     );
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const { v, r, s } = ethers.Signature.from(signature);
 
     // calling verifyAndAttest 1st time
     const result = await (
@@ -288,21 +292,21 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should revert if fee is insufficient", async function () {
-    const signature = await this.iamAccount._signTypedData(
+    const signature = await this.iamAccount.signTypedData(
       this.domain,
       passportTypes,
       this.passport
     );
-    const recoveredAddress = ethers.utils.verifyTypedData(
+    const recoveredAddress = ethers.verifyTypedData(
       this.domain,
       passportTypes,
       this.passport,
       signature
     );
 
-    expect(recoveredAddress).to.equal(this.iamAccount.address);
+    expect(recoveredAddress).to.equal(await this.iamAccount.getAddress());
 
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const { v, r, s } = ethers.Signature.from(signature);
 
     await expect(
       this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
@@ -312,21 +316,21 @@ describe("GitcoinVerifier", function () {
   });
 
   it("should accept fee", async function () {
-    const signature = await this.iamAccount._signTypedData(
+    const signature = await this.iamAccount.signTypedData(
       this.domain,
       passportTypes,
       this.passport
     );
-    const recoveredAddress = ethers.utils.verifyTypedData(
+    const recoveredAddress = ethers.verifyTypedData(
       this.domain,
       passportTypes,
       this.passport,
       signature
     );
 
-    expect(recoveredAddress).to.equal(this.iamAccount.address);
+    expect(recoveredAddress).to.equal(await this.iamAccount.getAddress());
 
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const { v, r, s } = ethers.Signature.from(signature);
 
     const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
       this.passport,
@@ -343,13 +347,13 @@ describe("GitcoinVerifier", function () {
 
   describe("withdrawFees", function () {
     this.beforeEach(async function () {
-      const signature = await this.iamAccount._signTypedData(
+      const signature = await this.iamAccount.signTypedData(
         this.domain,
         passportTypes,
         this.passport
       );
 
-      const { v, r, s } = ethers.utils.splitSignature(signature);
+      const { v, r, s } = ethers.Signature.from(signature);
       await (
         await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
           value: fee2,
@@ -359,7 +363,7 @@ describe("GitcoinVerifier", function () {
     it("should allow the owner to withdraw all fees", async function () {
       const balanceBefore = await this.owner.getBalance();
       const verifierBalance = await ethers.provider.getBalance(
-        this.gitcoinVerifier.address
+        await this.gitcoinVerifier.getAddress()
       );
 
       const tx = await this.gitcoinVerifier.withdrawFees();
@@ -368,7 +372,7 @@ describe("GitcoinVerifier", function () {
       const ownerBalanceAfter = await this.owner.getBalance();
 
       const contractBalanceAfter = await ethers.provider.getBalance(
-        this.gitcoinVerifier.address
+        await this.gitcoinVerifier.getAddress()
       );
 
       expect(ownerBalanceAfter.gt(balanceBefore)).to.be.true;
@@ -378,13 +382,13 @@ describe("GitcoinVerifier", function () {
     it("should reduce the contract balance after withdrawal", async function () {
       const [owner] = await ethers.getSigners();
       const contractBalanceBefore = await ethers.provider.getBalance(
-        this.gitcoinVerifier.address
+        await this.gitcoinVerifier.getAddress()
       );
 
       await this.gitcoinVerifier.withdrawFees();
 
       const contractBalanceAfter = await ethers.provider.getBalance(
-        this.gitcoinVerifier.address
+        await this.gitcoinVerifier.getAddress()
       );
 
       expect(contractBalanceAfter.lt(contractBalanceBefore)).to.be.true;
@@ -407,14 +411,16 @@ describe("GitcoinVerifier", function () {
       await expect(
         this.gitcoinVerifier
           .connect(nonOwner)
-          .transferOwnership(nonOwner.address)
+          .transferOwnership(await nonOwner.getAddress())
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should allow owner to transfer ownership", async function () {
-      await this.gitcoinVerifier.transferOwnership(this.iamAccount.address);
+      await this.gitcoinVerifier.transferOwnership(
+        await this.iamAccount.getAddress()
+      );
       expect(await this.gitcoinVerifier.owner()).to.equal(
-        this.iamAccount.address
+        await this.iamAccount.getAddress()
       );
     });
   });
