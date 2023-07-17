@@ -424,6 +424,41 @@ describe("GitcoinVerifier", function () {
       expect(await this.gitcoinVerifier.owner()).to.equal(
         await this.iamAccount.getAddress()
       );
+      await this.gitcoinVerifier
+        .connect(this.iamAccount)
+        .transferOwnership(await this.owner.getAddress());
+    });
+  });
+  describe("Pausability", function () {
+    it("should pause and unpause", async function () {
+      await this.gitcoinVerifier.connect(this.owner).pause();
+      expect(await this.gitcoinVerifier.paused()).to.equal(true);
+      await this.gitcoinVerifier.connect(this.owner).unpause();
+      expect(await this.gitcoinVerifier.paused()).to.equal(false);
+    });
+
+    it("should revert when paused", async function () {
+      await this.gitcoinVerifier.connect(this.owner).pause();
+      await expect(
+        this.gitcoinVerifier.verifyAndAttest(
+          this.passport,
+          8,
+          "0x69bec0b6cd72c2116c44b777f6d3df6cd5e40b0aa2107e6c79108a414260e35b",
+          "0x25fa382cd5b3d4577f4977fc3a0b742ee65ac8a3037789466f4ac3dfbb6eccc6",
+          {
+            value: fee2,
+          }
+        )
+      ).to.be.revertedWith("Pausable: paused");
+      await this.gitcoinVerifier.unpause();
+    });
+    it("should not allow non owner to pause", async function () {
+      await this.gitcoinVerifier
+        .connect(this.owner)
+        .transferOwnership(await this.iamAccount.getAddress());
+      await expect(
+        this.gitcoinVerifier.connect(this.owner).pause()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });

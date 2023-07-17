@@ -224,7 +224,7 @@ contract GitcoinVerifier is OwnableUpgradeable, PausableUpgradeable {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public payable {
+  ) public payable whenNotPaused {
     _verify(v, r, s, attestationRequest);
 
     if (msg.value < attestationRequest.fee) {

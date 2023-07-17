@@ -29,6 +29,14 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
     __Pausable_init();
   }
 
+  function pause() public onlyOwner {
+    _pause();
+  }
+
+  function unpause() public onlyOwner {
+    _unpause();
+  }
+
   /**
    * @dev Adds a verifier to the allow-list.
    * @param _verifier The address of the verifier to add.
@@ -63,7 +71,7 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
    */
   function submitAttestations(
     MultiAttestationRequest[] calldata multiAttestationRequest
-  ) public payable virtual returns (bytes32[] memory) {
+  ) public payable virtual whenNotPaused returns (bytes32[] memory) {
     require(
       verifiers[msg.sender],
       "Only authorized verifiers can call this function"
@@ -78,7 +86,7 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
    */
   function revokeAttestations(
     MultiRevocationRequest[] calldata multiRevocationRequest
-  ) public payable virtual {
+  ) public payable virtual whenNotPaused {
     require(verifiers[msg.sender] || msg.sender == owner(), "Only authorized verifiers or owner can call this function");
     eas.multiRevoke(multiRevocationRequest);
   }

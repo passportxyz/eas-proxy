@@ -115,14 +115,14 @@ describe("GitcoinAttester", function () {
       await gitcoinAttester.connect(owner).initialize();
 
       eas = new EAS(EASContractAddress);
+
+      await gitcoinAttester.setEASAddress(EASContractAddress);
     }
 
     await loadFixture(deployGitcoinAttester);
   });
   describe("Attestations", function () {
     it("Should write multiple attestations", async function () {
-      await gitcoinAttester.setEASAddress(EASContractAddress);
-
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
@@ -138,7 +138,6 @@ describe("GitcoinAttester", function () {
     });
 
     it("should revert when a non allowed address attempts to write attestations", async function () {
-      await gitcoinAttester.setEASAddress(EASContractAddress);
       await expect(
         gitcoinAttester
           .connect(iamAccount)
@@ -279,6 +278,27 @@ describe("GitcoinAttester", function () {
       ).to.be.revertedWith(
         "Only authorized verifiers or owner can call this function"
       );
+    });
+  });
+  describe("Pausability", function () {
+    it("should pause and unpause", async function () {
+      await gitcoinAttester.pause();
+      expect(await gitcoinAttester.paused()).to.equal(true);
+      await gitcoinAttester.unpause();
+      expect(await gitcoinAttester.paused()).to.equal(false);
+    });
+
+    it("should revert when paused", async function () {
+      await gitcoinAttester.pause();
+      await expect(
+        gitcoinAttester.submitAttestations([multiAttestationRequests])
+      ).to.be.revertedWith("Pausable: paused");
+      await gitcoinAttester.unpause();
+    });
+    it("should not allow non owner to pause", async function () {
+      await expect(
+        gitcoinAttester.connect(nonOwnerOrVerifier).pause()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });
