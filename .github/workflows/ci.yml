@@ -23,3 +23,6 @@ jobs:
 
       - name: Run tests
         run: yarn hardhat test
+
+        env:
+          PROVIDER_URL: ${{ secrets.PROVIDER_URL }}
