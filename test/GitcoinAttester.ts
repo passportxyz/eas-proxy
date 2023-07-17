@@ -6,6 +6,7 @@ import {
   ZERO_BYTES32,
   NO_EXPIRATION,
   MultiRevocationRequest,
+  EAS,
 } from "@ethereum-attestation-service/eas-sdk";
 
 type Stamp = {
@@ -63,7 +64,7 @@ const multiAttestationRequests = {
 describe("GitcoinAttester", function () {
   // TODO: move tests out of "Deployment" describe block
   let gitcoinAttester: any,
-    eas: any,
+    eas: EAS,
     easFactory: any,
     EASContractAddress: string,
     owner: any,
@@ -113,15 +114,7 @@ describe("GitcoinAttester", function () {
 
       await gitcoinAttester.connect(owner).initialize();
 
-      const provider = ethers.getDefaultProvider(1);
-
-      const schemaRegistryFactory = await ethers.getContractFactory(
-        "SchemaRegistry"
-      );
-      const schemaRegistry = await schemaRegistryFactory.deploy();
-
-      easFactory = await ethers.getContractFactory("contracts/EAS/EAS.sol:EAS");
-      eas = await easFactory.deploy(await schemaRegistry.getAddress());
+      eas = new EAS(EASContractAddress);
     }
 
     await loadFixture(deployGitcoinAttester);
@@ -215,7 +208,7 @@ describe("GitcoinAttester", function () {
       // const easInterface = new Interface(eas);
 
       attestationResult.logs?.forEach((log) => {
-        const decodedLog = easFactory.interface.parseLog(log);
+        const decodedLog = eas.contract.interface.parseLog(log);
         const args = decodedLog?.args;
         if (args) {
           const { schema, uid } = decodedLog.args;
@@ -250,7 +243,7 @@ describe("GitcoinAttester", function () {
       const revocationResult = await revocationTx.wait();
 
       revocationResult.logs?.forEach(async (log, i) => {
-        const easInterface = easFactory.interface.parseLog(log);
+        const easInterface = eas.contract.interface.parseLog(log);
         expect(easInterface?.args).to.not.be.undefined;
         const schema = easInterface?.args.schema;
         const uid = easInterface?.args.uid;

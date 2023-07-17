@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "./EAS/EAS.sol";
-import {ISchemaResolver} from "./EAS/resolver/ISchemaResolver.sol";
+import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 
 import "./GitcoinAttester.sol";
 

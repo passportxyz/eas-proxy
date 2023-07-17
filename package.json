@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@ethereum-attestation-service/eas-contracts": "^0.28.1",
     "@ethereum-attestation-service/eas-sdk": "^0.29.1",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.1",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
