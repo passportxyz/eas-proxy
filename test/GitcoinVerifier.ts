@@ -99,7 +99,6 @@ describe("GitcoinVerifier", function () {
 
     const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
 
-    // debugger;
     this.domain = {
       name: "GitcoinVerifier",
       version: "1",
@@ -167,8 +166,6 @@ describe("GitcoinVerifier", function () {
       nonce: await this.getNonce(await this.recipientAccount.getAddress()),
       fee: fee1,
     };
-
-    debugger;
 
     this.getOtherPassport = async () => {
       return {
@@ -381,7 +378,6 @@ describe("GitcoinVerifier", function () {
       );
 
       expect(ownerBalanceAfter > balanceBefore).to.be.true;
-      debugger;
       expect(contractBalanceAfter === BigInt(0)).to.be.true;
     });
 
