@@ -1,8 +1,7 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { expect, util } from "chai";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  EAS,
   SchemaEncoder,
   ZERO_BYTES32,
   NO_EXPIRATION,
@@ -121,7 +120,7 @@ describe("GitcoinAttester", function () {
       );
       const schemaRegistry = await schemaRegistryFactory.deploy();
 
-      easFactory = await ethers.getContractFactory("EAS");
+      easFactory = await ethers.getContractFactory("contracts/EAS/EAS.sol:EAS");
       eas = await easFactory.deploy(await schemaRegistry.getAddress());
     }
 
