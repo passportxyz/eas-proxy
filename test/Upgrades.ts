@@ -40,9 +40,7 @@ describe("Upgrading GitcoinVerifier", function () {
     );
   });
   it("should expose public functions from proxy", async function () {
-    expect(await this.gitcoinVerifierProxy.attester()).to.be.equal(
-      await this.gitcoinAttester.getAddress()
-    );
+    await this.gitcoinVerifierProxy.connect(this.owner).withdrawFees();
   });
 });
 

@@ -1,8 +1,12 @@
 // This script deals with deploying the GitcoinAttester on a given network
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 import { confirmContinue, assertEnvironment } from "./utils";
 
 assertEnvironment();
+
+if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
+  console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
+}
 
 export async function main() {
   // Wait 10 blocks for re-org protection
@@ -16,15 +20,16 @@ export async function main() {
 
   // Deploy GitcoinAttester
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-  const attester = await GitcoinAttester.deploy();
+  const attester = await upgrades.deployProxy(GitcoinAttester);
 
-  console.log(`Deploying GitcoinAttester to ${attester.address}`);
+  const deployment = await attester.waitForDeployment();
+  const deployedAddress = await attester.getAddress();
 
-  await attester.deployTransaction.wait(blocksToWait);
+  const transferOwnershipTx = await upgrades.admin.transferProxyAdminOwnership(
+    process.env.PASSPORT_MULTISIG_ADDRESS || ""
+  );
 
-  console.log("✅ Deployed GitcoinAttester.");
-
-  return attester.address;
+  console.log(`✅ Deployed GitcoinAttester. ${deployedAddress}`);
 }
 
 main().catch((error) => {
