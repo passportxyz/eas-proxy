@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 
-import "./GitcoinAttester.sol";
+import {BaseAttestor} from "./BaseAttester.sol";
 
 /**
- * @title GitcoinResolver
+ * @title BaseResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
-contract GitcoinResolver is ISchemaResolver {
+contract BaseResolver is ISchemaResolver {
     /**
      * @inheritdoc ISchemaResolver
      */

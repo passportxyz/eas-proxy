@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest, MultiRevocationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 /**
- * @title GitcoinAttester
+ * @title BaseAttester
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
-contract GitcoinAttester is Ownable {
+contract BaseAttester is Ownable {
   // An allow-list of Verifiers that are authorized and trusted to call the submitAttestations function.
   mapping(address => bool) public verifiers;
 

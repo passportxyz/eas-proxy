@@ -1,9 +1,10 @@
-import { HardhatUserConfig } from "hardhat/config";
-import * as dotenv from "dotenv";
+import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-toolbox";
-import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
+import "@typechain/hardhat";
+import * as dotenv from "dotenv";
 import "hardhat-gas-reporter";
+import { HardhatUserConfig } from "hardhat/config";
 import "solidity-coverage";
 
 dotenv.config();

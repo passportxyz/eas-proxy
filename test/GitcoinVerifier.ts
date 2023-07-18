@@ -1,27 +1,12 @@
-import { ethers } from "hardhat";
-import { expect } from "chai";
 import {
   NO_EXPIRATION,
   ZERO_BYTES32,
 } from "@ethereum-attestation-service/eas-sdk";
-import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { easEncodeScore, easEncodeStamp } from "./BaseAttester";
 
 const { BigNumber, utils } = ethers;
-
-const googleStamp = {
-  provider: "Google",
-  stampHash: "234567890",
-};
-
-const facebookStamp = {
-  provider: "Facebook",
-  stampHash: "234567891",
-};
-
-const twitterStamp = {
-  provider: "Twitter",
-  stampHash: "234567891",
-};
 
 // SEPOLIA SPECIFIC
 const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
@@ -34,25 +19,25 @@ const fee1 = utils.parseEther("0.001").toHexString();
 const fee1Less1Wei = utils.parseEther("0.000999999999999999").toHexString();
 const fee2 = utils.parseEther("0.002").toHexString();
 
-const passportTypes = {
-  AttestationRequestData: [
-    { name: "recipient", type: "address" },
-    { name: "expirationTime", type: "uint64" },
-    { name: "revocable", type: "bool" },
-    { name: "refUID", type: "bytes32" },
-    { name: "data", type: "bytes" },
-    { name: "value", type: "uint256" },
-  ],
-  MultiAttestationRequest: [
-    { name: "schema", type: "bytes32" },
-    { name: "data", type: "AttestationRequestData[]" },
-  ],
-  PassportAttestationRequest: [
-    { name: "multiAttestationRequest", type: "MultiAttestationRequest[]" },
-    { name: "nonce", type: "uint256" },
-    { name: "fee", type: "uint256" },
-  ],
-};
+// const passportTypes = {
+//   AttestationRequestData: [
+//     { name: "recipient", type: "address" },
+//     { name: "expirationTime", type: "uint64" },
+//     { name: "revocable", type: "bool" },
+//     { name: "refUID", type: "bytes32" },
+//     { name: "data", type: "bytes" },
+//     { name: "value", type: "uint256" },
+//   ],
+//   MultiAttestationRequest: [
+//     { name: "schema", type: "bytes32" },
+//     { name: "data", type: "AttestationRequestData[]" },
+//   ],
+//   PassportAttestationRequest: [
+//     { name: "multiAttestationRequest", type: "MultiAttestationRequest[]" },
+//     { name: "nonce", type: "uint256" },
+//     { name: "fee", type: "uint256" },
+//   ],
+// };
 
 const scorer1Score = {
   score: 100,
@@ -68,7 +53,7 @@ function sumDataLengths(requests: { data: any[] }[]): number {
   return requests.reduce((total, request) => total + request.data.length, 0);
 }
 
-describe("GitcoinVerifier", function () {
+describe("BaseVerifier", function () {
   this.beforeAll(async function () {
     const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
     this.owner = owner;
@@ -76,21 +61,21 @@ describe("GitcoinVerifier", function () {
     this.owner = owner;
     this.recipientAccount = recipientAccount;
 
-    // Deploy GitcoinAttester
-    const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-    this.gitcoinAttester = await GitcoinAttester.deploy();
-    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
+    // Deploy BaseAttester
+    const BaseAttester = await ethers.getContractFactory("BaseAttester");
+    this.BaseAttester = await BaseAttester.deploy();
+    await this.BaseAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
-    // Deploy GitcoinVerifier
-    const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-    this.gitcoinVerifier = await GitcoinVerifier.deploy(
+    // Deploy BaseVerifier
+    const BaseVerifier = await ethers.getContractFactory("BaseVerifier");
+    this.BaseVerifier = await BaseVerifier.deploy(
       this.iamAccount.address,
-      this.gitcoinAttester.address
+      this.BaseAttester.address
     );
 
-    // Add verifier to GitcoinAttester allow-list
-    const tx = await this.gitcoinAttester.addVerifier(
-      this.gitcoinVerifier.address
+    // Add verifier to BaseAttester allow-list
+    const tx = await this.BaseAttester.addVerifier(
+      this.BaseVerifier.address
     );
     await tx.wait();
 

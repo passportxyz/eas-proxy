@@ -1,7 +1,21 @@
 {
+  "name": "eas-sdk-example",
+  "author": {
+    "name": "team gitcoin",
+    "email": "jax@jaxcoder.xyz"
+  },
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "lint": "prettier --check \"./contracts/**/*.sol\" && solhint \"./contracts/**/*.sol\""
+  },
   "devDependencies": {
     "@ethereum-attestation-service/eas-sdk": "^0.27.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
+    "@nomicfoundation/hardhat-foundry": "^1.0.2",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@nomiclabs/hardhat-ethers": "^2.2.3",

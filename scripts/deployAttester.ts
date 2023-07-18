@@ -1,6 +1,6 @@
-// This script deals with deploying the GitcoinAttester on a given network
+// This script deals with deploying the BaseAttester on a given network
 import hre, { ethers } from "hardhat";
-import { confirmContinue, assertEnvironment } from "./utils";
+import { assertEnvironment, confirmContinue } from "./utils";
 
 assertEnvironment();
 
@@ -9,20 +9,20 @@ export async function main() {
   const blocksToWait = hre.network.name === "hardhat" ? 0 : 10;
 
   await confirmContinue({
-    contract: "GitcoinAttester",
+    contract: "BaseAttester",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
-  // Deploy GitcoinAttester
-  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-  const attester = await GitcoinAttester.deploy();
+  // Deploy BaseAttester
+  const BaseAttester = await ethers.getContractFactory("BaseAttester");
+  const attester = await BaseAttester.deploy();
 
-  console.log(`Deploying GitcoinAttester to ${attester.address}`);
+  console.log(`Deploying BaseAttester to ${attester.address}`);
 
   await attester.deployTransaction.wait(blocksToWait);
 
-  console.log("✅ Deployed GitcoinAttester.");
+  console.log("✅ Deployed BaseAttester.");
 
   return attester.address;
 }

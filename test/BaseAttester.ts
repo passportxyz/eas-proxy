@@ -1,14 +1,14 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { expect, util } from "chai";
-import { ethers } from "hardhat";
 import {
   EAS,
+  MultiRevocationRequest,
+  NO_EXPIRATION,
   SchemaEncoder,
   ZERO_BYTES32,
-  NO_EXPIRATION,
-  MultiRevocationRequest,
 } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinAttester } from "../typechain-types";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { BaseAttester } from "../typechain-types";
 
 const { utils, BigNumber } = ethers;
 
@@ -66,7 +66,7 @@ const multiAttestationRequests = {
 
 describe("GitcoinAttester", function () {
   // TODO: move tests out of "Deployment" describe block
-  let gitcoinAttester: GitcoinAttester,
+  let gitcoinAttester: BaseAttester,
     eas: EAS,
     EASContractAddress: string,
     owner: any,
@@ -210,7 +210,7 @@ describe("GitcoinAttester", function () {
         .submitAttestations([multiAttestationRequests]);
       const attestationResult = await tx.wait();
 
-      attestationResult.logs?.forEach((log) => {
+      attestationResult.logs?.forEach((log: { topics: string[]; data: string; }) => {
         const decodedLog = eas.contract.interface.parseLog(log);
         const { schema, uid } = decodedLog.args;
         const value = BigNumber.from(0);
@@ -241,7 +241,7 @@ describe("GitcoinAttester", function () {
         .revokeAttestations(multiRevocationRequest);
 
       const revocationResult = await revocationTx.wait();
-      revocationResult.logs?.forEach(async (log, i) => {
+      revocationResult.logs?.forEach(async (log: { topics: string[]; data: string; }, i: number) => {
         const parsedLogs = eas.contract.interface.parseLog(log);
         const { schema, uid } = parsedLogs.args;
         expect(schema).to.equal(multiRevocationRequest[0].schema);
@@ -258,7 +258,7 @@ describe("GitcoinAttester", function () {
         .connect(mockVerifier)
         .revokeAttestations(multiRevocationRequest);
       const revocationResult = await revocationTx.wait();
-      revocationResult.logs?.forEach(async (log, i) => {
+      revocationResult.logs?.forEach(async (log: { topics: string[]; data: string; }, i: number) => {
         const parsedLogs = eas.contract.interface.parseLog(log);
         const { schema, uid } = parsedLogs.args;
         expect(schema).to.equal(multiRevocationRequest[0].schema);

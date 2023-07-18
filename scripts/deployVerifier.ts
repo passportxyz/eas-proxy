@@ -1,4 +1,4 @@
-// This script deals with deploying the GitcoinVerifier on a given network
+// This script deals with deploying the BaseVerifier on a given network
 
 import hre, { ethers } from "hardhat";
 import { assertEnvironment, confirmContinue } from "./utils";
@@ -6,43 +6,43 @@ import { assertEnvironment, confirmContinue } from "./utils";
 assertEnvironment();
 
 export async function main() {
-  if (!process.env.GITCOIN_ATTESTER_ADDRESS) {
-    console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
+  if (!process.env.ATTESTER_ADDRESS) {
+    console.error("Please set your _ATTESTER_ADDRESS in a .env file");
   }
 
   // Wait 10 blocks for re-org protection
   const blocksToWait = hre.network.name === "hardhat" ? 0 : 10;
 
   await confirmContinue({
-    contract: "GitcoinVerifier",
+    contract: "BaseVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
   const IAM_ISSUER = String(process.env.IAM_ISSUER_ADDRESS);
-  const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
+  const ATTESTER_ADDRESS = String(process.env._ATTESTER_ADDRESS);
 
-  const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-  const verifier = await GitcoinVerifier.deploy(
+  const BaseVerifier = await ethers.getContractFactory("BaseVerifier");
+  const verifier = await BaseVerifier.deploy(
     IAM_ISSUER,
-    GITCOIN_ATTESTER_ADDRESS
+    ATTESTER_ADDRESS
   );
 
-  console.log(`Deploying GitcoinVerifier to ${verifier.address}`);
+  console.log(`Deploying BaseVerifier to ${verifier.address}`);
 
   await verifier.deployTransaction.wait(blocksToWait);
 
-  console.log("✅ Deployed GitcoinVerifier.");
+  console.log("✅ Deployed BaseVerifier.");
 
   const attester = await ethers.getContractAt(
-    "GitcoinAttester",
-    GITCOIN_ATTESTER_ADDRESS
+    "BaseAttester",
+    ATTESTER_ADDRESS
   );
 
   const tx = await attester.addVerifier(verifier.address);
   await tx.wait();
 
-  console.log("✅ Added the verifier to GitcoinAttester allow-list.");
+  console.log("✅ Added the verifier to BaseAttester allow-list.");
 
   return verifier.address;
 }
