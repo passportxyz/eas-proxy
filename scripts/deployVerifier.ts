@@ -14,18 +14,15 @@ export async function main() {
     console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
   }
 
+  if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
+    console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
+  }
+
   // Wait 10 blocks for re-org protection
   const blocksToWait = hre.network.name === "hardhat" ? 0 : 10;
 
   const IAM_ISSUER = String(process.env.IAM_ISSUER_ADDRESS);
   const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
-
-  console.log(
-    "IAM_ISSUER_ADDRESS",
-    IAM_ISSUER,
-    "GITCOIN_ATTESTER_ADDRESS",
-    GITCOIN_ATTESTER_ADDRESS
-  );
 
   await confirmContinue({
     contract: "GitcoinVerifier",
@@ -34,25 +31,23 @@ export async function main() {
   });
 
   const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-  const verifier = await upgrades.deployProxy(GitcoinVerifier, [
-    IAM_ISSUER,
-    GITCOIN_ATTESTER_ADDRESS,
-  ]);
+  const verifier = await upgrades.deployProxy(
+    GitcoinVerifier,
+    [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS],
+    {
+      kind: "uups",
+    }
+  );
 
   const deployment = await verifier.waitForDeployment();
 
   const verifierAddress = await deployment.getAddress();
   console.log(`✅ Deployed GitcoinVerifier to ${verifierAddress}`);
 
-  const attester = await ethers.getContractAt(
-    "GitcoinAttester",
-    GITCOIN_ATTESTER_ADDRESS
+  const transferProxyOwnerShip = await deployment.transferOwnership(
+    process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
-
-  const tx = await attester.addVerifier(verifierAddress);
-  await tx.wait();
-
-  console.log("✅ Added the verifier to GitcoinAttester allow-list.");
+  console.log("✅ Transfered ownership of GitcoinVerifier to multisig");
 }
 
 main().catch((error) => {

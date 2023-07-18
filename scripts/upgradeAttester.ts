@@ -1,6 +1,5 @@
-import hre, { ethers, upgrades, platform } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 import { confirmContinue, assertEnvironment } from "./utils";
-import { getProxyAdminFactory } from "@openzeppelin/hardhat-upgrades/dist/utils";
 
 assertEnvironment();
 
@@ -15,31 +14,24 @@ export async function main() {
     console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
   }
 
-  if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
-    console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
-  }
-
   const GitcoinAttesterUpdate = await ethers.getContractFactory(
     "GitcoinAttesterUpdate"
   );
-  const gitcoinAttesterUpdate = await GitcoinAttesterUpdate.deploy();
-  const deployment = await gitcoinAttesterUpdate.waitForDeployment();
-  const deployedUpgradedContractAddress =
-    await gitcoinAttesterUpdate.getAddress();
-  console.log(
-    `✅ Deployed Updated GitcoinAttester. ${deployedUpgradedContractAddress}`
-  );
 
-  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-
-  const preparedUpgrade = await upgrades.prepareUpgrade(
+  const preparedUpgradeAddress = await upgrades.prepareUpgrade(
     process.env.GITCOIN_ATTESTER_ADDRESS || "",
     GitcoinAttesterUpdate,
     {
       kind: "uups",
+      redeployImplementation: "always",
     }
   );
 
+  console.log(
+    `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
+  );
+
+  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
   const gitcoinAttester = await GitcoinAttester.attach(
     process.env.GITCOIN_ATTESTER_ADDRESS || ""
   );
@@ -47,7 +39,7 @@ export async function main() {
   // Encode upgrade transaction
   const upgradeData = gitcoinAttester.interface.encodeFunctionData(
     "upgradeTo",
-    [deployedUpgradedContractAddress]
+    [preparedUpgradeAddress]
   );
   console.log(`Upgrade transaction data: ${upgradeData}`);
 }
