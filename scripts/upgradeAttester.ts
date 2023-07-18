@@ -15,13 +15,6 @@ export async function main() {
     console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
   }
 
-  const GitcoinAttesterProxy = await ethers.getContractFactory(
-    "GitcoinAttester"
-  );
-  const gitcoinAttesterProxy = GitcoinAttesterProxy.attach(
-    process.env.GITCOIN_ATTESTER_ADDRESS || ""
-  );
-
   // TODO: use update implementation
   const GitcoinAttesterUpdate = await ethers.getContractFactory(
     "GitcoinAttester"
@@ -34,19 +27,18 @@ export async function main() {
     `✅ Deployed GitcoinAttester. ${deployedUpgradedContractAddress}`
   );
 
-  const implementationAddress = await platform.prepareUpgrade(
-    process.env.GITCOIN_ATTESTER_ADDRESS || "",
-    GitcoinAttesterUpdate
-  );
   // Get ProxyAdmin instance
-  const proxyAdminAddress = await upgrades.admin.getInstance();
+  const proxyAdminAddress = process.env.ATTESTER_PROXY_ADMIN_ADDRESS || "";
   const ProxyAdmin = await getProxyAdminFactory(hre);
   const proxyAdminContract = ProxyAdmin.attach(proxyAdminAddress);
 
   // Encode upgrade transaction
   const upgradeData = proxyAdminContract.interface.encodeFunctionData(
     "upgrade",
-    [process.env.GITCOIN_ATTESTER_ADDRESS || "", implementationAddress]
+    [
+      process.env.GITCOIN_ATTESTER_ADDRESS || "",
+      deployedUpgradedContractAddress,
+    ]
   );
   console.log(`Upgrade transaction data: ${upgradeData}`);
 }
