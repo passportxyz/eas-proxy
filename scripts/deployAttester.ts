@@ -25,11 +25,19 @@ export async function main() {
   const deployment = await attester.waitForDeployment();
   const deployedAddress = await attester.getAddress();
 
-  const transferOwnershipTx = await upgrades.admin.transferProxyAdminOwnership(
+  console.log(`✅ Deployed GitcoinAttester. ${deployedAddress}`);
+
+  const transferProxyOwnerShip = await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
 
-  console.log(`✅ Deployed GitcoinAttester. ${deployedAddress}`);
+  console.log("Ownership Transferred");
+
+  const transferAdminOwnershipTx =
+    await upgrades.admin.transferProxyAdminOwnership(
+      process.env.PASSPORT_MULTISIG_ADDRESS || ""
+    );
+  console.log("Proxy admin ownership Transferred");
 }
 
 main().catch((error) => {
