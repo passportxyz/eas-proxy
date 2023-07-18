@@ -15,30 +15,39 @@ export async function main() {
     console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
   }
 
-  // TODO: use update implementation
+  if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
+    console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
+  }
+
   const GitcoinAttesterUpdate = await ethers.getContractFactory(
-    "GitcoinAttester"
+    "GitcoinAttesterUpdate"
   );
   const gitcoinAttesterUpdate = await GitcoinAttesterUpdate.deploy();
   const deployment = await gitcoinAttesterUpdate.waitForDeployment();
   const deployedUpgradedContractAddress =
     await gitcoinAttesterUpdate.getAddress();
   console.log(
-    `✅ Deployed GitcoinAttester. ${deployedUpgradedContractAddress}`
+    `✅ Deployed Updated GitcoinAttester. ${deployedUpgradedContractAddress}`
   );
 
-  // Get ProxyAdmin instance
-  const proxyAdminAddress = process.env.ATTESTER_PROXY_ADMIN_ADDRESS || "";
-  const ProxyAdmin = await getProxyAdminFactory(hre);
-  const proxyAdminContract = ProxyAdmin.attach(proxyAdminAddress);
+  const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+
+  const preparedUpgrade = await upgrades.prepareUpgrade(
+    process.env.GITCOIN_ATTESTER_ADDRESS || "",
+    GitcoinAttesterUpdate,
+    {
+      kind: "uups",
+    }
+  );
+
+  const gitcoinAttester = await GitcoinAttester.attach(
+    process.env.GITCOIN_ATTESTER_ADDRESS || ""
+  );
 
   // Encode upgrade transaction
-  const upgradeData = proxyAdminContract.interface.encodeFunctionData(
-    "upgrade",
-    [
-      process.env.GITCOIN_ATTESTER_ADDRESS || "",
-      deployedUpgradedContractAddress,
-    ]
+  const upgradeData = gitcoinAttester.interface.encodeFunctionData(
+    "upgradeTo",
+    [deployedUpgradedContractAddress]
   );
   console.log(`Upgrade transaction data: ${upgradeData}`);
 }

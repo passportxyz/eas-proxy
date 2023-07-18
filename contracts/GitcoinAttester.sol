@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAttestationRequest, MultiRevocationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
@@ -11,7 +12,7 @@ import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAtt
  * @title GitcoinAttester
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
-contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
+contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
   // An allow-list of Verifiers that are authorized and trusted to call the submitAttestations function.
   mapping(address => bool) public verifiers;
 
@@ -36,6 +37,8 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
   function unpause() public onlyOwner {
     _unpause();
   }
+
+  function _authorizeUpgrade(address) internal override onlyOwner {}
 
   /**
    * @dev Adds a verifier to the allow-list.
@@ -71,7 +74,7 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
    */
   function submitAttestations(
     MultiAttestationRequest[] calldata multiAttestationRequest
-  ) public payable virtual whenNotPaused returns (bytes32[] memory) {
+  ) public payable whenNotPaused returns (bytes32[] memory) {
     require(
       verifiers[msg.sender],
       "Only authorized verifiers can call this function"
@@ -86,7 +89,7 @@ contract GitcoinAttester is OwnableUpgradeable, PausableUpgradeable {
    */
   function revokeAttestations(
     MultiRevocationRequest[] calldata multiRevocationRequest
-  ) public payable virtual whenNotPaused {
+  ) public payable whenNotPaused {
     require(verifiers[msg.sender] || msg.sender == owner(), "Only authorized verifiers or owner can call this function");
     eas.multiRevoke(multiRevocationRequest);
   }
