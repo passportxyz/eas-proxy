@@ -1,9 +1,13 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 
-const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
-const IAM_ISSUER = String(process.env.IAM_ISSUER_ADDRESS);
-const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
+const IAM_ISSUER = String(
+  process.env.IAM_ISSUER_ADDRESS || "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
+);
+const GITCOIN_ATTESTER_ADDRESS = String(
+  process.env.GITCOIN_ATTESTER_ADDRESS ||
+    "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
+);
 
 describe("Upgrading GitcoinVerifier", function () {
   this.beforeEach(async function () {
