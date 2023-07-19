@@ -12,7 +12,7 @@ import { AttestationRequest, AttestationRequestData, IEAS, Attestation, MultiAtt
  * @title GitcoinAttester
  * @dev A contract that allows a Verifier contract to add passport information for users using Ethereum Attestation Service.
  */
-contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract GitcoinAttesterUpdate is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
   // An allow-list of Verifiers that are authorized and trusted to call the submitAttestations function.
   mapping(address => bool) public verifiers;
 
@@ -39,6 +39,10 @@ contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
   }
 
   function _authorizeUpgrade(address) internal override onlyOwner {}
+
+  function finaltest() pure public returns (uint) {
+    return 1;
+  }
 
   /**
    * @dev Adds a verifier to the allow-list.

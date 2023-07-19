@@ -1,5 +1,6 @@
 import readline from "readline";
 import * as dotenv from "dotenv";
+import { utils } from "ethers";
 
 dotenv.config();
 
@@ -48,4 +49,17 @@ export async function confirmContinue(params: Record<string, unknown>) {
   if (response !== "y")
     throw new Error("Aborting script: User chose to exit script");
   console.log("\n");
+}
+
+export async function preHashTypeHashes() {
+  const desiredHashes = [
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+    "AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)",
+    "MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)",
+    "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)",
+  ];
+  desiredHashes.forEach((hashType) => {
+    const hashedValue = utils.keccak256(utils.toUtf8Bytes(hashType));
+    console.log(`"${hashType}": "${hashedValue}",`);
+  });
 }

@@ -6,7 +6,6 @@ import {
   EAS,
   Offchain,
   SchemaEncoder,
-  SchemaRegistry,
   Delegated,
   ZERO_BYTES32,
   NO_EXPIRATION,
@@ -14,8 +13,6 @@ import {
   ATTEST_PRIMARY_TYPE,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinScorer } from "../typechain-types";
-
-const utils = ethers.utils;
 
 describe("GitcoinScorer", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -57,14 +54,14 @@ describe("GitcoinScorer", function () {
         const GitcoinScorer = await ethers.getContractFactory("GitcoinScorer");
         gitcoinScorer = await GitcoinScorer.connect(owner).deploy();
 
-        const provider = ethers.getDefaultProvider();
+        const provider = ethers.getDefaultProvider(1);
 
         // Initialize the sdk with the address of the EAS Schema contract address
         eas = new EAS(EASContractAddress);
 
         // Connects an ethers style provider/signingProvider to perform read/write functions.
         // MUST be a signer to do write operations!
-        eas.connect(provider);
+        // eas.connect(provider);
       }
 
       await loadFixture(deployGitcoinScorer);

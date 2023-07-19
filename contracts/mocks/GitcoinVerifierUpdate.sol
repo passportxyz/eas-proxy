@@ -8,13 +8,13 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import "./GitcoinAttester.sol";
+import "../GitcoinAttester.sol";
 
 /**
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
-contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract GitcoinVerifierUpdate is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
   using ECDSA for bytes32;
 
   // Instance of the GitcoinAttester contract
@@ -114,6 +114,10 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     assembly {
       chainId := chainid()
     }
+  }
+
+  function finaltest() public pure returns (uint) {
+    return 0;
   }
 
   /**

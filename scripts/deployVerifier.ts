@@ -1,6 +1,6 @@
 // This script deals with deploying the GitcoinVerifier on a given network
 
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 import { assertEnvironment, confirmContinue } from "./utils";
 
 assertEnvironment();
@@ -10,8 +10,19 @@ export async function main() {
     console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
   }
 
+  if (!process.env.IAM_ISSUER_ADDRESS) {
+    console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
+  }
+
+  if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
+    console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
+  }
+
   // Wait 10 blocks for re-org protection
   const blocksToWait = hre.network.name === "hardhat" ? 0 : 10;
+
+  const IAM_ISSUER = String(process.env.IAM_ISSUER_ADDRESS);
+  const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
 
   await confirmContinue({
     contract: "GitcoinVerifier",
@@ -19,32 +30,24 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  const IAM_ISSUER = String(process.env.IAM_ISSUER_ADDRESS);
-  const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
-
   const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-  const verifier = await GitcoinVerifier.deploy(
-    IAM_ISSUER,
-    GITCOIN_ATTESTER_ADDRESS
+  const verifier = await upgrades.deployProxy(
+    GitcoinVerifier,
+    [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS],
+    {
+      kind: "uups",
+    }
   );
 
-  console.log(`Deploying GitcoinVerifier to ${verifier.address}`);
+  const deployment = await verifier.waitForDeployment();
 
-  await verifier.deployTransaction.wait(blocksToWait);
+  const verifierAddress = await deployment.getAddress();
+  console.log(`✅ Deployed GitcoinVerifier to ${verifierAddress}`);
 
-  console.log("✅ Deployed GitcoinVerifier.");
-
-  const attester = await ethers.getContractAt(
-    "GitcoinAttester",
-    GITCOIN_ATTESTER_ADDRESS
+  const transferProxyOwnerShip = await deployment.transferOwnership(
+    process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
-
-  const tx = await attester.addVerifier(verifier.address);
-  await tx.wait();
-
-  console.log("✅ Added the verifier to GitcoinAttester allow-list.");
-
-  return verifier.address;
+  console.log("✅ Transfered ownership of GitcoinVerifier to multisig");
 }
 
 main().catch((error) => {

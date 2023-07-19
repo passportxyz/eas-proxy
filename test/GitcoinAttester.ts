@@ -1,16 +1,13 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { expect, util } from "chai";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  EAS,
   SchemaEncoder,
   ZERO_BYTES32,
   NO_EXPIRATION,
   MultiRevocationRequest,
+  EAS,
 } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinAttester } from "../typechain-types";
-
-const { utils, BigNumber } = ethers;
 
 type Stamp = {
   provider: string;
@@ -33,7 +30,7 @@ export const easEncodeScore = (score: Score) => {
 
 export const easEncodeStamp = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
-  let providerValue = utils.keccak256(utils.toUtf8Bytes(stamp.provider));
+  let providerValue = ethers.keccak256(ethers.toUtf8Bytes(stamp.provider));
 
   const encodedData = schemaEncoder.encodeData([
     { name: "provider", value: providerValue, type: "bytes32" },
@@ -66,8 +63,9 @@ const multiAttestationRequests = {
 
 describe("GitcoinAttester", function () {
   // TODO: move tests out of "Deployment" describe block
-  let gitcoinAttester: GitcoinAttester,
+  let gitcoinAttester: any,
     eas: EAS,
+    easFactory: any,
     EASContractAddress: string,
     owner: any,
     iamAccount: any,
@@ -100,6 +98,7 @@ describe("GitcoinAttester", function () {
         recipientAccount,
         mockVerifierAccount,
         nonOwnerOrVerifierAccount,
+        easDeployer,
       ] = await ethers.getSigners();
 
       owner = ownerAccount;
@@ -113,22 +112,17 @@ describe("GitcoinAttester", function () {
       );
       gitcoinAttester = await GitcoinAttester.connect(owner).deploy();
 
-      const provider = ethers.getDefaultProvider();
+      await gitcoinAttester.connect(owner).initialize();
 
-      // Initialize the sdk with the address of the EAS Schema contract address
       eas = new EAS(EASContractAddress);
 
-      // Connects an ethers style provider/signingProvider to perform read/write functions.
-      // MUST be a signer to do write operations!
-      eas.connect(provider);
+      await gitcoinAttester.setEASAddress(EASContractAddress);
     }
 
     await loadFixture(deployGitcoinAttester);
   });
   describe("Attestations", function () {
     it("Should write multiple attestations", async function () {
-      await gitcoinAttester.setEASAddress(EASContractAddress);
-
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
@@ -138,13 +132,12 @@ describe("GitcoinAttester", function () {
 
       const result = await resultTx.wait();
 
-      expect(result.events?.length).to.equal(
+      expect(result.logs?.length).to.equal(
         multiAttestationRequests.data.length
       );
     });
 
     it("should revert when a non allowed address attempts to write attestations", async function () {
-      await gitcoinAttester.setEASAddress(EASContractAddress);
       await expect(
         gitcoinAttester
           .connect(iamAccount)
@@ -205,33 +198,39 @@ describe("GitcoinAttester", function () {
     let multiRevocationRequest: MultiRevocationRequest[] = [];
     beforeEach(async function () {
       multiRevocationRequest = [];
+
       const tx = await gitcoinAttester
         .connect(owner)
         .submitAttestations([multiAttestationRequests]);
       const attestationResult = await tx.wait();
 
+      // const easInterface = new Interface(eas);
+
       attestationResult.logs?.forEach((log) => {
         const decodedLog = eas.contract.interface.parseLog(log);
-        const { schema, uid } = decodedLog.args;
-        const value = BigNumber.from(0);
-        const existingRevocationRequest = multiRevocationRequest.find(
-          (r) => r.schema === schema
-        );
-        if (existingRevocationRequest) {
-          existingRevocationRequest.data.push({
-            uid,
-            value,
-          });
-        } else {
-          multiRevocationRequest.push({
-            schema,
-            data: [
-              {
-                uid,
-                value,
-              },
-            ],
-          });
+        const args = decodedLog?.args;
+        if (args) {
+          const { schema, uid } = decodedLog.args;
+          const value = BigInt(0);
+          const existingRevocationRequest = multiRevocationRequest.find(
+            (r) => r.schema === schema
+          );
+          if (existingRevocationRequest) {
+            existingRevocationRequest.data.push({
+              uid,
+              value,
+            });
+          } else {
+            multiRevocationRequest.push({
+              schema,
+              data: [
+                {
+                  uid,
+                  value,
+                },
+              ],
+            });
+          }
         }
       });
     });
@@ -241,9 +240,12 @@ describe("GitcoinAttester", function () {
         .revokeAttestations(multiRevocationRequest);
 
       const revocationResult = await revocationTx.wait();
+
       revocationResult.logs?.forEach(async (log, i) => {
-        const parsedLogs = eas.contract.interface.parseLog(log);
-        const { schema, uid } = parsedLogs.args;
+        const easInterface = eas.contract.interface.parseLog(log);
+        expect(easInterface?.args).to.not.be.undefined;
+        const schema = easInterface?.args.schema;
+        const uid = easInterface?.args.uid;
         expect(schema).to.equal(multiRevocationRequest[0].schema);
         expect(uid).to.equal(multiRevocationRequest[0].data[i].uid);
         // check that each attestation was revoked by uid
@@ -276,6 +278,27 @@ describe("GitcoinAttester", function () {
       ).to.be.revertedWith(
         "Only authorized verifiers or owner can call this function"
       );
+    });
+  });
+  describe("Pausability", function () {
+    it("should pause and unpause", async function () {
+      await gitcoinAttester.pause();
+      expect(await gitcoinAttester.paused()).to.equal(true);
+      await gitcoinAttester.unpause();
+      expect(await gitcoinAttester.paused()).to.equal(false);
+    });
+
+    it("should revert when paused", async function () {
+      await gitcoinAttester.pause();
+      await expect(
+        gitcoinAttester.submitAttestations([multiAttestationRequests])
+      ).to.be.revertedWith("Pausable: paused");
+      await gitcoinAttester.unpause();
+    });
+    it("should not allow non owner to pause", async function () {
+      await expect(
+        gitcoinAttester.connect(nonOwnerOrVerifier).pause()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });
