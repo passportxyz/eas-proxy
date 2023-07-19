@@ -28,6 +28,12 @@ contract GitcoinResolver is ISchemaResolver {
     // Gitcoin Attester contract
     GitcoinAttester internal immutable _gitcoinAttester;
 
+    // Emitted when a passport is added to the passports mapping
+    event PassportAdded(address recipient);
+
+    // Emitted when a passport is removed from the passports mapping
+    event PassportRemoved(address recipient);
+
     /**
      * @dev Creates a new resolver.
      * @param eas The address of the global EAS contract
@@ -51,7 +57,7 @@ contract GitcoinResolver is ISchemaResolver {
     }
     
     /**
-     * @dev Returns whether the resolver supports ETH transfers. Required function from the interface ISchemaResolver
+     * @dev Returns whether the resolver supports ETH transfers. Required function from the interface ISchemaResolver that we won't be using
      * @inheritdoc ISchemaResolver
      */
     function isPayable() external pure returns (bool) {
@@ -69,7 +75,8 @@ contract GitcoinResolver is ISchemaResolver {
     ) external payable onlyEAS returns (bool) {
         if (attestation.attester == address(_gitcoinAttester)) {
             passports[attestation.recipient] = attestation.uid;
-        } 
+        }
+        emit PassportAdded(attestation.recipient);
         return true;
     }
 
@@ -86,9 +93,13 @@ contract GitcoinResolver is ISchemaResolver {
     ) external payable onlyEAS returns (bool) {
         values;
         bool allAttested = true;
-        for (uint i = 0; i < attestations.length; i++) {
+        for (uint i = 0; i < attestations.length;) {
             if (attestations[i].attester == address(_gitcoinAttester)) {
-                passports[msg.sender] = attestations[i].uid;
+                passports[attestations[i].recipient] = attestations[i].uid;
+                emit PassportAdded(attestations[i].recipient);
+                unchecked {
+                    ++i;
+                }
             } else {
                 allAttested = false;
                 break;
@@ -106,9 +117,10 @@ contract GitcoinResolver is ISchemaResolver {
     function revoke(
         Attestation calldata attestation
     ) external payable onlyEAS returns (bool) {
-        if (passports[msg.sender] == attestation.uid) {
-            passports[msg.sender] = 0;
+        if (passports[attestation.recipient] == attestation.uid) {
+            passports[attestation.recipient] = 0;
         }
+        emit PassportRemoved(attestation.recipient);
         return true;
     }
 
@@ -124,9 +136,13 @@ contract GitcoinResolver is ISchemaResolver {
         uint256[] calldata values
     ) external payable onlyEAS returns (bool) {
         values;
-        for (uint i = 0; i > attestations.length; i++) {
-            if (passports[msg.sender] == attestations[i].uid) {
-                passports[msg.sender] = 0;
+        for (uint i = 0; i > attestations.length;) {
+            if (passports[attestations[i].recipient] == attestations[i].uid) {
+                passports[attestations[i].recipient] = 0;
+                emit PassportRemoved(attestations[i].recipient);
+                unchecked {
+                    ++i;
+                }
             }
         }
         return true;
