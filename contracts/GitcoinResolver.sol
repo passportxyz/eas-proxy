@@ -2,19 +2,20 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import {InvalidEAS} from "./Common.sol";
 
 import "./GitcoinAttester.sol";
-// TODO: Make this contract pausable, upgradeable, and ownable
 /**
  * @title GitcoinResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
-contract GitcoinResolver is ISchemaResolver {
+contract GitcoinResolver is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ISchemaResolver {
     error AccessDenied();
     error InsufficientValue();
     error NotPayable();
@@ -23,10 +24,10 @@ contract GitcoinResolver is ISchemaResolver {
     mapping(address => bytes32) public passports;
 
     // The global EAS contract.
-    IEAS internal immutable _eas;
+    IEAS public eas;
 
     // Gitcoin Attester contract
-    GitcoinAttester internal immutable _gitcoinAttester;
+    GitcoinAttester public gitcoinAttester;
 
     // Emitted when a passport is added to the passports mapping
     event PassportAdded(address recipient, bytes32 recipientUid);
@@ -35,22 +36,36 @@ contract GitcoinResolver is ISchemaResolver {
 
     /**
      * @dev Creates a new resolver.
-     * @param eas The address of the global EAS contract
-     * @param gitcoinAttester The address of the Gitcoin Attester contract.
+     * @notice Initializer function responsible for setting up the contract's initial state.
+     * @param _eas The address of the global EAS contract
+     * @param _gitcoinAttester The address of the Gitcoin Attester contract.
      */
-    constructor(IEAS eas, GitcoinAttester gitcoinAttester) {
-        if (address(eas) == address(0)) {
+    function initialize(IEAS _eas, GitcoinAttester _gitcoinAttester) public initializer {
+        __Ownable_init();
+        __Pausable_init();
+
+        if (address(_eas) == address(0)) {
             revert InvalidEAS();
         }
-        _eas = eas;
-        _gitcoinAttester = gitcoinAttester;
+        eas = _eas;
+        gitcoinAttester = _gitcoinAttester;
     }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /**
      * @dev Ensures that only the EAS contract can make this call.
      */
     modifier onlyEAS() {
-        require(msg.sender == address(_eas), "Only EAS contract can call this function");
+        require(msg.sender == address(eas), "Only EAS contract can call this function");
 
         _;
     }
@@ -71,8 +86,8 @@ contract GitcoinResolver is ISchemaResolver {
      */
     function attest(
         Attestation calldata attestation
-    ) external payable onlyEAS returns (bool) {
-        require(attestation.attester == address(_gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+    ) external payable whenNotPaused onlyEAS returns (bool) {
+        require(attestation.attester == address(gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
 
         passports[attestation.recipient] = attestation.uid;
 
@@ -90,18 +105,17 @@ contract GitcoinResolver is ISchemaResolver {
     function multiAttest(
         Attestation[] calldata attestations,
         uint256[] calldata values
-    ) external payable onlyEAS returns (bool) {
+    ) external payable whenNotPaused onlyEAS returns (bool) {
         values;
-        bool allAttested = true;
         for (uint i = 0; i < attestations.length;) {
-            require(attestations[i].attester == address(_gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+            require(attestations[i].attester == address(gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
             passports[attestations[i].recipient] = attestations[i].uid;
             emit PassportAdded(attestations[i].recipient, attestations[i].uid);
             unchecked {
                 ++i;
             }
         }
-        return allAttested;
+        return true;
     }
 
     /**
@@ -112,7 +126,7 @@ contract GitcoinResolver is ISchemaResolver {
      */
     function revoke(
         Attestation calldata attestation
-    ) external payable onlyEAS returns (bool) {
+    ) external payable whenNotPaused onlyEAS returns (bool) {
         if (passports[attestation.recipient] == attestation.uid) {
             passports[attestation.recipient] = 0;
         }
@@ -130,7 +144,7 @@ contract GitcoinResolver is ISchemaResolver {
     function multiRevoke(
         Attestation[] calldata attestations,
         uint256[] calldata values
-    ) external payable onlyEAS returns (bool) {
+    ) external payable whenNotPaused onlyEAS returns (bool) {
         values;
         for (uint i = 0; i > attestations.length;) {
             if (passports[attestations[i].recipient] == attestations[i].uid) {
