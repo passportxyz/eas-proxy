@@ -21,7 +21,6 @@ type Stamp = {
   stampHash: string;
 };
 
-const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 const GITCOIN_VCS_SCHEMA =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
 
@@ -45,6 +44,7 @@ describe("GitcoinResolver", function() {
   let owner: any,
   iamAccount: any,
   recipient: any,
+  mockEasAccount: any,
   gitcoinResolver: GitcoinResolver,
   eas: EAS,
   gitcoinAttester: GitcoinAttester;
@@ -54,11 +54,13 @@ describe("GitcoinResolver", function() {
       ownerAccount,
       otherAccount,
       recipientAccount,
+      mockEasContractAccount,
     ] = await ethers.getSigners();
     
     owner = ownerAccount;
     iamAccount = otherAccount;
     recipient = recipientAccount;
+    mockEasAccount = mockEasContractAccount;
   
     const schemaRegistryContractAddress = "0xA7b39296258348C78294F95B872b282326A97BDF";
     const schemaRegistry = new SchemaRegistry(schemaRegistryContractAddress);
@@ -69,7 +71,7 @@ describe("GitcoinResolver", function() {
     gitcoinAttester = await GitcoinAttester.connect(owner).deploy();
 
     // Initialize the sdk with the address of the EAS Schema contract address
-    eas = new EAS(EAS_CONTRACT_ADDRESS);
+    eas = new EAS(mockEasAccount.address);
 
     // Connects an ethers style provider/signingProvider to perform read/write functions.
     // MUST be a signer to do write operations!
@@ -79,7 +81,7 @@ describe("GitcoinResolver", function() {
       "GitcoinResolver"
     );
     gitcoinResolver = await GitcoinResolver.connect(owner).deploy(
-      EAS_CONTRACT_ADDRESS,
+      mockEasAccount.address,
       gitcoinAttester.address
     );
   
@@ -101,75 +103,81 @@ describe("GitcoinResolver", function() {
     await transaction.wait();
   });
 
-  describe("GitcoinResolver", function () {
-    it("Should process attestations correctly", async function () {
-      const [owner, verifier, attester, recipient] = await ethers.getSigners();
-  
-      const EAS = await ethers.getContractAt("EAS", EAS_CONTRACT_ADDRESS);
-      const GitcoinAttester = await ethers.getContractAt("GitcoinAttester", gitcoinAttester.address);
-  
-      // Add a verifier
-      await GitcoinAttester.connect(owner).addVerifier(verifier.address);
-      expect(await GitcoinAttester.verifiers(verifier.address)).to.equal(true);
+    describe("Attestations", function() {
+      it("should make 1 attestation", async function() {
+        const attester = gitcoinAttester.address;
+        const uid = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test"));
+        const attestation = {
+          uid,
+          schema: GITCOIN_VCS_SCHEMA,
+          time: NO_EXPIRATION,
+          expirationTime: NO_EXPIRATION,
+          revocationTime: NO_EXPIRATION,
+          refUID: ZERO_BYTES32,
+          recipient: recipient.address,
+          attester,
+          revocable: true,
+          data: encodedData,
+        };
+    
+        const attestResult = await gitcoinResolver.connect(mockEasAccount).attest(attestation);
+        
+        const { events } = await attestResult.wait();
 
-  
-      // AttestationRequest
-      const attestationRequest = {
-        recipient: recipient.address,
-        expirationTime: NO_EXPIRATION,
-        revocable: true,
-        data: encodedData,
-        refUID: ZERO_BYTES32,
-        value: 0,
-      };
-  
-      // Create a MultiAttestationRequest
-      const multiAttestationRequests = {
-        schema: GITCOIN_VCS_SCHEMA,
-        data: [attestationRequest, attestationRequest, attestationRequest]
-      };
-  
-      // Submit attestations
-      const tx = await GitcoinAttester.connect(verifier).submitAttestations([multiAttestationRequests]);
-
-      const result = await tx.wait();
-
-      console.log(result);
-      
-  
-      expect(result.events?.length).to.equal(
-        multiAttestationRequests.data.length
-      );
+        events?.forEach(async (event) => {
+          expect(event).to.equal("PassportAdded");
+        });
+        
+        const attestationUID = await gitcoinResolver.passports(recipient.address);
+        
+        expect(attestationUID).to.equal(uid);
+      });
     });
   });
-});
 
-//   describe("Attestations", function() {
-//     it("should make 1 attestation", async function() {
-//       const attester = gitcoinAttester.address;
-//       const uid = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test"));
-//       const attestation = {
-//         uid,
-//         schema: GITCOIN_VCS_SCHEMA,
-//         time: NO_EXPIRATION,
-//         expirationTime: NO_EXPIRATION,
-//         revocationTime: NO_EXPIRATION,
-//         refUID: ZERO_BYTES32,
-//         recipient: recipient.address,
-//         attester,
-//         revocable: true,
-//         data: encodedData,
-//       };
+  // describe("GitcoinResolver", function () {
+    // it("Should process attestations correctly", async function () {
+    //   const [owner, verifier, attester, recipient] = await ethers.getSigners();
+  
+    //   const EAS = await ethers.getContractAt("EAS", EAS_CONTRACT_ADDRESS);
+    //   const GitcoinAttester = await ethers.getContractAt("GitcoinAttester", gitcoinAttester.address);
+  
+    //   // Add a verifier
+    //   await GitcoinAttester.connect(owner).addVerifier(verifier.address);
+    //   expect(await GitcoinAttester.verifiers(verifier.address)).to.equal(true);
 
-//       expect(await eas.connect(owner).attest(attestation));
-//       console.log(gitcoinResolver.passports.length);
+  
+    //   // AttestationRequest
+    //   const attestationRequest = {
+    //     recipient: recipient.address,
+    //     expirationTime: NO_EXPIRATION,
+    //     revocable: true,
+    //     data: encodedData,
+    //     refUID: ZERO_BYTES32,
+    //     value: 0,
+    //   };
+  
+    //   // Create a MultiAttestationRequest
+    //   const multiAttestationRequests = {
+    //     schema: GITCOIN_VCS_SCHEMA,
+    //     data: [attestationRequest, attestationRequest, attestationRequest]
+    //   };
+  
+    //   // Submit attestations
+    //   const tx = await GitcoinAttester.connect(verifier).submitAttestations([multiAttestationRequests]);
+
+    //   const result = await tx.wait();
+
+    //   console.log(result);
       
-//       // const attestationUID = gitcoinResolver.passports(await recipient.getAddress());
-//       // console.log(attestationUID);
-      
-//       // expect(await passportAddress).to.equal(uid);
+  
+    //   expect(result.events?.length).to.equal(
+    //     multiAttestationRequests.data.length
+    //   );
+    // });
+//   });
+// });
 
-//     });
 
 //     // it("should make multiple attestations", async function() {
 //     //   const attester = gitcoinAttester.address;
