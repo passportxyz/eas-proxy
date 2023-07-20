@@ -29,10 +29,9 @@ contract GitcoinResolver is ISchemaResolver {
     GitcoinAttester internal immutable _gitcoinAttester;
 
     // Emitted when a passport is added to the passports mapping
-    event PassportAdded(address recipient);
-
+    event PassportAdded(address recipient, bytes32 recipientUid);
     // Emitted when a passport is removed from the passports mapping
-    event PassportRemoved(address recipient);
+    event PassportRemoved(address recipient, bytes32 recipientUid);
 
     /**
      * @dev Creates a new resolver.
@@ -73,10 +72,11 @@ contract GitcoinResolver is ISchemaResolver {
     function attest(
         Attestation calldata attestation
     ) external payable onlyEAS returns (bool) {
-        if (attestation.attester == address(_gitcoinAttester)) {
-            passports[attestation.recipient] = attestation.uid;
-        }
-        emit PassportAdded(attestation.recipient);
+        require(attestation.attester == address(_gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+
+        passports[attestation.recipient] = attestation.uid;
+
+        emit PassportAdded(attestation.recipient, attestation.uid);
         return true;
     }
 
@@ -94,15 +94,11 @@ contract GitcoinResolver is ISchemaResolver {
         values;
         bool allAttested = true;
         for (uint i = 0; i < attestations.length;) {
-            if (attestations[i].attester == address(_gitcoinAttester)) {
-                passports[attestations[i].recipient] = attestations[i].uid;
-                emit PassportAdded(attestations[i].recipient);
-                unchecked {
-                    ++i;
-                }
-            } else {
-                allAttested = false;
-                break;
+            require(attestations[i].attester == address(_gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+            passports[attestations[i].recipient] = attestations[i].uid;
+            emit PassportAdded(attestations[i].recipient, attestations[i].uid);
+            unchecked {
+                ++i;
             }
         }
         return allAttested;
@@ -120,7 +116,7 @@ contract GitcoinResolver is ISchemaResolver {
         if (passports[attestation.recipient] == attestation.uid) {
             passports[attestation.recipient] = 0;
         }
-        emit PassportRemoved(attestation.recipient);
+        emit PassportRemoved(attestation.recipient, attestation.uid);
         return true;
     }
 
@@ -139,7 +135,7 @@ contract GitcoinResolver is ISchemaResolver {
         for (uint i = 0; i > attestations.length;) {
             if (passports[attestations[i].recipient] == attestations[i].uid) {
                 passports[attestations[i].recipient] = 0;
-                emit PassportRemoved(attestations[i].recipient);
+                emit PassportRemoved(attestations[i].recipient, attestations[i].uid);
                 unchecked {
                     ++i;
                 }
