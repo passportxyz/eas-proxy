@@ -5,11 +5,9 @@ import {
   SchemaEncoder,
   ZERO_BYTES32,
   NO_EXPIRATION,
-  SchemaRegistry,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
-import { SignerOrProvider } from "@ethereum-attestation-service/eas-sdk/dist/transaction";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { ethers as Ethers } from "ethers";
 
 type Stamp = {
   provider: string;
@@ -157,9 +155,6 @@ describe("GitcoinResolver", function () {
     nonOwnerOrVerifier: any,
     mockEas: any,
     gitcoinResolver: GitcoinResolver,
-    eas: EAS,
-    gitcoinResolverAddress: any,
-    validAttestation: any,
     gitcoinAttester: GitcoinAttester;
 
   before(async function () {
@@ -213,8 +208,6 @@ describe("GitcoinResolver", function () {
       data: encodedData,
     };
 
-    // add gitcoin schema
-    // schemaRegistry.connect(owner);
     const schemaRegistry = new ethers.Contract(
       schemaRegistryContractAddress,
       schemaRegistryAbi,
@@ -231,12 +224,11 @@ describe("GitcoinResolver", function () {
       revocable
     );
 
-    // Optional: Wait for transaction to be validated
     await transaction.wait();
   });
 
   describe("Attestations", function () {
-    it.only("should make 1 attestation", async function () {
+    it("should make 1 attestation", async function () {
       await expect(
         gitcoinResolver.connect(mockEas).attest(this.validAttestation)
       )
@@ -249,19 +241,17 @@ describe("GitcoinResolver", function () {
     });
 
     it("should make multiple attestations", async function () {
-      const result = await gitcoinResolver
+      await expect(gitcoinResolver
         .connect(mockEas)
         .multiAttest(
           [this.validAttestation, this.validAttestation, this.validAttestation],
           []
-        );
-      console.log(result);
+        ))
+          .to.emit(gitcoinResolver, "PassportAdded");
 
-      events?.forEach(async (event) => {
-        expect(event.event).to.equal("PassportAdded");
-        expect(event.args?.recipient).to.equal(recipient.address);
-        expect(event.args?.recipientUid).to.equal(recipient.address);
-      });
+      const attestationUID = await gitcoinResolver.passports(recipient.address);
+
+      expect(attestationUID).to.equal(this.uid);
     });
 
     it("should revert when a non-allowed address attempts to make any attestation", async function () {
@@ -290,64 +280,111 @@ describe("GitcoinResolver", function () {
       ).to.be.revertedWith("Only the Gitcoin Attester can make attestations");
     });
   });
+
   describe("Revocations", function () {
     it("should make 1 revocation", async function () {
       // Make an attestation
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
-      // Get the result of the revocation
-      const attestResult = await gitcoinResolver
+      await expect(gitcoinResolver
         .connect(mockEas)
-        .revoke(this.validAttestatio);
-      // Destructure the events from the awaited results
-      const { events } = await attestResult.wait();
-      // Loop through the events and perform checks
-      events?.forEach(async (event) => {
-        expect(event).to.equal("PassportRemoved");
-      });
+        .revoke(this.validAttestation))
+        .to.emit(gitcoinResolver, "PassportRemoved")
+        .withArgs(this.validAttestation.recipient, this.uid);
     });
 
     it("Should make multiple revocations", async function () {
-      // Make multiple attestations
       await gitcoinResolver
         .connect(mockEas)
         .multiAttest(
-          [this.validAttestation, this.validAttestation, this.validAttestation],
-          []
+          [this.validAttestation, this.validAttestation, this.validAttestation], []
         );
-      // Get the result of the multiRevoke
-      const result = await gitcoinResolver
+      await expect(gitcoinResolver
         .connect(mockEas)
         .multiRevoke(
           [this.validAttestation, this.validAttestation, this.validAttestation],
           []
-        );
-      // Destructure the events from the awaited results
-      const { events } = await result.wait();
+        )).to.emit(gitcoinResolver, "PassportRemoved");
 
-      // Loop through the events and perform checks
-      events?.forEach(async (event) => {
-        expect(event.event).to.equal("PassportRemoved");
-        expect(event.args?.recipient).to.equal(recipient.address);
-        expect(event.args?.recipientUid).to.equal(recipient.address);
-      });
+      let attestationUID = await gitcoinResolver.passports(recipient.address);
+      expect(attestationUID).to.equal(ethers.ZeroHash);
     });
 
-    it("should allow a user to revoke their own attestations", async function () {
+    it("should allow a user to revoke their own attestation", async function () {
+      const validAttestation = {
+        uid: this.uid,
+        schema: GITCOIN_VCS_SCHEMA,
+        time: NO_EXPIRATION,
+        expirationTime: NO_EXPIRATION,
+        revocationTime: NO_EXPIRATION,
+        refUID: ZERO_BYTES32,
+        recipient: recipient.address,
+        attester: recipient,
+        revocable: true,
+        data: encodedData,
+      };
       // Make an attestations
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
       // Get the result of the revocation made by the user
-      const result = await gitcoinResolver
+      await expect(gitcoinResolver
         .connect(recipient)
-        .revoke(this.validAttestation);
-      // Destructure the events from the awaited results
-      const { events } = await result.wait();
+        .revoke(validAttestation))
+        .to.emit(gitcoinResolver, "PassportRemoved")
+        .withArgs(validAttestation.recipient, this.uid);
 
-      // Loop through the events and perform checks
-      events?.forEach(async (event) => {
-        expect(event.event).to.equal("PassportRemoved");
-        expect(event.args?.recipient).to.equal(recipient.address);
-        expect(event.args?.recipientUid).to.equal(recipient.address);
-      });
+        let attestationUID = await gitcoinResolver.passports(recipient.address);
+        expect(attestationUID).to.equal(ethers.ZeroHash);
+    });
+
+    it("should allow a user to revoke their own attestations", async function () {
+      const validAttestation = {
+        uid: this.uid,
+        schema: GITCOIN_VCS_SCHEMA,
+        time: NO_EXPIRATION,
+        expirationTime: NO_EXPIRATION,
+        revocationTime: NO_EXPIRATION,
+        refUID: ZERO_BYTES32,
+        recipient: recipient.address,
+        attester: recipient,
+        revocable: true,
+        data: encodedData,
+      };
+      // Make an attestations
+      await gitcoinResolver
+        .connect(mockEas)
+        .multiAttest(
+          [this.validAttestation, this.validAttestation, this.validAttestation], []
+        );
+      // Get the result of the revocation made by the user
+      await expect(gitcoinResolver
+        .connect(recipient)
+        .multiRevoke([validAttestation, validAttestation, validAttestation], []))
+        .to.emit(gitcoinResolver, "PassportRemoved");
+
+        let attestationUID = await gitcoinResolver.passports(recipient.address);
+        expect(attestationUID).to.equal(ethers.ZeroHash);
+    });
+  });
+
+  describe("Pausability", function () {
+    it("should pause and unpause", async function () {
+      await gitcoinResolver.pause();
+      expect(await gitcoinResolver.paused()).to.equal(true);
+      await gitcoinResolver.unpause();
+      expect(await gitcoinResolver.paused()).to.equal(false);
+    });
+
+    it("should revert when paused", async function () {
+      await gitcoinResolver.pause();
+      await expect(
+        gitcoinResolver.attest(this.validAttestation)
+      ).to.be.revertedWith("Pausable: paused");
+      await gitcoinResolver.unpause();
+    });
+    
+    it("should not allow non owner to pause", async function () {
+      await expect(
+        gitcoinResolver.connect(nonOwnerOrVerifier).pause()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 });

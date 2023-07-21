@@ -109,9 +109,51 @@ describe("Upgrading GitcoinAttester", function () {
 
 describe("Upgrading GitcoinResolver", function () {
   this.beforeEach(async function () {
-    const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+    const [owner, mockEASAccount] = await ethers.getSigners();
     this.owner = owner;
-    this.iamAccount = iamAccount;
-    this.recipientAccount = recipientAccount;
+    this.mockEAS = mockEASAccount;
+  });
+
+  it("should deploy GitcoinResolver and proxy contract", async function () {
+    const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+    const gitcoinAttester = await upgrades.deployProxy(GitcoinAttester, {
+      kind: "uups",
+    });
+    const gitcoinAttesterAddress = await gitcoinAttester.getAddress();
+
+    const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
+    const gitcoinResolver = await upgrades.deployProxy(
+      GitcoinResolver,
+      [this.mockEAS.address, gitcoinAttesterAddress],
+      {
+        kind: "uups",
+      }
+    );
+    const gitcoinResolverAddress = await gitcoinResolver.getAddress();
+    this.resolverProxyAddress = gitcoinResolverAddress;
+    this.gitcoinResolverProxy = gitcoinResolver;
+    expect(gitcoinResolverAddress).to.not.be.null;
+  });
+
+  it("should upgrade GitcoinResolver implementation", async function () {
+    const GitcoinResolverUpdate = await ethers.getContractFactory(
+      "GitcoinResolverUpdate"
+    );
+
+    const preparedUpgradeAddress = await upgrades.prepareUpgrade(
+      this.resolverProxyAddress,
+      GitcoinResolverUpdate,
+      {
+        kind: "uups",
+        redeployImplementation: "always",
+      }
+    );
+
+    const upgradeCall = await this.gitcoinResolverProxy.upgradeTo(
+      preparedUpgradeAddress as string
+    );
+    expect(await this.gitcoinResolverProxy.getAddress()).to.be.equal(
+      this.resolverProxyAddress
+    );
   });
 });

@@ -5,13 +5,14 @@ assertEnvironment();
 
 export async function main() {
   await confirmContinue({
-    contract: "GitcoinResolver",
+    contract: "GitcoinResolverUpdate",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
   if (!process.env.GITCOIN_RESOLVER_ADDRESS) {
     console.error("Please set your GITCOIN_RESOLVER_ADDRESS in a .env file");
+    return;
   }
 
   const GitcoinResolverUpdate = await ethers.getContractFactory(

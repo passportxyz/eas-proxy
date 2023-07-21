@@ -8,14 +8,14 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
-import {InvalidEAS} from "./Common.sol";
+import {InvalidEAS} from "../Common.sol";
 
-import "./GitcoinAttester.sol";
+import "../GitcoinAttester.sol";
 /**
- * @title GitcoinResolver
+ * @title GitcoinResolverUpdate
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
-contract GitcoinResolver is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ISchemaResolver {
+contract GitcoinResolverUpdate is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable, ISchemaResolver {
     error AccessDenied();
     error InsufficientValue();
     error NotPayable();
