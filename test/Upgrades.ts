@@ -106,3 +106,12 @@ describe("Upgrading GitcoinAttester", function () {
     );
   });
 });
+
+describe("Upgrading GitcoinResolver", function () {
+  this.beforeEach(async function () {
+    const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+    this.owner = owner;
+    this.iamAccount = iamAccount;
+    this.recipientAccount = recipientAccount;
+  });
+});

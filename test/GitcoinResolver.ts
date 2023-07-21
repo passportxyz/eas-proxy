@@ -8,6 +8,8 @@ import {
   SchemaRegistry,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
+import { SignerOrProvider } from "@ethereum-attestation-service/eas-sdk/dist/transaction";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 type Stamp = {
   provider: string;
@@ -141,6 +143,8 @@ export const easEncodeStamp = (stamp: Stamp) => {
   return encodedData;
 };
 
+const network = process.env.ETHEREUM_NETWORK || "sepolia";
+
 const encodedData = easEncodeStamp({
   provider: "TestProvider",
   stampHash: "234567890",
@@ -154,6 +158,8 @@ describe("GitcoinResolver", function () {
     mockEas: any,
     gitcoinResolver: GitcoinResolver,
     eas: EAS,
+    gitcoinResolverAddress: any,
+    validAttestation: any,
     gitcoinAttester: GitcoinAttester;
 
   before(async function () {
