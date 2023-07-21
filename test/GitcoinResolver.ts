@@ -19,7 +19,116 @@ const GITCOIN_VCS_SCHEMA =
 const schemaRegistryContractAddress =
   process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
   "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0";
-const schemaRegistry = new SchemaRegistry(schemaRegistryContractAddress);
+// const schemaRegistry = new SchemaRegistry(schemaRegistryContractAddress);
+const schemaRegistryAbi = [
+  {
+    inputs: [],
+    name: "AlreadyExists",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "uid",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "registerer",
+        type: "address",
+      },
+    ],
+    name: "Registered",
+    type: "event",
+  },
+  {
+    inputs: [],
+    name: "VERSION",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "uid",
+        type: "bytes32",
+      },
+    ],
+    name: "getSchema",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "bytes32",
+            name: "uid",
+            type: "bytes32",
+          },
+          {
+            internalType: "contract ISchemaResolver",
+            name: "resolver",
+            type: "address",
+          },
+          {
+            internalType: "bool",
+            name: "revocable",
+            type: "bool",
+          },
+          {
+            internalType: "string",
+            name: "schema",
+            type: "string",
+          },
+        ],
+        internalType: "struct SchemaRecord",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "schema",
+        type: "string",
+      },
+      {
+        internalType: "contract ISchemaResolver",
+        name: "resolver",
+        type: "address",
+      },
+      {
+        internalType: "bool",
+        name: "revocable",
+        type: "bool",
+      },
+    ],
+    name: "register",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+];
 
 export const easEncodeStamp = (stamp: Stamp) => {
   const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
@@ -83,54 +192,54 @@ describe("GitcoinResolver", function () {
       .initialize(mockEas.address, gitcoinAttesterAddress);
     const gitcoinResolverAddress = await gitcoinResolver.getAddress();
 
-    const attester = await gitcoinResolver.getAddress();
-    const uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
+    this.uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
 
     this.validAttestation = {
-      uid,
+      uid: this.uid,
       schema: GITCOIN_VCS_SCHEMA,
       time: NO_EXPIRATION,
       expirationTime: NO_EXPIRATION,
       revocationTime: NO_EXPIRATION,
       refUID: ZERO_BYTES32,
       recipient: recipient.address,
-      attester,
+      attester: gitcoinAttesterAddress,
       revocable: true,
       data: encodedData,
     };
 
     // add gitcoin schema
-    schemaRegistry.connect(owner);
+    // schemaRegistry.connect(owner);
+    const schemaRegistry = new ethers.Contract(
+      schemaRegistryContractAddress,
+      schemaRegistryAbi,
+      owner
+    );
+
     const schema = "uint256 eventId, uint8 voteIndex";
     const resolverAddress = gitcoinResolverAddress;
     const revocable = true;
 
-    const transaction = await schemaRegistry.register({
+    const transaction = await schemaRegistry.register(
       schema,
       resolverAddress,
-      revocable,
-    });
+      revocable
+    );
 
     // Optional: Wait for transaction to be validated
     await transaction.wait();
   });
 
   describe("Attestations", function () {
-    it("should make 1 attestation", async function () {
-      const attestResult = await gitcoinResolver
-        .connect(mockEas)
-        .attest(this.validAttestation);
-      console.log(attestResult);
-
-      const events = await attestResult.data;
-
-      events?.forEach(async (event) => {
-        expect(event).to.equal("PassportAdded");
-      });
+    it.only("should make 1 attestation", async function () {
+      await expect(
+        gitcoinResolver.connect(mockEas).attest(this.validAttestation)
+      )
+        .to.emit(gitcoinResolver, "PassportAdded")
+        .withArgs(this.validAttestation.recipient, this.uid);
 
       const attestationUID = await gitcoinResolver.passports(recipient.address);
 
-      expect(attestationUID).to.equal(uid);
+      expect(attestationUID).to.equal(this.uid);
     });
 
     it("should make multiple attestations", async function () {
@@ -172,9 +281,7 @@ describe("GitcoinResolver", function () {
 
       await expect(
         gitcoinResolver.connect(mockEas).attest(attestation)
-      ).to.be.revertedWith(
-        "Only the the Gitcoin Attester can make attestations"
-      );
+      ).to.be.revertedWith("Only the Gitcoin Attester can make attestations");
     });
   });
   describe("Revocations", function () {

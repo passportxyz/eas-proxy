@@ -10,6 +10,9 @@ import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttes
 import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import {InvalidEAS} from "./Common.sol";
 
+
+import "hardhat/console.sol";
+
 import "./GitcoinAttester.sol";
 /**
  * @title GitcoinResolver
@@ -87,8 +90,11 @@ contract GitcoinResolver is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     function attest(
         Attestation calldata attestation
     ) external payable whenNotPaused onlyEAS returns (bool) {
-        require(attestation.attester == address(gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+        console.log("attester       ", attestation.attester);
+        console.log("   -> expected ", address(gitcoinAttester));
+        require(attestation.attester == address(gitcoinAttester), "Only the Gitcoin Attester can make attestations");
 
+        console.log("recipient       ", attestation.recipient);
         passports[attestation.recipient] = attestation.uid;
 
         emit PassportAdded(attestation.recipient, attestation.uid);
@@ -108,7 +114,7 @@ contract GitcoinResolver is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     ) external payable whenNotPaused onlyEAS returns (bool) {
         values;
         for (uint i = 0; i < attestations.length;) {
-            require(attestations[i].attester == address(gitcoinAttester), "Only the the Gitcoin Attester can make attestations");
+            require(attestations[i].attester == address(gitcoinAttester), "Only the Gitcoin Attester can make attestations");
             passports[attestations[i].recipient] = attestations[i].uid;
             emit PassportAdded(attestations[i].recipient, attestations[i].uid);
             unchecked {
