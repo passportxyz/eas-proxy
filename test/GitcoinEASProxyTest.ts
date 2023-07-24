@@ -197,7 +197,7 @@ describe("GitcoinEASProxy", function() {
     );
   });
 
-  describe.only("GitcoinEASProxy", function () {
+  describe("GitcoinEASProxy", function () {
     it("should successfully move through the entire EAS proxy flow", async function () {
       // Add a verifier
       const verificationResult = await this.gitcoinAttester.connect(this.owner).addVerifier(await this.gitcoinVerifier.getAddress());
