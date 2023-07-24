@@ -1,152 +1,13 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import {
-  EAS,
-  SchemaEncoder,
-  ZERO_BYTES32,
-  NO_EXPIRATION,
-} from "@ethereum-attestation-service/eas-sdk";
+import { ZERO_BYTES32, NO_EXPIRATION } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
-import { ethers as Ethers } from "ethers";
+import { encodedData, gitcoinVCSchema } from "./GitcoinAttester";
+import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 
-type Stamp = {
-  provider: string;
-  stampHash: string;
-};
-
-const GITCOIN_VCS_SCHEMA =
-  "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-const schemaRegistryContractAddress =
+export const schemaRegistryContractAddress =
   process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
   "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0";
-// const schemaRegistry = new SchemaRegistry(schemaRegistryContractAddress);
-const schemaRegistryAbi = [
-  {
-    inputs: [],
-    name: "AlreadyExists",
-    type: "error",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "bytes32",
-        name: "uid",
-        type: "bytes32",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "registerer",
-        type: "address",
-      },
-    ],
-    name: "Registered",
-    type: "event",
-  },
-  {
-    inputs: [],
-    name: "VERSION",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "uid",
-        type: "bytes32",
-      },
-    ],
-    name: "getSchema",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "bytes32",
-            name: "uid",
-            type: "bytes32",
-          },
-          {
-            internalType: "contract ISchemaResolver",
-            name: "resolver",
-            type: "address",
-          },
-          {
-            internalType: "bool",
-            name: "revocable",
-            type: "bool",
-          },
-          {
-            internalType: "string",
-            name: "schema",
-            type: "string",
-          },
-        ],
-        internalType: "struct SchemaRecord",
-        name: "",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "schema",
-        type: "string",
-      },
-      {
-        internalType: "contract ISchemaResolver",
-        name: "resolver",
-        type: "address",
-      },
-      {
-        internalType: "bool",
-        name: "revocable",
-        type: "bool",
-      },
-    ],
-    name: "register",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-];
-
-export const easEncodeStamp = (stamp: Stamp) => {
-  const schemaEncoder = new SchemaEncoder("bytes32 provider, bytes32 hash");
-  let providerValue = ethers.keccak256(ethers.toUtf8Bytes(stamp.provider));
-
-  const encodedData = schemaEncoder.encodeData([
-    { name: "provider", value: providerValue, type: "bytes32" },
-    { name: "hash", value: providerValue, type: "bytes32" }, // TODO decode hash here
-  ]);
-  return encodedData;
-};
-
-const network = process.env.ETHEREUM_NETWORK || "sepolia";
-
-const encodedData = easEncodeStamp({
-  provider: "TestProvider",
-  stampHash: "234567890",
-});
 
 describe("GitcoinResolver", function () {
   let owner: any,
@@ -197,7 +58,7 @@ describe("GitcoinResolver", function () {
 
     this.validAttestation = {
       uid: this.uid,
-      schema: GITCOIN_VCS_SCHEMA,
+      schema: gitcoinVCSchema,
       time: NO_EXPIRATION,
       expirationTime: NO_EXPIRATION,
       revocationTime: NO_EXPIRATION,
@@ -210,7 +71,7 @@ describe("GitcoinResolver", function () {
 
     const schemaRegistry = new ethers.Contract(
       schemaRegistryContractAddress,
-      schemaRegistryAbi,
+      SCHEMA_REGISTRY_ABI,
       owner
     );
 
@@ -264,7 +125,7 @@ describe("GitcoinResolver", function () {
       const uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
       const attestation = {
         uid,
-        schema: GITCOIN_VCS_SCHEMA,
+        schema: gitcoinVCSchema,
         time: NO_EXPIRATION,
         expirationTime: NO_EXPIRATION,
         revocationTime: NO_EXPIRATION,
@@ -312,7 +173,7 @@ describe("GitcoinResolver", function () {
     it("should allow a user to revoke their own attestation", async function () {
       const validAttestation = {
         uid: this.uid,
-        schema: GITCOIN_VCS_SCHEMA,
+        schema: gitcoinVCSchema,
         time: NO_EXPIRATION,
         expirationTime: NO_EXPIRATION,
         revocationTime: NO_EXPIRATION,
@@ -338,7 +199,7 @@ describe("GitcoinResolver", function () {
     it("should allow a user to revoke their own attestations", async function () {
       const validAttestation = {
         uid: this.uid,
-        schema: GITCOIN_VCS_SCHEMA,
+        schema: gitcoinVCSchema,
         time: NO_EXPIRATION,
         expirationTime: NO_EXPIRATION,
         revocationTime: NO_EXPIRATION,

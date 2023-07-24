@@ -6,33 +6,33 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
 
-const googleStamp = {
+export const googleStamp = {
   provider: "Google",
   stampHash: "234567890",
 };
 
-const facebookStamp = {
+export const facebookStamp = {
   provider: "Facebook",
   stampHash: "234567891",
 };
 
-const twitterStamp = {
+export const twitterStamp = {
   provider: "Twitter",
   stampHash: "234567891",
 };
 
 // SEPOLIA SPECIFIC
-const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
-const GITCOIN_STAMP_SCHEMA =
+export const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
+export const GITCOIN_STAMP_SCHEMA =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-const GITCOIN_SCORE_SCHEMA =
+export const GITCOIN_SCORE_SCHEMA =
   "0x0f2928937d46e9ec78b350750185d2f495e708f79b383cef23b903fe120d9a2e";
 
-const fee1 = ethers.parseEther("0.001");
-const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
-const fee2 = ethers.parseEther("0.002");
+export const fee1 = ethers.parseEther("0.001");
+export const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
+export const fee2 = ethers.parseEther("0.002");
 
-const passportTypes = {
+export const passportTypes = {
   AttestationRequestData: [
     { name: "recipient", type: "address" },
     { name: "expirationTime", type: "uint64" },
@@ -52,17 +52,17 @@ const passportTypes = {
   ],
 };
 
-const scorer1Score = {
+export const scorer1Score = {
   score: 100,
   scorer_id: 420,
 };
 
-const scorer2Score = {
+export const scorer2Score = {
   score: 200,
   scorer_id: 240,
 };
 
-function sumDataLengths(requests: { data: any[] }[]): number {
+export function sumDataLengths(requests: { data: any[] }[]): number {
   return requests.reduce((total, request) => total + request.data.length, 0);
 }
 
