@@ -227,14 +227,14 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public payable whenNotPaused {
+  ) public payable whenNotPaused returns (bytes32[] memory) {
     _verify(v, r, s, attestationRequest);
 
     if (msg.value < attestationRequest.fee) {
       revert("Insufficient fee");
     }
 
-    attester.submitAttestations(attestationRequest.multiAttestationRequest);
+    return attester.submitAttestations(attestationRequest.multiAttestationRequest);
   }
 
   /**

@@ -106,4 +106,4 @@ export const SCHEMA_REGISTRY_ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-];
+]

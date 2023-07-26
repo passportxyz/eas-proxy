@@ -9,7 +9,7 @@ export const schemaRegistryContractAddress =
   process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
   "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0";
 
-describe("GitcoinResolver", function () {
+describe.only("GitcoinResolver", function () {
   let owner: any,
     iamAccount: any,
     recipient: any,

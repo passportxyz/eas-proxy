@@ -27,7 +27,7 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  const EAS_CONTRACT_ADDRESS = String(process.env.EAS_CONTRACT_ADDRESS);
+  const EAS_CONTRACT_ADDRESS = String(process.env.SEPOLIA_EAS_CONTRACT_ADDRESS);
   const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
@@ -35,6 +35,7 @@ export async function main() {
     GitcoinResolver,
     [EAS_CONTRACT_ADDRESS, GITCOIN_ATTESTER_ADDRESS],
     {
+      initializer: "initialize",
       kind: "uups",
     }
   );
@@ -48,7 +49,7 @@ export async function main() {
   const transferProxyOwnerShip = await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
-  console.log("✅ Transfered ownership of GitcoinVerifier to multisig");
+  console.log("✅ Transfered ownership of GitcoinResolver to multisig");
 }
 
 main().catch((error) => {
