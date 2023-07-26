@@ -1,19 +1,17 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { EAS, ZERO_BYTES32, NO_EXPIRATION, Attestation } from "@ethereum-attestation-service/eas-sdk";
-import { GitcoinAttester, GitcoinResolver, GitcoinVerifier } from "../typechain-types";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+
 import {
-  easEncodeScore,
-  easEncodeStamp,
-  encodedData,
-  gitcoinVCSchema,
-} from "./GitcoinAttester";
+  EAS,
+  ZERO_BYTES32,
+  Attestation,
+} from "@ethereum-attestation-service/eas-sdk";
+import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
 
 import {
   googleStamp,
   facebookStamp,
-  GITCOIN_SCORE_SCHEMA,
-  GITCOIN_STAMP_SCHEMA,
   passportTypes,
   scorer1Score,
   scorer2Score,
@@ -24,26 +22,29 @@ import {
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 
-describe.only("GitcoinEASProxy", function () {
+describe("GitcoinEASProxy", function () {
   this.beforeAll(async function () {
-    const [
-      ownerAccount,
-      otherAccount,
-      recipientAccount
-    ] = await ethers.getSigners();
+    const [ownerAccount, otherAccount, recipientAccount] =
+      await ethers.getSigners();
 
     this.owner = ownerAccount;
     this.iamAccount = otherAccount;
     this.recipient = recipientAccount;
 
     // Deploy GitcoinAttester
-    const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester", this.owner);
+    const GitcoinAttester = await ethers.getContractFactory(
+      "GitcoinAttester",
+      this.owner
+    );
     this.gitcoinAttester = await GitcoinAttester.deploy();
     await this.gitcoinAttester.connect(this.owner).initialize();
     this.gitcoinAttesterAddress = await this.gitcoinAttester.getAddress();
 
     // Deploy GitcoinVerifier
-    const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier", this.owner);
+    const GitcoinVerifier = await ethers.getContractFactory(
+      "GitcoinVerifier",
+      this.owner
+    );
     this.gitcoinVerifier = await GitcoinVerifier.deploy();
 
     await this.gitcoinVerifier
@@ -56,7 +57,9 @@ describe.only("GitcoinEASProxy", function () {
     this.eas = new EAS(EAS_CONTRACT_ADDRESS);
     await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
-    const chainId = await ethers.provider.getNetwork().then((n: { chainId: any; }) => n.chainId);
+    const chainId = await ethers.provider
+      .getNetwork()
+      .then((n: { chainId: any }) => n.chainId);
 
     this.domain = {
       name: "GitcoinVerifier",
@@ -72,19 +75,17 @@ describe.only("GitcoinEASProxy", function () {
     this.uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
 
     // Deploy GitcoinResolver
-    const GitcoinStampResolver = await ethers.getContractFactory("GitcoinResolver", this.owner);
-    this.gitcoinStampResolver = await GitcoinStampResolver.deploy();
-    await this.gitcoinStampResolver.connect(this.owner).initialize(
-      EAS_CONTRACT_ADDRESS,
-      await this.gitcoinAttester.getAddress()
+    const GitcoinResolver = await ethers.getContractFactory(
+      "GitcoinResolver",
+      this.owner
     );
-
-    const GitcoinScoreResolver = await ethers.getContractFactory("GitcoinResolver", this.owner);
-    this.gitcoinScoreResolver = await GitcoinScoreResolver.deploy();
-    await this.gitcoinScoreResolver.connect(this.owner).initialize(
-      EAS_CONTRACT_ADDRESS,
-      await this.gitcoinAttester.getAddress()
-    );
+    this.gitcoinResolver = await GitcoinResolver.deploy();
+    await this.gitcoinResolver
+      .connect(this.owner)
+      .initialize(
+        EAS_CONTRACT_ADDRESS,
+        await this.gitcoinAttester.getAddress()
+      );
 
     // Register schema for resolver
     const schemaRegistry = new ethers.Contract(
@@ -95,38 +96,44 @@ describe.only("GitcoinEASProxy", function () {
 
     this.scoreSchemaInput = "uint32 score,uint32 scorer_id";
     this.stampSchemaInput = "string provider,string hash";
-    this.resolverAddressStamp = await this.gitcoinStampResolver.getAddress();
-    this.resolverAddressScore = await this.gitcoinScoreResolver.getAddress();
+    this.resolverAddress = await this.gitcoinResolver.getAddress();
     this.revocable = true;
 
     this.stampTx = await schemaRegistry.register(
       this.stampSchemaInput,
-      this.resolverAddressStamp,
+      this.resolverAddress,
       this.revocable
     );
 
     this.scoreTx = await schemaRegistry.register(
       this.scoreSchemaInput,
-      this.resolverAddressScore,
+      this.resolverAddress,
       this.revocable
     );
 
-    this.scoreSchemaTxReciept = await this.scoreTx.wait();
-    const scoreSchemaEvent = this.scoreSchemaTxReciept.logs.filter((log: any) => {
-      return log.fragment.name == "Registered";
-    });
+    this.scoreSchemaTxReceipt = await this.scoreTx.wait();
+    const scoreSchemaEvent = this.scoreSchemaTxReceipt.logs.filter(
+      (log: any) => {
+        return log.fragment.name == "Registered";
+      }
+    );
     this.scoreSchemaUID = scoreSchemaEvent[0].args[0];
 
-    this.stampSchemaTxReceipt = await this.stampTx.wait();
-    const stampSchemaEvent = this.stampSchemaTxReceipt.logs.filter((log: any) => {
-      return log.fragment.name == "Registered";
-    });
-    this.stampSchemaUID = stampSchemaEvent[0].args[0];
+    this.passportSchemaTxReceipt = await this.stampTx.wait();
+    const passportSchemaEvent = this.passportSchemaTxReceipt.logs.filter(
+      (log: any) => {
+        return log.fragment.name == "Registered";
+      }
+    );
+    this.passportSchemaUID = passportSchemaEvent[0].args[0];
+
+    await this.gitcoinResolver.setPassportSchema(this.passportSchemaUID);
+    await this.gitcoinResolver.setScoreSchema(this.scoreSchemaUID);
 
     this.passport = {
       multiAttestationRequest: [
         {
-          schema: this.stampSchemaUID,
+          schema: this.passportSchemaUID,
           data: [
             {
               recipient: this.recipient.address,
@@ -180,11 +187,15 @@ describe.only("GitcoinEASProxy", function () {
       fee: fee1,
     };
 
-    this.signature = await this.iamAccount.signTypedData(
-      this.domain,
-      passportTypes,
-      this.passport
-    );
+    const addVerifierResult = await this.gitcoinAttester
+      .connect(this.owner)
+      .addVerifier(await this.gitcoinVerifier.getAddress());
+
+    await addVerifierResult.wait();
+
+    await expect(addVerifierResult)
+      .to.emit(this.gitcoinAttester, "VerifierAdded")
+      .withArgs(await this.gitcoinVerifier.getAddress());
   });
 
   this.beforeEach(async function () {
@@ -195,125 +206,115 @@ describe.only("GitcoinEASProxy", function () {
 
   describe("GitcoinEASProxy", function () {
     it("should move through the entire Gitcoin EAS proxy attestation flow", async function () {
-      // Add a verifier
-      const verificationResult = await this.gitcoinAttester.connect(this.owner).addVerifier(await this.gitcoinVerifier.getAddress());
-      expect(verificationResult)
-        .to.emit(this.gitcoinAttester, "VerifierAdded")
-        .withArgs(await this.gitcoinVerifier.getAddress()
-        );
-      await verificationResult.wait();
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        this.passport
+      );
 
-      const { v, r, s } = ethers.Signature.from(this.signature);
+      const { v, r, s } = ethers.Signature.from(signature);
 
       // Submit attestations
-      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-        value: fee1,
-      });
+      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+        this.passport,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
 
-      const xxx = await verifiedPassport.wait();
+      await verifiedPassport.wait();
 
-      console.log(xxx.logs);
-      
-
-      // this.passport.multiAttestationRequest.forEach((attestations: { data: Attestation[]; }) => {
-      //   attestations.data.forEach((attestation: Attestation) => {
-      //     expect(verifiedPassport)
-      //       .to.emit(this.gitcoinStampResolver, "PassportAdded")
-      //       .withArgs(attestation.recipient, attestation.uid);
-
-      //     expect(verifiedPassport)
-      //       .to.emit(this.gitcoinScoreResolver, "PassportAdded")
-      //       .withArgs(attestation.recipient, attestation.uid);
-      //   });
-      // });
+      await Promise.all(
+        this.passport.multiAttestationRequest.map(
+          async (attestations: { data: Attestation[] }) => {
+            await Promise.all(
+              attestations.data.map(async (attestation: Attestation) => {
+                await expect(verifiedPassport)
+                  .to.emit(this.gitcoinResolver, "PassportAdded")
+                  .withArgs(attestation.recipient, anyValue);
+              })
+            );
+          }
+        )
+      );
 
       const receipt = await verifiedPassport.wait();
       expect(receipt.status).to.equal(1);
     });
 
     it("should move through the entire Gitcoin EAS proxy revocation flow", async function () {
-      
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        this.passport
+      );
 
-      // const signature = await this.iamAccount.signTypedData(
-      //   this.domain,
-      //   passportTypes,
-      //   passport
-      // );
-      // const verificationResult = await this.gitcoinAttester.connect(this.owner).addVerifier(await this.gitcoinVerifier.getAddress());
+      const { v, r, s } = ethers.Signature.from(signature);
 
-      // await verificationResult.wait();
+      const attested = await this.gitcoinVerifier.verifyAndAttest(
+        this.passport,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
 
-      // await expect(verificationResult)
-      //   .to.emit(this.gitcoinAttester, "VerifierAdded")
-      //   .withArgs(await this.gitcoinVerifier.getAddress());
+      await attested.wait();
 
-      // const { v, r, s } = ethers.Signature.from(signature);
-
-      // const attested = await this.gitcoinVerifier.verifyAndAttest(
-      //   passport, v, r, s,
-      //   {
-      //     value: fee1,
-      //   }
-      // );
-
-      // await attested.wait();
-      
-      const stampAttestationUID = await this.gitcoinStampResolver.passports(this.recipient.address);
-      const scoreAttestationUID = await this.gitcoinScoreResolver.passports(this.recipient.address);
+      const passportAttestationUID = await this.gitcoinResolver.passports(
+        this.recipient.address
+      );
+      const scoreAttestationUID = await this.gitcoinResolver.scores(
+        this.recipient.address
+      );
 
       const multiRevocationRequest = [
-          {
-            schema: this.stampSchemaUID,
-            data: [
-              {
-                uid: stampAttestationUID,
-                value: 0,
-              },
-              {
-                uid: stampAttestationUID,
-                value: 0,
-              },
-            ],
-          },
-          {
-            schema: this.scoreSchemaUID,
-            data: [
-              {
-                uid: scoreAttestationUID,
-                value: 0,
-              },
-              {
-                uid: scoreAttestationUID,
-                value: 0,
-              },
-              {
-                uid: scoreAttestationUID,
-                value: 0,
-              },
-            ],
-          },
-        ];
+        {
+          schema: this.passportSchemaUID,
+          data: [
+            {
+              uid: passportAttestationUID,
+              value: 0,
+            },
+          ],
+        },
+        {
+          schema: this.scoreSchemaUID,
+          data: [
+            {
+              uid: scoreAttestationUID,
+              value: 0,
+            },
+          ],
+        },
+      ];
 
-      this.gitcoinAttester.connect(this.owner).revokeAttestations(multiRevocationRequest)
+      const revokeResult = await this.gitcoinAttester
+        .connect(this.owner)
+        .revokeAttestations(multiRevocationRequest);
 
-      const xxxx = await this.gitcoinStampResolver.passports(this.recipient.address);
-      console.log(xxxx);
-      
+      const passportUID = await this.gitcoinResolver.passports(
+        this.recipient.address
+      );
+      expect(passportUID).to.equal(ZERO_BYTES32);
 
-      // await expect(this.gitcoinAttester.connect(this.owner)
-      //   .revokeAttestations(passport.multiAttestationRequest))
-      //   .to.emit(this.gitcoinScoreResolver, "PassportRemoved")
-      //   // .withArgs(this.recipient.address, scoreAttestationUID);
+      const scoreUID = await this.gitcoinResolver.scores(
+        this.recipient.address
+      );
+      expect(scoreUID).to.equal(ZERO_BYTES32);
 
-      // console.log(await this.eas.getAttestation(scoreAttestationUID));
-      
+      await expect(revokeResult)
+        .to.emit(this.gitcoinResolver, "PassportRemoved")
+        .withArgs(this.recipient.address, passportAttestationUID);
 
-      // multiRevocationRequest.forEach((attestations) => {
-      //   attestations.data.forEach(attestation => {
-      //     const revocationTime = ethers.getBigInt(attestation.revocationTime.toString()); 
-      //     expect(revocationTime).to.be.greaterThan(0);
-      //   });
-      // });
+      await expect(revokeResult)
+        .to.emit(this.gitcoinResolver, "ScoreRemoved")
+        .withArgs(this.recipient.address, scoreAttestationUID);
     });
   });
 });
