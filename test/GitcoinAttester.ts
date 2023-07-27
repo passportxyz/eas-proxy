@@ -9,12 +9,12 @@ import {
   EAS,
 } from "@ethereum-attestation-service/eas-sdk";
 
-type Stamp = {
+export type Stamp = {
   provider: string;
   stampHash: string;
 };
 
-type Score = {
+export type Score = {
   score: number;
   scorer_id: number;
 };
@@ -39,12 +39,12 @@ export const easEncodeStamp = (stamp: Stamp) => {
   return encodedData;
 };
 
-const encodedData = easEncodeStamp({
+export const encodedData = easEncodeStamp({
   provider: "TestProvider",
   stampHash: "234567890",
 });
 
-const attestationRequest = {
+export const attestationRequest = {
   recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
   expirationTime: NO_EXPIRATION,
   revocable: true,
@@ -53,10 +53,10 @@ const attestationRequest = {
   value: 0,
 };
 
-const gitcoinVCSchema =
+export const gitcoinVCSchema =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
 
-const multiAttestationRequests = {
+export const multiAttestationRequests = {
   schema: gitcoinVCSchema,
   data: [attestationRequest, attestationRequest, attestationRequest],
 };

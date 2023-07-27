@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import { Initializable, OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 import { InvalidEAS } from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
 
-import { GitcoinAttester } from "./GitcoinAttester.sol";
+import { GitcoinAttester } from "../GitcoinAttester.sol";
 
 /**
  * @title GitcoinResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
-contract GitcoinResolver is
+contract GitcoinResolverUpdate is
   Initializable,
   UUPSUpgradeable,
   OwnableUpgradeable,
@@ -37,8 +38,10 @@ contract GitcoinResolver is
   // Gitcoin Attester contract
   GitcoinAttester public _gitcoinAttester;
 
-  bytes32 public passportSchema;
-  bytes32 public scoreSchema;
+  bytes32 passportSchema;
+  bytes32 scoreSchema;
+
+  bytes32 aNewVariable;
 
   // Emitted when a passport is added to the passports mapping
   event PassportAdded(address recipient, bytes32 recipientUid);
@@ -79,7 +82,7 @@ contract GitcoinResolver is
   modifier _onlyEAS() {
     require(
       msg.sender == address(_eas),
-      "Only EAS can call this function"
+      "Only EAS contract can call this function"
     );
 
     _;
@@ -93,7 +96,6 @@ contract GitcoinResolver is
     _unpause();
   }
 
-  // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
   function setPassportSchema(bytes32 _passportSchema) public onlyOwner {
@@ -129,7 +131,7 @@ contract GitcoinResolver is
   function _attest(Attestation calldata attestation) internal returns (bool) {
     require(
       attestation.attester == address(_gitcoinAttester),
-      "Invalid attester"
+      "Only the Gitcoin Attester can make attestations"
     );
 
     if (attestation.schema == passportSchema) {
@@ -200,12 +202,8 @@ contract GitcoinResolver is
   function _revoke(Attestation calldata attestation) internal returns (bool) {
     if (passports[attestation.recipient] == attestation.uid) {
       passports[attestation.recipient] = 0;
-      emit PassportRemoved(attestation.recipient, attestation.uid);
-    } else if (scores[attestation.recipient] == attestation.uid) {
-      scores[attestation.recipient] = 0;
-      emit ScoreRemoved(attestation.recipient, attestation.uid);
     }
-
+    emit PassportRemoved(attestation.recipient, attestation.uid);
     return true;
   }
 }
