@@ -10,10 +10,6 @@ export async function main() {
     console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
   }
 
-  if (!process.env.IAM_ISSUER_ADDRESS) {
-    console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
-  }
-
   if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
     console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
   }
@@ -27,7 +23,7 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  const EAS_CONTRACT_ADDRESS = String(process.env.SEPOLIA_EAS_CONTRACT_ADDRESS);
+  const EAS_CONTRACT_ADDRESS = String(process.env.EAS_CONTRACT_ADDRESS);
   const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
@@ -56,3 +52,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
