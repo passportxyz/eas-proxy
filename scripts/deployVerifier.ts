@@ -1,7 +1,12 @@
 // This script deals with deploying the GitcoinVerifier on a given network
 
 import hre, { ethers, upgrades } from "hardhat";
-import { assertEnvironment, confirmContinue } from "./utils";
+import {
+  assertEnvironment,
+  confirmContinue,
+  getAbi,
+  updateDeploymentsFile,
+} from "./utils";
 
 assertEnvironment();
 
@@ -43,6 +48,13 @@ export async function main() {
 
   const verifierAddress = await deployment.getAddress();
   console.log(`✅ Deployed GitcoinVerifier to ${verifierAddress}`);
+
+  await updateDeploymentsFile(
+    "GitcoinVerifier",
+    getAbi(deployment),
+    hre.network.config.chainId,
+    verifierAddress
+  );
 
   const transferProxyOwnerShip = await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""

@@ -1,6 +1,7 @@
 import readline from "readline";
 import * as dotenv from "dotenv";
-import { utils } from "ethers";
+import { utils, BaseContract, ContractFactory } from "ethers";
+import fs from "fs";
 
 dotenv.config();
 
@@ -62,4 +63,61 @@ export async function preHashTypeHashes() {
     const hashedValue = utils.keccak256(utils.toUtf8Bytes(hashType));
     console.log(`"${hashType}": "${hashedValue}",`);
   });
+}
+
+export function getAbi(contract: { interface: { formatJson: () => string } }) {
+  const abi = contract.interface.formatJson();
+  return JSON.parse(abi);
+}
+
+// For updating proxies, don't pass the address in order to reuse the existing one
+export async function updateDeploymentsFile(
+  contractName: string,
+  abi: any,
+  chainId?: number,
+  newAddress?: string
+) {
+  let hexChainId = "0x" + chainId?.toString(16);
+  if (!chainId) {
+    console.error("No chain ID, assuming local deployment");
+    hexChainId = "0x7a69";
+  }
+
+  const deploymentsFilePath = "./deployments.json";
+
+  let existingChainConfig: Record<string, any> = {};
+
+  try {
+    // read current chain config from local file
+    existingChainConfig = JSON.parse(
+      fs.readFileSync(deploymentsFilePath, "utf8")
+    );
+  } catch {}
+
+  const contractData: { abi: any; address?: string } = {
+    abi,
+  };
+
+  if (newAddress) contractData.address = newAddress;
+
+  const newChainConfig = {
+    ...existingChainConfig,
+    [hexChainId]: {
+      ...existingChainConfig[hexChainId],
+      [contractName]: {
+        ...existingChainConfig[hexChainId]?.[contractName],
+        ...contractData,
+      },
+    },
+  };
+
+  // overwrite the deployments.json file with the new one
+  fs.writeFileSync(
+    deploymentsFilePath,
+    JSON.stringify(newChainConfig, null, 2)
+  );
+
+  console.log(
+    `✅ Updated ${deploymentsFilePath} with new ${contractName} info`
+  );
 }

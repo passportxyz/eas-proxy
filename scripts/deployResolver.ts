@@ -1,7 +1,12 @@
 // This script deals with deploying the GitcoinResolver on a given network
 
 import hre, { ethers, upgrades } from "hardhat";
-import { assertEnvironment, confirmContinue } from "./utils";
+import {
+  assertEnvironment,
+  confirmContinue,
+  updateDeploymentsFile,
+  getAbi,
+} from "./utils";
 
 assertEnvironment();
 
@@ -13,9 +18,6 @@ export async function main() {
   if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
     console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
   }
-
-  // Wait 10 blocks for re-org protection
-  const blocksToWait = hre.network.name === "hardhat" ? 0 : 10;
 
   await confirmContinue({
     contract: "GitcoinResolver",
@@ -42,14 +44,20 @@ export async function main() {
 
   console.log(`✅ Deployed GitcoinResolver to ${resolverAddress}.`);
 
-  const transferProxyOwnerShip = await deployment.transferOwnership(
+  await updateDeploymentsFile(
+    "GitcoinResolver",
+    getAbi(deployment),
+    hre.network.config.chainId,
+    resolverAddress
+  );
+
+  await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
-  console.log("✅ Transfered ownership of GitcoinResolver to multisig");
+  console.log("✅ Transferred ownership of GitcoinResolver to multisig");
 }
 
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-

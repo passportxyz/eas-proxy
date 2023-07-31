@@ -1,6 +1,11 @@
 // This script deals with deploying the GitcoinAttester on a given network
 import hre, { ethers, upgrades } from "hardhat";
-import { confirmContinue, assertEnvironment } from "./utils";
+import {
+  confirmContinue,
+  assertEnvironment,
+  updateDeploymentsFile,
+  getAbi,
+} from "./utils";
 
 assertEnvironment();
 
@@ -28,6 +33,13 @@ export async function main() {
   const deployedAddress = await attester.getAddress();
 
   console.log(`✅ Deployed GitcoinAttester. ${deployedAddress}`);
+
+  await updateDeploymentsFile(
+    "GitcoinAttester",
+    getAbi(deployment),
+    hre.network.config.chainId,
+    deployedAddress
+  );
 
   const transferProxyOwnerShip = await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
