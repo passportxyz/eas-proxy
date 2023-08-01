@@ -1,6 +1,6 @@
 import readline from "readline";
 import * as dotenv from "dotenv";
-import { utils, BaseContract, ContractFactory } from "ethers";
+import { utils } from "ethers";
 import fs from "fs";
 
 dotenv.config();
@@ -79,45 +79,62 @@ export async function updateDeploymentsFile(
 ) {
   let hexChainId = "0x" + chainId?.toString(16);
   if (!chainId) {
-    console.error("No chain ID, assuming local deployment");
+    console.log("⚠️  No chain ID, assuming local deployment");
     hexChainId = "0x7a69";
   }
 
-  const deploymentsFilePath = "./deployments.json";
+  const outputDir = "./deployments";
+  const infoFile = `${outputDir}/onchainInfo.json`;
+  const abiDir = `${outputDir}/abi`;
+  const abiFile = `${abiDir}/${contractName}.json`;
 
-  let existingChainConfig: Record<string, any> = {};
+  if (!fs.existsSync("./deployments")) {
+    fs.mkdirSync("./deployments");
+  }
+
+  if (!fs.existsSync(abiDir)) {
+    fs.mkdirSync(abiDir);
+  }
+
+  if (newAddress) {
+    addChainInfoToFile(infoFile, hexChainId, (thisChainExistingInfo) => ({
+      ...thisChainExistingInfo,
+      [contractName]: {
+        address: newAddress,
+      },
+    }));
+
+    console.log(`✅ Updated ${infoFile} with new ${contractName} info`);
+  }
+
+  addChainInfoToFile(abiFile, hexChainId, () => abi);
+
+  console.log(`✅ Updated ${abiFile}`);
+
+  console.log(
+    `✏️  You should copy the ${outputDir} directory to the Passport frontend, overwriting the current one`
+  );
+}
+
+function addChainInfoToFile(
+  file: string,
+  hexChainId: string,
+  updater: (thisChainExistingInfo: any) => any
+) {
+  let existingInfo: Record<string, any> = {};
 
   try {
     // read current chain config from local file
-    existingChainConfig = JSON.parse(
-      fs.readFileSync(deploymentsFilePath, "utf8")
-    );
+    existingInfo = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {}
 
-  const contractData: { abi: any; address?: string } = {
-    abi,
+  const thisChainExistingInfo = existingInfo[hexChainId] || {};
+  const thisChainNewInfo = updater(thisChainExistingInfo);
+
+  const newInfo = {
+    ...existingInfo,
+    [hexChainId]: thisChainNewInfo,
   };
 
-  if (newAddress) contractData.address = newAddress;
-
-  const newChainConfig = {
-    ...existingChainConfig,
-    [hexChainId]: {
-      ...existingChainConfig[hexChainId],
-      [contractName]: {
-        ...existingChainConfig[hexChainId]?.[contractName],
-        ...contractData,
-      },
-    },
-  };
-
-  // overwrite the deployments.json file with the new one
-  fs.writeFileSync(
-    deploymentsFilePath,
-    JSON.stringify(newChainConfig, null, 2)
-  );
-
-  console.log(
-    `✅ Updated ${deploymentsFilePath} with new ${contractName} info`
-  );
+  fs.writeFileSync(file, JSON.stringify(newInfo, null, 2));
 }
