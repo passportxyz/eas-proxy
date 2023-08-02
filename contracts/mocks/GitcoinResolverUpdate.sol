@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable, OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
@@ -26,11 +25,9 @@ contract GitcoinResolverUpdate is
   error AccessDenied();
   error InsufficientValue();
   error NotPayable();
-  error InvalidAttestationSchema();
 
-  // Mapping of Passport addresses to attestation UIDs
-  mapping(address => bytes32) public passports;
-  mapping(address => bytes32) public scores;
+  // Mapping of addresses to schemas to an attestation UID
+  mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 
   // The global EAS contract.
   IEAS public _eas;
@@ -38,23 +35,7 @@ contract GitcoinResolverUpdate is
   // Gitcoin Attester contract
   GitcoinAttester public _gitcoinAttester;
 
-  bytes32 passportSchema;
-  bytes32 scoreSchema;
-
-  bytes32 aNewVariable;
-
-  // Emitted when a passport is added to the passports mapping
-  event PassportAdded(address recipient, bytes32 recipientUid);
-  // Emitted when a passport is removed from the passports mapping
-  event PassportRemoved(address recipient, bytes32 recipientUid);
-
-  // Emitted when a score is added to the scores mapping
-  event ScoreAdded(address recipient, bytes32 recipientUid);
-  // Emitted when a score is removed from the scores mapping
-  event ScoreRemoved(address recipient, bytes32 recipientUid);
-
-  event UpdatedPassportSchema(bytes32 passportSchema);
-  event UpdatedScoreSchema(bytes32 scoreSchema);
+  uint256 public aNewPublicVairable;
 
   /**
    * @dev Creates a new resolver.
@@ -80,10 +61,7 @@ contract GitcoinResolverUpdate is
    * @dev Ensures that only the EAS contract can make this call.
    */
   modifier _onlyEAS() {
-    require(
-      msg.sender == address(_eas),
-      "Only EAS contract can call this function"
-    );
+    require(msg.sender == address(_eas), "Only EAS can call this function");
 
     _;
   }
@@ -96,17 +74,8 @@ contract GitcoinResolverUpdate is
     _unpause();
   }
 
+  // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address) internal override onlyOwner {}
-
-  function setPassportSchema(bytes32 _passportSchema) public onlyOwner {
-    passportSchema = _passportSchema;
-    emit UpdatedPassportSchema(_passportSchema);
-  }
-
-  function setScoreSchema(bytes32 _scoreSchema) public onlyOwner {
-    scoreSchema = _scoreSchema;
-    emit UpdatedScoreSchema(_scoreSchema);
-  }
 
   /**
    * @dev Returns whether the resolver supports ETH transfers. Required function from the interface ISchemaResolver that we won't be using
@@ -131,18 +100,10 @@ contract GitcoinResolverUpdate is
   function _attest(Attestation calldata attestation) internal returns (bool) {
     require(
       attestation.attester == address(_gitcoinAttester),
-      "Only the Gitcoin Attester can make attestations"
+      "Invalid attester"
     );
 
-    if (attestation.schema == passportSchema) {
-      passports[attestation.recipient] = attestation.uid;
-      emit PassportAdded(attestation.recipient, attestation.uid);
-    } else if (attestation.schema == scoreSchema) {
-      scores[attestation.recipient] = attestation.uid;
-      emit ScoreAdded(attestation.recipient, attestation.uid);
-    } else {
-      revert InvalidAttestationSchema();
-    }
+    userAttestations[attestation.recipient][attestation.schema] = attestation.uid;
 
     return true;
   }
@@ -200,10 +161,8 @@ contract GitcoinResolverUpdate is
   }
 
   function _revoke(Attestation calldata attestation) internal returns (bool) {
-    if (passports[attestation.recipient] == attestation.uid) {
-      passports[attestation.recipient] = 0;
-    }
-    emit PassportRemoved(attestation.recipient, attestation.uid);
+    userAttestations[attestation.recipient][attestation.schema] = 0;
+
     return true;
   }
 }

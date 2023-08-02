@@ -1,5 +1,10 @@
 import hre, { ethers, upgrades } from "hardhat";
-import { confirmContinue, assertEnvironment } from "./utils";
+import {
+  confirmContinue,
+  assertEnvironment,
+  updateDeploymentsFile,
+  getAbi,
+} from "./utils";
 
 assertEnvironment();
 
@@ -34,6 +39,12 @@ export async function main() {
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
   const gitcoinAttester = await GitcoinAttester.attach(
     process.env.GITCOIN_ATTESTER_ADDRESS || ""
+  );
+
+  await updateDeploymentsFile(
+    "GitcoinAttester",
+    getAbi(GitcoinAttesterUpdate),
+    hre.network.config.chainId
   );
 
   // Encode upgrade transaction

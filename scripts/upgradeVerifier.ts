@@ -1,5 +1,10 @@
 import hre, { ethers, upgrades } from "hardhat";
-import { confirmContinue, assertEnvironment } from "./utils";
+import {
+  confirmContinue,
+  assertEnvironment,
+  updateDeploymentsFile,
+  getAbi,
+} from "./utils";
 
 assertEnvironment();
 
@@ -30,6 +35,12 @@ export async function main() {
 
   console.log(
     `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
+  );
+
+  await updateDeploymentsFile(
+    "GitcoinVerifier",
+    getAbi(GitcoinVerifierUpdate),
+    hre.network.config.chainId
   );
 
   const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");

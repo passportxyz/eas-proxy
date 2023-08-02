@@ -84,8 +84,6 @@ describe("GitcoinResolver", function () {
 
     this.schemaUID = registerEvent[0].args[0];
 
-    await gitcoinResolver.connect(owner).setPassportSchema(this.schemaUID);
-
     this.validAttestation = {
       uid: this.uid,
       schema: this.schemaUID,
@@ -102,32 +100,28 @@ describe("GitcoinResolver", function () {
 
   describe("Attestations", function () {
     it("should make 1 attestation", async function () {
-      await expect(
-        gitcoinResolver.connect(mockEas).attest(this.validAttestation)
-      )
-        .to.emit(gitcoinResolver, "PassportAdded")
-        .withArgs(this.validAttestation.recipient, this.uid);
+      await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
 
-      const attestationUID = await gitcoinResolver.passports(recipient.address);
+      const attestationUID = await gitcoinResolver.userAttestations(
+        recipient.address,
+        this.schemaUID
+      );
 
       expect(attestationUID).to.equal(this.uid);
     });
 
     it("should make multiple attestations", async function () {
-      await expect(
-        gitcoinResolver
-          .connect(mockEas)
-          .multiAttest(
-            [
-              this.validAttestation,
-              this.validAttestation,
-              this.validAttestation,
-            ],
-            []
-          )
-      ).to.emit(gitcoinResolver, "PassportAdded");
+      await gitcoinResolver
+        .connect(mockEas)
+        .multiAttest(
+          [this.validAttestation, this.validAttestation, this.validAttestation],
+          []
+        );
 
-      const attestationUID = await gitcoinResolver.passports(recipient.address);
+      const attestationUID = await gitcoinResolver.userAttestations(
+        recipient.address,
+        this.schemaUID
+      );
 
       expect(attestationUID).to.equal(this.uid);
     });
@@ -163,11 +157,7 @@ describe("GitcoinResolver", function () {
     it("should make 1 revocation", async function () {
       // Make an attestation
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
-      await expect(
-        gitcoinResolver.connect(mockEas).revoke(this.validAttestation)
-      )
-        .to.emit(gitcoinResolver, "PassportRemoved")
-        .withArgs(this.validAttestation.recipient, this.uid);
+      await gitcoinResolver.connect(mockEas).revoke(this.validAttestation);
     });
 
     it("Should make multiple revocations", async function () {
@@ -177,20 +167,18 @@ describe("GitcoinResolver", function () {
           [this.validAttestation, this.validAttestation, this.validAttestation],
           []
         );
-      await expect(
-        gitcoinResolver
-          .connect(mockEas)
-          .multiRevoke(
-            [
-              this.validAttestation,
-              this.validAttestation,
-              this.validAttestation,
-            ],
-            []
-          )
-      ).to.emit(gitcoinResolver, "PassportRemoved");
+      await gitcoinResolver
+        .connect(mockEas)
+        .multiRevoke(
+          [this.validAttestation, this.validAttestation, this.validAttestation],
+          []
+        );
 
-      let attestationUID = await gitcoinResolver.passports(recipient.address);
+      let attestationUID = await gitcoinResolver.userAttestations(
+        recipient.address,
+        this.schemaUID
+      );
+
       expect(attestationUID).to.equal(ethers.ZeroHash);
     });
 
@@ -210,11 +198,12 @@ describe("GitcoinResolver", function () {
       // Make an attestations
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
       // Get the result of the revocation made by the user
-      await expect(gitcoinResolver.connect(mockEas).revoke(validAttestation))
-        .to.emit(gitcoinResolver, "PassportRemoved")
-        .withArgs(validAttestation.recipient, this.uid);
+      await gitcoinResolver.connect(mockEas).revoke(validAttestation);
 
-      let attestationUID = await gitcoinResolver.passports(recipient.address);
+      let attestationUID = await gitcoinResolver.userAttestations(
+        recipient.address,
+        this.schemaUID
+      );
       expect(attestationUID).to.equal(ethers.ZeroHash);
     });
 
@@ -247,38 +236,6 @@ describe("GitcoinResolver", function () {
             []
           )
       ).to.be.revertedWith("Only EAS can call this function");
-
-      it("should allow a eas to revoke a user's attestation from an old schema", async function () {
-        const validAttestation = {
-          uid: this.uid,
-          schema: this.schemaUID,
-          time: NO_EXPIRATION,
-          expirationTime: NO_EXPIRATION,
-          revocationTime: NO_EXPIRATION,
-          refUID: ZERO_BYTES32,
-          recipient: recipient.address,
-          attester: recipient,
-          revocable: true,
-          data: encodedData,
-        };
-
-        // Make an attestations
-        await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
-
-        // Override the schemas
-        await gitcoinResolver.connect(owner).setScoreSchema(ZERO_BYTES32);
-        await gitcoinResolver.connect(owner).setPassportSchema(ZERO_BYTES32);
-
-        // Get the result of the revocation made by the user
-        await expect(gitcoinResolver.connect(mockEas).revoke(validAttestation))
-          .to.emit(gitcoinResolver, "PassportRemoved")
-          .withArgs(validAttestation.recipient, this.uid);
-
-        const attestationUID = await gitcoinResolver.passports(
-          recipient.address
-        );
-        expect(attestationUID).to.equal(ethers.ZeroHash);
-      });
     });
   });
 

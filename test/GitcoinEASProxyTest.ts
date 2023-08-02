@@ -127,9 +127,6 @@ describe("GitcoinEASProxy", function () {
     );
     this.passportSchemaUID = passportSchemaEvent[0].args[0];
 
-    await this.gitcoinResolver.setPassportSchema(this.passportSchemaUID);
-    await this.gitcoinResolver.setScoreSchema(this.scoreSchemaUID);
-
     this.passport = {
       multiAttestationRequest: [
         {
@@ -214,6 +211,13 @@ describe("GitcoinEASProxy", function () {
 
       const { v, r, s } = ethers.Signature.from(signature);
 
+      expect(
+        await this.gitcoinResolver.userAttestations(
+          this.recipient.address,
+          this.passportSchemaUID
+        )
+      ).to.equal(ZERO_BYTES32);
+
       // Submit attestations
       const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
         this.passport,
@@ -227,22 +231,15 @@ describe("GitcoinEASProxy", function () {
 
       await verifiedPassport.wait();
 
-      await Promise.all(
-        this.passport.multiAttestationRequest.map(
-          async (attestations: { data: Attestation[] }) => {
-            await Promise.all(
-              attestations.data.map(async (attestation: Attestation) => {
-                await expect(verifiedPassport)
-                  .to.emit(this.gitcoinResolver, "PassportAdded")
-                  .withArgs(attestation.recipient, anyValue);
-              })
-            );
-          }
-        )
-      );
-
       const receipt = await verifiedPassport.wait();
       expect(receipt.status).to.equal(1);
+
+      expect(
+        await this.gitcoinResolver.userAttestations(
+          this.recipient.address,
+          this.passportSchemaUID
+        )
+      ).not.to.equal(ZERO_BYTES32);
     });
 
     it("should move through the entire Gitcoin EAS proxy revocation flow", async function () {
@@ -266,11 +263,14 @@ describe("GitcoinEASProxy", function () {
 
       await attested.wait();
 
-      const passportAttestationUID = await this.gitcoinResolver.passports(
-        this.recipient.address
-      );
-      const scoreAttestationUID = await this.gitcoinResolver.scores(
-        this.recipient.address
+      const passportAttestationUID =
+        await this.gitcoinResolver.userAttestations(
+          this.recipient.address,
+          this.passportSchemaUID
+        );
+      const scoreAttestationUID = await this.gitcoinResolver.userAttestations(
+        this.recipient.address,
+        this.scoreSchemaUID
       );
 
       const multiRevocationRequest = [
@@ -294,27 +294,21 @@ describe("GitcoinEASProxy", function () {
         },
       ];
 
-      const revokeResult = await this.gitcoinAttester
+      await this.gitcoinAttester
         .connect(this.owner)
         .revokeAttestations(multiRevocationRequest);
 
-      const passportUID = await this.gitcoinResolver.passports(
-        this.recipient.address
+      const passportUID = await this.gitcoinResolver.userAttestations(
+        this.recipient.address,
+        this.passportSchemaUID
       );
       expect(passportUID).to.equal(ZERO_BYTES32);
 
-      const scoreUID = await this.gitcoinResolver.scores(
-        this.recipient.address
+      const scoreUID = await this.gitcoinResolver.userAttestations(
+        this.recipient.address,
+        this.scoreSchemaUID
       );
       expect(scoreUID).to.equal(ZERO_BYTES32);
-
-      await expect(revokeResult)
-        .to.emit(this.gitcoinResolver, "PassportRemoved")
-        .withArgs(this.recipient.address, passportAttestationUID);
-
-      await expect(revokeResult)
-        .to.emit(this.gitcoinResolver, "ScoreRemoved")
-        .withArgs(this.recipient.address, scoreAttestationUID);
     });
   });
 });

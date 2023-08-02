@@ -1,6 +1,7 @@
 import readline from "readline";
 import * as dotenv from "dotenv";
 import { utils } from "ethers";
+import fs from "fs";
 
 dotenv.config();
 
@@ -62,4 +63,79 @@ export async function preHashTypeHashes() {
     const hashedValue = utils.keccak256(utils.toUtf8Bytes(hashType));
     console.log(`"${hashType}": "${hashedValue}",`);
   });
+}
+
+export function getAbi(contract: {
+  interface: { format: () => string[] };
+}): string[] {
+  return contract.interface.format();
+}
+
+// For updating proxies, don't pass the address in order to reuse the existing one
+export async function updateDeploymentsFile(
+  contractName: string,
+  abi: string[],
+  chainId?: number,
+  newAddress?: string
+) {
+  let hexChainId = "0x" + chainId?.toString(16);
+  if (!chainId) {
+    console.log("⚠️  No chain ID, assuming local deployment");
+    hexChainId = "0x7a69";
+  }
+
+  const outputDir = "./deployments";
+  const infoFile = `${outputDir}/onchainInfo.json`;
+  const abiDir = `${outputDir}/abi`;
+  const abiFile = `${abiDir}/${contractName}.json`;
+
+  if (!fs.existsSync("./deployments")) {
+    fs.mkdirSync("./deployments");
+  }
+
+  if (!fs.existsSync(abiDir)) {
+    fs.mkdirSync(abiDir);
+  }
+
+  if (newAddress) {
+    addChainInfoToFile(infoFile, hexChainId, (thisChainExistingInfo) => ({
+      ...thisChainExistingInfo,
+      [contractName]: {
+        address: newAddress,
+      },
+    }));
+
+    console.log(`✅ Updated ${infoFile} with new ${contractName} info`);
+  }
+
+  addChainInfoToFile(abiFile, hexChainId, () => abi);
+
+  console.log(`✅ Updated ${abiFile}`);
+
+  console.log(
+    `✏️  You should copy the ${outputDir} directory to the Passport frontend, overwriting the current one`
+  );
+}
+
+function addChainInfoToFile(
+  file: string,
+  hexChainId: string,
+  updater: (thisChainExistingInfo: any) => any
+) {
+  let existingInfo: Record<string, any> = {};
+
+  try {
+    // read current chain config from local file
+    existingInfo = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {}
+
+  const thisChainExistingInfo = existingInfo[hexChainId] || {};
+  const thisChainNewInfo = updater(thisChainExistingInfo);
+
+  const newInfo = {
+    ...existingInfo,
+    [hexChainId]: thisChainNewInfo,
+  };
+
+  fs.writeFileSync(file, JSON.stringify(newInfo, null, 2));
 }
