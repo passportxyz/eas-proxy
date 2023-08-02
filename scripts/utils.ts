@@ -65,15 +65,16 @@ export async function preHashTypeHashes() {
   });
 }
 
-export function getAbi(contract: { interface: { formatJson: () => string } }) {
-  const abi = contract.interface.formatJson();
-  return JSON.parse(abi);
+export function getAbi(contract: {
+  interface: { format: () => string[] };
+}): string[] {
+  return contract.interface.format();
 }
 
 // For updating proxies, don't pass the address in order to reuse the existing one
 export async function updateDeploymentsFile(
   contractName: string,
-  abi: any,
+  abi: string[],
   chainId?: number,
   newAddress?: string
 ) {
