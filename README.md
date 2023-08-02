@@ -4,4 +4,4 @@ This EAS proxy will be the attester who will write the stamps into EAS attestati
 
 ## Deployments
 
-See latest contract addresses and other deployment info [here](deployments/onchainInfo.json).
+See latest contract addresses and other deployment info, organized by chain ID, [here](deployments/onchainInfo.json).
