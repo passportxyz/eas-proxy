@@ -2,19 +2,16 @@
 
 import hre from "hardhat";
 import {
-  confirmContinue,
   assertEnvironment,
+  confirmContinue,
   transferOwnershipToMultisig,
 } from "./lib/utils";
+import { deployAttester } from "./lib/attester";
 import { deployVerifier } from "./lib/verifier";
 
 assertEnvironment();
 
 export async function main() {
-  if (!process.env.GITCOIN_ATTESTER_ADDRESS) {
-    console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
-  }
-
   if (!process.env.IAM_ISSUER_ADDRESS) {
     console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
   }
@@ -24,14 +21,19 @@ export async function main() {
   }
 
   await confirmContinue({
-    contract: "GitcoinVerifier",
+    contract: "GitcoinAttester and GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
-  const deployment = await deployVerifier(process.env.GITCOIN_ATTESTER_ADDRESS);
+  const attester = await deployAttester();
+  const verifier = await deployVerifier(await attester.getAddress());
 
-  transferOwnershipToMultisig(deployment);
+  await attester.addVerifier(await verifier.getAddress());
+  console.log("✅ Added verifier to attester");
+
+  transferOwnershipToMultisig(attester);
+  transferOwnershipToMultisig(verifier);
 }
 
 main().catch((error) => {

@@ -139,3 +139,10 @@ function addChainInfoToFile(
 
   fs.writeFileSync(file, JSON.stringify(newInfo, null, 2));
 }
+
+export async function transferOwnershipToMultisig(deployment: any) {
+  await deployment.transferOwnership(
+    process.env.PASSPORT_MULTISIG_ADDRESS || ""
+  );
+  console.log("✅ Transferred ownership of contract to multisig");
+}

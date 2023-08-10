@@ -4,7 +4,7 @@ import {
   assertEnvironment,
   updateDeploymentsFile,
   getAbi,
-} from "./utils";
+} from "./lib/utils";
 
 assertEnvironment();
 

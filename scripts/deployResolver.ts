@@ -6,7 +6,8 @@ import {
   confirmContinue,
   updateDeploymentsFile,
   getAbi,
-} from "./utils";
+  transferOwnershipToMultisig,
+} from "./lib/utils";
 
 assertEnvironment();
 
@@ -51,10 +52,7 @@ export async function main() {
     resolverAddress
   );
 
-  await deployment.transferOwnership(
-    process.env.PASSPORT_MULTISIG_ADDRESS || ""
-  );
-  console.log("✅ Transferred ownership of GitcoinResolver to multisig");
+  await transferOwnershipToMultisig(deployment);
 }
 
 main().catch((error) => {
