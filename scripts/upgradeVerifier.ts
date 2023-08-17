@@ -4,7 +4,8 @@ import {
   assertEnvironment,
   updateDeploymentsFile,
   getAbi,
-} from "./utils";
+  getVerifierAddress,
+} from "./lib/utils";
 
 assertEnvironment();
 
@@ -15,17 +16,14 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  if (!process.env.GITCOIN_VERIFIER_ADDRESS) {
-    console.error("Please set your GITCOIN_VERIFIER_ADDRESS in a .env file");
-    return;
-  }
+  const verifierAddress = getVerifierAddress();
 
   const GitcoinVerifierUpdate = await ethers.getContractFactory(
     "GitcoinVerifierUpdate"
   );
 
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
-    process.env.GITCOIN_VERIFIER_ADDRESS || "",
+    verifierAddress,
     GitcoinVerifierUpdate,
     {
       kind: "uups",
@@ -37,17 +35,11 @@ export async function main() {
     `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
   );
 
-  await updateDeploymentsFile(
-    "GitcoinVerifier",
-    getAbi(GitcoinVerifierUpdate),
-    hre.network.config.chainId
-  );
+  await updateDeploymentsFile("GitcoinVerifier", getAbi(GitcoinVerifierUpdate));
 
   const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
 
-  const gitcoinVerifier = await GitcoinVerifier.attach(
-    process.env.GITCOIN_VERIFIER_ADDRESS || ""
-  );
+  const gitcoinVerifier = GitcoinVerifier.attach(verifierAddress);
 
   const upgradeData = gitcoinVerifier.interface.encodeFunctionData(
     "upgradeTo",

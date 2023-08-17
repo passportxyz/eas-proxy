@@ -2,26 +2,32 @@
 
 import hre from "hardhat";
 import {
-  confirmContinue,
   assertEnvironment,
-  getAttesterAddress,
+  confirmContinue,
   getIssuerAddress,
 } from "./lib/utils";
+import { deployAttester } from "./lib/attester";
 import { deployVerifier } from "./lib/verifier";
 
 assertEnvironment();
 
 export async function main() {
   await confirmContinue({
-    contract: "GitcoinVerifier",
+    contract: "GitcoinAttester and GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
-  const attesterAddress = getAttesterAddress();
   const issuerAddress = getIssuerAddress();
 
-  await deployVerifier(attesterAddress, issuerAddress);
+  const attester = await deployAttester();
+  const verifier = await deployVerifier(
+    await attester.getAddress(),
+    issuerAddress
+  );
+
+  await attester.addVerifier(await verifier.getAddress());
+  console.log("✅ Added verifier to attester");
 }
 
 main().catch((error) => {

@@ -6,32 +6,26 @@ import {
   confirmContinue,
   updateDeploymentsFile,
   getAbi,
-} from "./utils";
+  getAttesterAddress,
+  getEASAddress,
+} from "./lib/utils";
 
 assertEnvironment();
 
 export async function main() {
-  if (!process.env.GITCOIN_ATTESTER_ADDRESS) {
-    console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
-  }
-
-  if (!process.env.PASSPORT_MULTISIG_ADDRESS) {
-    console.error("Please set your PASSPORT_MULTISIG_ADDRESS in a .env file");
-  }
-
   await confirmContinue({
     contract: "GitcoinResolver",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
-  const EAS_CONTRACT_ADDRESS = String(process.env.EAS_CONTRACT_ADDRESS);
-  const GITCOIN_ATTESTER_ADDRESS = String(process.env.GITCOIN_ATTESTER_ADDRESS);
+  const attesterAddress = getAttesterAddress();
+  const easAddress = getEASAddress();
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
   const resolver = await upgrades.deployProxy(
     GitcoinResolver,
-    [EAS_CONTRACT_ADDRESS, GITCOIN_ATTESTER_ADDRESS],
+    [easAddress, attesterAddress],
     {
       initializer: "initialize",
       kind: "uups",
@@ -47,14 +41,8 @@ export async function main() {
   await updateDeploymentsFile(
     "GitcoinResolver",
     getAbi(deployment),
-    hre.network.config.chainId,
     resolverAddress
   );
-
-  await deployment.transferOwnership(
-    process.env.PASSPORT_MULTISIG_ADDRESS || ""
-  );
-  console.log("✅ Transferred ownership of GitcoinResolver to multisig");
 }
 
 main().catch((error) => {
