@@ -4,10 +4,7 @@ import { expect } from "chai";
 const IAM_ISSUER = String(
   process.env.IAM_ISSUER_ADDRESS || "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
 );
-const GITCOIN_ATTESTER_ADDRESS = String(
-  process.env.GITCOIN_ATTESTER_ADDRESS ||
-    "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
-);
+const GITCOIN_ATTESTER_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 
 describe("Upgrading GitcoinVerifier", function () {
   this.beforeEach(async function () {
@@ -157,3 +154,4 @@ describe("Upgrading GitcoinResolver", function () {
     );
   });
 });
+

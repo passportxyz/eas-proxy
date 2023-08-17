@@ -18,7 +18,7 @@ let config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: process.env.BASE_ETHERSCAN_API_KEY as string,
+    apiKey: process.env.ETHERSCAN_API_KEY as string,
     customChains: [
       {
         network: "baseGoerli",
@@ -59,18 +59,24 @@ let config: HardhatUserConfig = {
   },
 };
 
-if (
-  process.env.PROVIDER_URL &&
-  process.env.DEPLOYER_PRIVATE_KEY &&
-  process.env.DEPLOYER_ADDRESS
-) {
+if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
   if (config.networks) {
-    config.networks["sepolia"] = {
-      url: process.env.PROVIDER_URL as string,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
-      chainId: 11155111,
-      from: process.env.DEPLOYER_ADDRESS as string,
-    };
+    if (process.env.PROVIDER_URL) {
+      config.networks["sepolia"] = {
+        url: process.env.PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 11155111,
+        from: process.env.DEPLOYER_ADDRESS as string,
+      };
+    }
+    if (process.env.OP_PROVIDER_URL) {
+      config.networks["optimism"] = {
+        url: process.env.OP_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 10,
+        from: process.env.DEPLOYER_ADDRESS as string,
+      };
+    }
   }
 }
 

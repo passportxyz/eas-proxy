@@ -4,6 +4,7 @@ import {
   assertEnvironment,
   updateDeploymentsFile,
   getAbi,
+  getAttesterAddress,
 } from "./lib/utils";
 
 assertEnvironment();
@@ -15,16 +16,14 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  if (!process.env.GITCOIN_ATTESTER_ADDRESS) {
-    console.error("Please set your GITCOIN_ATTESTER_ADDRESS in a .env file");
-  }
-
   const GitcoinAttesterUpdate = await ethers.getContractFactory(
     "GitcoinAttesterUpdate"
   );
 
+  const attesterAddress = getAttesterAddress();
+
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
-    process.env.GITCOIN_ATTESTER_ADDRESS || "",
+    attesterAddress,
     GitcoinAttesterUpdate,
     {
       kind: "uups",
@@ -33,13 +32,11 @@ export async function main() {
   );
 
   console.log(
-    `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
+    `✅ Deployed Upgraded GitcoinAttesterUpdate. ${preparedUpgradeAddress}`
   );
 
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
-  const gitcoinAttester = await GitcoinAttester.attach(
-    process.env.GITCOIN_ATTESTER_ADDRESS || ""
-  );
+  const gitcoinAttester = GitcoinAttester.attach(attesterAddress);
 
   await updateDeploymentsFile(
     "GitcoinAttester",

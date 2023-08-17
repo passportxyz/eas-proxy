@@ -4,6 +4,7 @@ import {
   assertEnvironment,
   updateDeploymentsFile,
   getAbi,
+  getResolverAddress,
 } from "./lib/utils";
 
 assertEnvironment();
@@ -15,17 +16,14 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  if (!process.env.GITCOIN_RESOLVER_ADDRESS) {
-    console.error("Please set your GITCOIN_RESOLVER_ADDRESS in a .env file");
-    return;
-  }
+  const resolverAddress = getResolverAddress();
 
   const GitcoinResolverUpdate = await ethers.getContractFactory(
     "GitcoinResolverUpdate"
   );
 
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
-    process.env.GITCOIN_RESOLVER_ADDRESS || "",
+    resolverAddress,
     GitcoinResolverUpdate,
     {
       kind: "uups",
@@ -38,9 +36,7 @@ export async function main() {
   );
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
-  const gitcoinResolver = await GitcoinResolver.attach(
-    process.env.GITCOIN_RESOLVER_ADDRESS || ""
-  );
+  const gitcoinResolver = GitcoinResolver.attach(resolverAddress);
 
   await updateDeploymentsFile(
     "GitcoinResolver",

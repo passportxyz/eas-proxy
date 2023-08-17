@@ -2,6 +2,8 @@ import readline from "readline";
 import * as dotenv from "dotenv";
 import { utils } from "ethers";
 import fs from "fs";
+import hre from "hardhat";
+import onchainInfo from "../../deployments/onchainInfo.json";
 
 dotenv.config();
 
@@ -145,4 +147,51 @@ export async function transferOwnershipToMultisig(deployment: any) {
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
   console.log("✅ Transferred ownership of contract to multisig");
+}
+
+let thisChainInfo: {
+  GitcoinAttester: { address: string };
+  GitcoinVerifier: { address: string };
+  GitcoinResolver: { address: string };
+  EAS: { address: string };
+};
+
+function getThisChainInfo() {
+  if (!thisChainInfo) {
+    const hardhatChainId = "0x7a69";
+    thisChainInfo =
+      onchainInfo[
+        (hre.network.config.chainId ||
+          hardhatChainId) as keyof typeof onchainInfo
+      ];
+    if (!thisChainInfo) throw new Error("No onchain info for this chainId");
+  }
+  return thisChainInfo;
+}
+
+export function getAttesterAddress() {
+  const attesterAddress = getThisChainInfo().GitcoinAttester.address;
+  if (!attesterAddress)
+    throw new Error("Attester address not found in onchainInfo");
+  return attesterAddress;
+}
+
+export function getVerifierAddress() {
+  const verifierAddress = getThisChainInfo().GitcoinVerifier.address;
+  if (!verifierAddress)
+    throw new Error("Verifier address not found in onchainInfo");
+  return verifierAddress;
+}
+
+export function getEASAddress() {
+  const easAddress = getThisChainInfo().EAS.address;
+  if (!easAddress) throw new Error("EAS address not found in onchainInfo");
+  return easAddress;
+}
+
+export function getResolverAddress() {
+  const resolverAddress = getThisChainInfo().GitcoinResolver.address;
+  if (!resolverAddress)
+    throw new Error("Resolver address not found in onchainInfo");
+  return resolverAddress;
 }

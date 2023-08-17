@@ -1,16 +1,17 @@
 // This script deals with deploying the GitcoinAttester on a given network
+import { getErrors } from "@openzeppelin/upgrades-core";
 import hre, { ethers, upgrades } from "hardhat";
-import { updateDeploymentsFile, getAbi } from "./utils";
+import { updateDeploymentsFile, getAbi, getEASAddress } from "./utils";
 
 export async function deployAttester() {
-  // Deploy GitcoinAttester
+  const easAddress = getEASAddress();
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
   const attester = await upgrades.deployProxy(GitcoinAttester, {
     kind: "uups",
   });
 
   const deployment = await attester.waitForDeployment();
-  const deployedAddress = await attester.getAddress();
+  const deployedAddress = await deployment.getAddress();
 
   console.log(`✅ Deployed GitcoinAttester. ${deployedAddress}`);
 
@@ -20,6 +21,9 @@ export async function deployAttester() {
     hre.network.config.chainId,
     deployedAddress
   );
+
+  deployment.setEASAddress(easAddress);
+  console.log(`✅ Set EAS address ${easAddress} on GitcoinAttester.`);
 
   return deployment;
 }
