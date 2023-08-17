@@ -1,7 +1,7 @@
 // This script deals with deploying the GitcoinVerifier on a given network
 
 import hre, { ethers, upgrades } from "hardhat";
-import { getAbi, getIssuerAddress, updateDeploymentsFile } from "./utils";
+import { getAbi, updateDeploymentsFile } from "./utils";
 
 export async function deployVerifier(
   attesterAddress: string,
