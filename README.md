@@ -33,13 +33,16 @@ Run deployments with `npx hardhat run scripts/<deploymentScript> --network <netw
 
 Verify with `npx hardhat verify <contractAddress> --network <network>`
 
-1. Set the IAM_ISSUER_ADDRESS to the correct value (testnet vs. mainnet) in
-   your .env
-2. deployVerifierAndAttester.ts
-3. deployResolver.ts
-4. Verify contracts, make sure everything looks good
-5. transferOwnership.ts
-6. Create EAS schemas pointing to the new resolver
+1. If necessary, add network to `hardhat.config.ts`
+2. If necessary, run `initializeChainInfo.ts`
+   (e.g. `npx hardhat run scripts/initializeChainInfo.ts --network optimism`)
+   and follow instructions
+3. Run `deployVerifierAndAttester.ts`
+4. Run `deployResolver.ts`
+5. Verify contracts, make sure everything looks good
+6. Run `transferOwnership.ts`
+7. Create EAS schemas pointing to the new resolver,
+   add to `onChainInfo.json`
 
 The verifier and attester also have separate deploy scripts if needed. In this
 case, be sure to call `addVerifier` on the Attester contract from the

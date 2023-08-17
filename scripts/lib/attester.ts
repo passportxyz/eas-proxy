@@ -18,7 +18,6 @@ export async function deployAttester() {
   await updateDeploymentsFile(
     "GitcoinAttester",
     getAbi(deployment),
-    hre.network.config.chainId,
     deployedAddress
   );
 

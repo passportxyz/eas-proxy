@@ -38,11 +38,7 @@ export async function main() {
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
   const gitcoinResolver = GitcoinResolver.attach(resolverAddress);
 
-  await updateDeploymentsFile(
-    "GitcoinResolver",
-    getAbi(GitcoinResolverUpdate),
-    hre.network.config.chainId
-  );
+  await updateDeploymentsFile("GitcoinResolver", getAbi(GitcoinResolverUpdate));
 
   // Encode upgrade transaction
   const upgradeData = gitcoinResolver.interface.encodeFunctionData(

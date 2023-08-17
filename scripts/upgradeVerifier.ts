@@ -35,11 +35,7 @@ export async function main() {
     `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
   );
 
-  await updateDeploymentsFile(
-    "GitcoinVerifier",
-    getAbi(GitcoinVerifierUpdate),
-    hre.network.config.chainId
-  );
+  await updateDeploymentsFile("GitcoinVerifier", getAbi(GitcoinVerifierUpdate));
 
   const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
 

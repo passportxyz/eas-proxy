@@ -1,9 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 
-const IAM_ISSUER = String(
-  process.env.IAM_ISSUER_ADDRESS || "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"
-);
+const IAM_ISSUER = "0xC2679fBD37d54388Ce493F1DB75320D236e1816f";
 const GITCOIN_ATTESTER_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 
 describe("Upgrading GitcoinVerifier", function () {
@@ -154,4 +152,3 @@ describe("Upgrading GitcoinResolver", function () {
     );
   });
 });
-

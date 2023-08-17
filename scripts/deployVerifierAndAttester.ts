@@ -1,7 +1,11 @@
 // This script deals with deploying the GitcoinVerifier on a given network
 
 import hre from "hardhat";
-import { assertEnvironment, confirmContinue } from "./lib/utils";
+import {
+  assertEnvironment,
+  confirmContinue,
+  getIssuerAddress,
+} from "./lib/utils";
 import { deployAttester } from "./lib/attester";
 import { deployVerifier } from "./lib/verifier";
 
@@ -14,8 +18,13 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
+  const issuerAddress = getIssuerAddress();
+
   const attester = await deployAttester();
-  const verifier = await deployVerifier(await attester.getAddress());
+  const verifier = await deployVerifier(
+    await attester.getAddress(),
+    issuerAddress
+  );
 
   await attester.addVerifier(await verifier.getAddress());
   console.log("✅ Added verifier to attester");

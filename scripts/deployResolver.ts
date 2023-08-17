@@ -41,7 +41,6 @@ export async function main() {
   await updateDeploymentsFile(
     "GitcoinResolver",
     getAbi(deployment),
-    hre.network.config.chainId,
     resolverAddress
   );
 }

@@ -7,6 +7,8 @@ import onchainInfo from "../../deployments/onchainInfo.json";
 
 dotenv.config();
 
+const OUTPUT_DIR = "./deployments";
+export const INFO_FILE = `${OUTPUT_DIR}/onchainInfo.json`;
 /**
  * Asserts that environment variables are set as expected
  */
@@ -16,9 +18,6 @@ export const assertEnvironment = () => {
   }
   if (!process.env.PROVIDER_URL) {
     console.error("Please set your PROVIDER_URL in a .env file");
-  }
-  if (!process.env.IAM_ISSUER_ADDRESS) {
-    console.error("Please set your IAM_ISSUER_ADDRESS in a .env file");
   }
 };
 
@@ -77,19 +76,12 @@ export function getAbi(contract: {
 export async function updateDeploymentsFile(
   contractName: string,
   abi: string[],
-  chainId?: number,
   newAddress?: string
 ) {
-  let hexChainId = "0x" + chainId?.toString(16);
-  if (!chainId) {
-    console.log("⚠️  No chain ID, assuming local deployment");
-    hexChainId = "0x7a69";
-  }
-
-  const outputDir = "./deployments";
-  const infoFile = `${outputDir}/onchainInfo.json`;
-  const abiDir = `${outputDir}/abi`;
+  const abiDir = `${OUTPUT_DIR}/abi`;
   const abiFile = `${abiDir}/${contractName}.json`;
+
+  const hexChainId = getHexChainId();
 
   if (!fs.existsSync("./deployments")) {
     fs.mkdirSync("./deployments");
@@ -100,14 +92,14 @@ export async function updateDeploymentsFile(
   }
 
   if (newAddress) {
-    addChainInfoToFile(infoFile, hexChainId, (thisChainExistingInfo) => ({
+    addChainInfoToFile(INFO_FILE, hexChainId, (thisChainExistingInfo) => ({
       ...thisChainExistingInfo,
       [contractName]: {
         address: newAddress,
       },
     }));
 
-    console.log(`✅ Updated ${infoFile} with new ${contractName} info`);
+    console.log(`✅ Updated ${INFO_FILE} with new ${contractName} info`);
   }
 
   addChainInfoToFile(abiFile, hexChainId, () => abi);
@@ -115,11 +107,11 @@ export async function updateDeploymentsFile(
   console.log(`✅ Updated ${abiFile}`);
 
   console.log(
-    `✏️  You should copy the ${outputDir} directory to the Passport frontend, overwriting the current one`
+    `✏️  You should copy the ${OUTPUT_DIR} directory to the Passport frontend, overwriting the current one`
   );
 }
 
-function addChainInfoToFile(
+export function addChainInfoToFile(
   file: string,
   hexChainId: string,
   updater: (thisChainExistingInfo: any) => any
@@ -150,48 +142,67 @@ export async function transferOwnershipToMultisig(deployment: any) {
 }
 
 let thisChainInfo: {
-  GitcoinAttester: { address: string };
-  GitcoinVerifier: { address: string };
-  GitcoinResolver: { address: string };
-  EAS: { address: string };
+  GitcoinAttester?: { address?: string };
+  GitcoinVerifier?: { address?: string };
+  GitcoinResolver?: { address?: string };
+  EAS?: { address?: string };
+  issuer?: { address?: string };
 };
 
-function getThisChainInfo() {
+export function getThisChainInfo() {
   if (!thisChainInfo) {
-    const hardhatChainId = "0x7a69";
-    thisChainInfo =
-      onchainInfo[
-        (hre.network.config.chainId ||
-          hardhatChainId) as keyof typeof onchainInfo
-      ];
-    if (!thisChainInfo) throw new Error("No onchain info for this chainId");
+    const hexChainId = getHexChainId();
+    thisChainInfo = onchainInfo[hexChainId as keyof typeof onchainInfo];
+    if (!thisChainInfo)
+      throw new Error(
+        "No onchain info for this chainId, run initializeChainInfo.ts"
+      );
   }
   return thisChainInfo;
 }
 
 export function getAttesterAddress() {
-  const attesterAddress = getThisChainInfo().GitcoinAttester.address;
+  const attesterAddress = getThisChainInfo().GitcoinAttester?.address;
   if (!attesterAddress)
-    throw new Error("Attester address not found in onchainInfo");
+    throw new Error("GitcoinAttester address not found in onchainInfo");
   return attesterAddress;
 }
 
 export function getVerifierAddress() {
-  const verifierAddress = getThisChainInfo().GitcoinVerifier.address;
+  const verifierAddress = getThisChainInfo().GitcoinVerifier?.address;
   if (!verifierAddress)
-    throw new Error("Verifier address not found in onchainInfo");
+    throw new Error("GitcoinVerifier address not found in onchainInfo");
   return verifierAddress;
 }
 
 export function getEASAddress() {
-  const easAddress = getThisChainInfo().EAS.address;
+  const easAddress = getThisChainInfo().EAS?.address;
   if (!easAddress) throw new Error("EAS address not found in onchainInfo");
   return easAddress;
 }
 
 export function getResolverAddress() {
-  const resolverAddress = getThisChainInfo().GitcoinResolver.address;
+  const resolverAddress = getThisChainInfo().GitcoinResolver?.address;
   if (!resolverAddress)
-    throw new Error("Resolver address not found in onchainInfo");
+    throw new Error("GitcoinResolver address not found in onchainInfo");
   return resolverAddress;
+}
+
+export function getIssuerAddress() {
+  const resolverAddress = getThisChainInfo().issuer?.address;
+  if (!resolverAddress)
+    throw new Error("issuer address not found in onchainInfo");
+  return resolverAddress;
+}
+
+export function getHexChainId() {
+  const chainId = hre.network.config.chainId;
+  let hexChainId: string;
+  if (chainId) {
+    hexChainId = "0x" + chainId.toString(16);
+  } else {
+    console.log("⚠️  No chain ID, assuming local deployment");
+    hexChainId = "0x7a69";
+  }
+  return hexChainId;
 }

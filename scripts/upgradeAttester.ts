@@ -38,11 +38,7 @@ export async function main() {
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
   const gitcoinAttester = GitcoinAttester.attach(attesterAddress);
 
-  await updateDeploymentsFile(
-    "GitcoinAttester",
-    getAbi(GitcoinAttesterUpdate),
-    hre.network.config.chainId
-  );
+  await updateDeploymentsFile("GitcoinAttester", getAbi(GitcoinAttesterUpdate));
 
   // Encode upgrade transaction
   const upgradeData = gitcoinAttester.interface.encodeFunctionData(

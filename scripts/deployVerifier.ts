@@ -5,6 +5,7 @@ import {
   confirmContinue,
   assertEnvironment,
   getAttesterAddress,
+  getIssuerAddress,
 } from "./lib/utils";
 import { deployVerifier } from "./lib/verifier";
 
@@ -18,8 +19,9 @@ export async function main() {
   });
 
   const attesterAddress = getAttesterAddress();
+  const issuerAddress = getIssuerAddress();
 
-  await deployVerifier(attesterAddress);
+  await deployVerifier(attesterAddress, issuerAddress);
 }
 
 main().catch((error) => {
