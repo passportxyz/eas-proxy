@@ -40,7 +40,7 @@ Verify with `npx hardhat verify <contractAddress> --network <network>`
 3. Run `deployVerifierAndAttester.ts`
 4. Run `deployResolver.ts`
 5. Verify contracts, make sure everything looks good
-6. Run `transferOwnership.ts`
+6. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
 7. Create EAS schemas pointing to the new resolver,
    add to `onChainInfo.json`
 
