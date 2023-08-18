@@ -3,14 +3,6 @@
     "issuer": {
       "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
     },
-    "easSchemas": {
-      "passport": {
-        "uid": "0x9d43e5c201404b9ab0913bcd6475c78e32d32a4d78233b2c309e9b6828f59e45"
-      },
-      "score": {
-        "uid": "0xf72ba57b5fb4c12a5f967574bc44a11efb8be76bcfbf47ced36e1afe226ba702"
-      }
-    },
     "EAS": {
       "address": "0xAcfE09Fd03f7812F022FBf636700AdEA18Fd2A7A"
     },
@@ -22,19 +14,19 @@
     },
     "GitcoinAttester": {
       "address": "0x5bbbc733e12f50e6834c40a90066f2f9ffb820e0"
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": "0x9d43e5c201404b9ab0913bcd6475c78e32d32a4d78233b2c309e9b6828f59e45"
+      },
+      "score": {
+        "uid": "0xf72ba57b5fb4c12a5f967574bc44a11efb8be76bcfbf47ced36e1afe226ba702"
+      }
     }
   },
   "0xa": {
     "issuer": {
       "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
-    },
-    "easSchemas": {
-      "passport": {
-        "uid": "0xa475887348fd4ee5f882a34e815ec93aa120f846895d06ec04d1f4e95ab6a9d3"
-      },
-      "score": {
-        "uid": "0x21beda1e0938388ba669137313e462e07c9de77970e7df1b4d680eff1ae36c23"
-      }
     },
     "EAS": {
       "address": "0x4200000000000000000000000000000000000021"
@@ -47,6 +39,14 @@
     },
     "GitcoinResolver": {
       "address": "0x9A44DAA3823B21Df8d905AbD9c06b75131f43F38"
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": "0xa475887348fd4ee5f882a34e815ec93aa120f846895d06ec04d1f4e95ab6a9d3"
+      },
+      "score": {
+        "uid": "0x21beda1e0938388ba669137313e462e07c9de77970e7df1b4d680eff1ae36c23"
+      }
     }
   }
 }

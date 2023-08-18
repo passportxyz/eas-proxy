@@ -23,6 +23,10 @@ export async function main() {
     addChainInfoToFile(INFO_FILE, chainId, () => {
       return {
         issuer: { address: "" },
+        EAS: { address: "" },
+        GitcoinAttester: {},
+        GitcoinVerifier: {},
+        GitcoinResolver: {},
         easSchemas: {
           passport: {
             uid: "",
@@ -31,10 +35,6 @@ export async function main() {
             uid: "",
           },
         },
-        EAS: { address: "" },
-        GitcoinAttester: { address: "" },
-        GitcoinVerifier: { address: "" },
-        GitcoinResolver: { address: "" },
       };
     });
 
