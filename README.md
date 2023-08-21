@@ -66,10 +66,10 @@ _Note: the issuer address is **not the attester address**_
 
 ## Other Topics
 
-[Section 0: On-Chain Data Overview](docs/00-on-chain-data.md)
+[Section 0: Onchain Data Overview](docs/00-onchain-data.md)
 
-[Section 1: On-Chain Passport Attestation](docs/01-on-chain-passport-attestation.md)
+[Section 1: Onchain Passport Attestation](docs/01-onchain-passport-attestation.md)
 
-[Section 2: On-Chain Stamp Attestation ⚠️ _not used_ ⚠️](docs/02-on-chain-stamp-attestation.md)
+[Section 2: Onchain Stamp Attestation ⚠️ _not used_ ⚠️](docs/02-onchain-stamp-attestation.md)
 
 [Section 3: New Chain Deployment Process](docs/03-new-deployment.md)
