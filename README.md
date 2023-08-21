@@ -7,6 +7,44 @@ This EAS proxy will be the attester who will write the stamps into EAS attestati
 See latest contract addresses and other deployment
 info&mdash;organized by chain ID&mdash;[here](deployments/onchainInfo.json).
 
+- Optimism (0xa)
+- Base Goerli (0x14a33)
+
+The file has the following schema:
+
+_Fields marked with a pencil (✏️) are manually filled out, the rest are
+populated by scripts_
+
+```json
+{
+  "[chainId]": {
+    "issuer": {
+      "address": "[✏️ test or production issuer address (see below)]"
+    },
+    "EAS": {
+      "address": "[✏️ address of the EAS contract]"
+    },
+    "GitcoinAttester": {
+      "address": "[address of the GitcoinAttester contract]"
+    },
+    "GitcoinVerifier": {
+      "address": "[address of the GitcoinVerifier contract]"
+    },
+    "GitcoinResolver": {
+      "address": "[address of the GitcoinResolver contract]"
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": "[✏️ uid of the Passport EAS Schema]"
+      },
+      "score": {
+        "uid": "[✏️ uid of the Passport score EAS Schema]"
+      }
+    }
+  }
+}
+```
+
 ## Issuers
 
 These are the addresses signing attestation data, the verifier only accepts attestations
@@ -16,9 +54,6 @@ The production address is used only in the production environment of the
 Passport app with mainnet chains.
 The testnet address is used with all other environments.
 
-_Note: this is not the **attester** address, which can be found in the file
-above for each chain as the GitcoinAttester contract address._
-
 ### Production
 
 0x804233b96cbd6d81efeb6517347177ef7bD488ED
@@ -27,23 +62,14 @@ above for each chain as the GitcoinAttester contract address._
 
 0x5f603Ed913738d9105bAf3BD981AA4750016B167
 
-## Initial Deployment Process
+_Note: the issuer address is **not the attester address**_
 
-Run deployments with `npx hardhat run scripts/<deploymentScript> --network <network>`
+## Other Topics
 
-Verify with `npx hardhat verify <contractAddress> --network <network>`
+[Section 0: On-Chain Data Overview](docs/00-on-chain-data.md)
 
-1. If necessary, add network to `hardhat.config.ts`
-2. If necessary, run `initializeChainInfo.ts`
-   (e.g. `npx hardhat run scripts/initializeChainInfo.ts --network optimism`)
-   and follow instructions
-3. Run `deployVerifierAndAttester.ts`
-4. Run `deployResolver.ts`
-5. Verify contracts, make sure everything looks good
-6. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
-7. Create EAS schemas pointing to the new resolver,
-   add to `onChainInfo.json`
+[Section 1: On-Chain Passport Attestation](docs/01-on-chain-passport-attestation.md)
 
-The verifier and attester also have separate deploy scripts if needed. In this
-case, be sure to call `addVerifier` on the Attester contract from the
-owner account.
+[Section 2: On-Chain Stamp Attestation ⚠️ _not used_ ⚠️](docs/02-on-chain-stamp-attestation.md)
+
+[Section 3: New Chain Deployment Process](docs/03-new-deployment.md)
