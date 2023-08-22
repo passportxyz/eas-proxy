@@ -1,9 +1,9 @@
-# Bringing Passport Data On-Chain
+# Bringing Passport Data Onchain
 
-In order to store Passport (and potentially Passport scorer data) on-chain we
+In order to store Passport (and potentially Passport scorer data) onchain we
 have chosen the [Ethereum Attestation Service](https://attest.sh/) (EAS). Stamps
 (and in the future potentially also scores and other data) will be written as
-attestations on-chain, using the EAS protocol.
+attestations onchain, using the EAS protocol.
 
 EAS is a protocol that allows storing attestations on chain.
 
@@ -20,7 +20,7 @@ How does this work?
    2. the recipient (an ETH address)
    3. other data like: creation date, expiration, is \_revocable, a referenced attestation
 
-The Passport concept for bringing data on-chain contains the following:
+The Passport concept for bringing data onchain contains the following:
 
 - GitcoinAttester - this is a smart contract that is designed to act as a proxy.
   Its purpose is to relay any potential attestations, coming from trusted resources,
@@ -28,7 +28,7 @@ The Passport concept for bringing data on-chain contains the following:
 - GitcoinVerifier - this is designed to be a trusted resource for the Attester. This
   smart contract will be called from the
   [Passport App](https://passport.gitcoin.co/) whenever a user desires to bring
-  their stamps on-chain.
+  their stamps onchain.
 - Resolver - this is an optional smart contract that can be registered for an EAS
   schema. We will use a resolver smart contract to record the latest state of a
   user's Passport related attestations.
@@ -43,17 +43,16 @@ OpenZeppelin's `Ownable`.
 All of the smart contracts are upgradeable and pauseable.
 
 The flow:
-
 ```mermaid
 sequenceDiagram
     actor User
     participant App as Passport App
     participant IAM as IAM Service
-    participant Verifier as Verifier (gitcoin, on-chain)
-    participant Attester as Attester (gitcoin, on-chain)
+    participant Verifier as Verifier (gitcoin, onchain)
+    participant Attester as Attester (gitcoin, onchain)
     participant EAS
-    participant Resolver as Resolver (gitcoin, on-chain)
-    User->>App: "Write stamps on-chain"
+    participant Resolver as Resolver (gitcoin, onchain)
+    User->>App: "Write stamps onchain"
     App->>IAM: "Verify and attest payload"
     IAM-->>App: PassportAttestationRequest
     activate Verifier
@@ -66,16 +65,17 @@ sequenceDiagram
     Attester->>EAS : multiAttest
     activate Resolver
     EAS->>Resolver : multiAttest
-    Resolver-->>EAS :
+    Resolver-->>EAS : 
     deactivate Resolver
     EAS-->>Attester : UUIDs: bytes32[]
     deactivate EAS
-    Attester-->>Verifier :
+    Attester-->>Verifier : 
     deactivate Attester
-    Verifier-->>App :
+    Verifier-->>App : 
     deactivate Verifier
-    App-->>User : display on-chain status
+    App-->>User : display onchain status
 ```
+
 
 ## GitcoinAttester
 
@@ -96,17 +96,17 @@ Here are the main features:
 ## GitcoinVerifier
 
 The purpose of the verifier is to validate the Passport data that a user wants
-to bring on-chain. The validation is performed by checking the
+to bring onchain. The validation is performed by checking the
 [EIP-712](https://eips.ethereum.org/EIPS/eip-712) signature for the data that is
 sent in by the Passport app.
 The EIP-712 signature will be created by the **Passport IAM Service** which is
 the same service that issues the stamps (verifiable credentials) for the Passport
 applications.
 
-The flow when the user triggers the process to bring their data on-chain from the
+The flow when the user triggers the process to bring their data onchain from the
 Passport app is the following:
 
-1. The Passport App creates a payload with the data to be written on-chain (a
+1. The Passport App creates a payload with the data to be written onchain (a
    list of stamps) and sends this to the IAM Service
 2. The IAM service validates that data and signs it with the EIP-712 procedure
 3. The Passport App will call the `GitcoinVerifier` function `verifyAndAttest`
@@ -117,7 +117,7 @@ Passport app is the following:
 ### Fee
 
 It was a requirement that a small fee shall be collected by the verifier for
-each data set that is written on-chain. For this purpose when the
+each data set that is written onchain. For this purpose when the
 `verifyAndAttest` method is called, it will check if the expected amount
 (in ETH) has been sent to the smart contract, and will revert with the message
 “_Insufficient fee_” if this is not the case.
@@ -125,7 +125,7 @@ each data set that is written on-chain. For this purpose when the
 The amount of the fee is determined by the IAM server, and it is the equivalent
 of 2 USD in ETH.
 The fee is part of the data structure that is signed with the EIP-712 procedure,
-so that it cannot be changed during the process of writing stamps on-chain.
+so that it cannot be changed during the process of writing stamps onchain.
 
 ### Replay protection
 

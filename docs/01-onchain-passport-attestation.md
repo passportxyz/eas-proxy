@@ -1,18 +1,18 @@
-# On-Chain Passport Attestation
+# Onchain Passport Attestation
 
 ## Intro
 
 The purpose of this document is to describe the EAS schema used to store Gitcoin
-Passports on-chain, how to get a users Passport attestation and how to use it in
+Passports onchain, how to get a users Passport attestation and how to use it in
 integrations (for example how to score a Passport).
 
 For details about the process of bringing Passport data on chain please see:
-[On-Chain Data](./00-on-chain-data.md).
+[Onchain Data](./00-onchain-data.md).
 
 ## Passport EAS Schema
 
-Following is the EAS schema to store a Passport on-chain.
-This will allow capturing a snapshot of a users Passport on-chain.
+Following is the EAS schema to store a Passport onchain.
+This will allow capturing a snapshot of a users Passport onchain.
 
 ```solidity
 new SchemaEncoder(
@@ -85,7 +85,7 @@ the first element in providers, and we record the 3 hashes in the `hashes` field
 
 ## Score EAS Schema
 
-Following is the EAS schema to store a score on-chain.
+Following is the EAS schema to store a score onchain.
 
 ```solidity
 new SchemaEncoder(
@@ -128,7 +128,7 @@ mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 Given this structure, we would be able to retrieve the UUID for the latest
 Passport attestation of a particular recipient.
 
-As also mentioned in [On Chain Data](./00-on-chain-data.md), the resolver smart
+As also mentioned in [On Chain Data](./00-onchain-data.md), the resolver smart
 contract will:
 
 - only allow calls from a trusted EAS smart contract
@@ -139,12 +139,12 @@ contract will:
 A Passport attestation will always record a snapshot of a user's Passport.
 Whenever the user makes changes to their Passport (deleting, renewing or claiming
 new stamps) in the Passport App, a new attestation needs to be created in EAS in
-order to record the latest state of the Passport on-chain.
+order to record the latest state of the Passport onchain.
 Optionally, the previous attestation can be revoked.
 
 ## Integrations
 
-### How to Score a Passport On-Chain
+### How to Score a Passport Onchain
 
 Please see the implementation of the
 [GitcoinScorer](../contracts/GitcoinScorer.sol) smart contract for an example of
