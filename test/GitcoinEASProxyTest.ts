@@ -1,13 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 
-import {
-  EAS,
-  ZERO_BYTES32,
-  Attestation,
-} from "@ethereum-attestation-service/eas-sdk";
-import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
+import { EAS, ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
+import { easEncodeScore, easEncodeStamp } from "./helpers/mockAttestations";
 
 import {
   googleStamp,
