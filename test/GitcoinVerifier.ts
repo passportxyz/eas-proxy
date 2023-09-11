@@ -4,7 +4,7 @@ import {
   NO_EXPIRATION,
   ZERO_BYTES32,
 } from "@ethereum-attestation-service/eas-sdk";
-import { easEncodeScore, easEncodeStamp } from "./GitcoinAttester";
+import { easEncodeScore, easEncodeStamp } from "./helpers/mockAttestations";
 
 export const googleStamp = {
   provider: "Google",
@@ -22,7 +22,8 @@ export const twitterStamp = {
 };
 
 // SEPOLIA SPECIFIC
-export const EAS_CONTRACT_ADDRESS = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
+export const EAS_CONTRACT_ADDRESS =
+  "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
 export const GITCOIN_STAMP_SCHEMA =
   "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
 export const GITCOIN_SCORE_SCHEMA =

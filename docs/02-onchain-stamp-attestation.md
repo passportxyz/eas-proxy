@@ -1,26 +1,26 @@
-# On-Chain Stamp Attestation
+# Onchain Stamp Attestation
 
 ## Intro
 
 🛑
 _This is not being used with the Gitcoin Passport app and is not fully implemented,
 the full Passport is written to the chain instead. See
-[On-Chain Passport Attestation](./01-on-chain-passport-attestation.md)_
+[Onchain Passport Attestation](./01-onchain-passport-attestation.md)_
 🛑
 
 _[← Back to README](..#other-topics)_
 
 The purpose of this document is to describe:
 
-- the EAS schema that can be used to store Gitcoin Passports Stamps on-chain
-- how to discover all of a recipients stamp attestations on-chain
+- the EAS schema that can be used to store Gitcoin Passports Stamps onchain
+- how to discover all of a recipients stamp attestations onchain
 - how to use the stamps in integrations, for example how to score a Passport
 
-For details about the process of bringing Passport data in chain please see: [On Chain Data](./00-on-chain-data.md).
+For details about the process of bringing Passport data in chain please see: [Onchain Data](./00-onchain-data.md).
 
 ## EAS Schema
 
-Following is the EAS schema to store a Passport on-chain
+Following is the EAS schema to store a Passport onchain
 
 ```js
 new SchemaEncoder("bytes32 provider, bytes32 hash, uint64 issuanceDate");
@@ -45,11 +45,11 @@ Given this structure, we would be able to retrieve the UUID for any Passport att
 
 ## Updating Passport
 
-Whenever the user makes changes to their Passport (deleting, renewing or claiming new stamps) the following actions need to be taken in order to keep the on-chain Passport up to date:
+Whenever the user makes changes to their Passport (deleting, renewing or claiming new stamps) the following actions need to be taken in order to keep the onchain Passport up to date:
 
-- claiming new stamps - write the new stamps as attestations on-chain
+- claiming new stamps - write the new stamps as attestations onchain
 - refreshing stamps
-  - write the new stamps as attestations on-chain, this will overwrite the previous stamp
+  - write the new stamps as attestations onchain, this will overwrite the previous stamp
   - optionally revoke the older stamp
 - delete stamps
   - ⁉️⁉️⁉️ TODO: clarify how to properly handle this

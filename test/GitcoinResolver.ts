@@ -5,7 +5,7 @@ import {
   NO_EXPIRATION,
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
-import { encodedData } from "./GitcoinAttester";
+import { encodedData } from "./helpers/mockAttestations";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 
 export const schemaRegistryContractAddress =
