@@ -16,17 +16,6 @@ let config: HardhatUserConfig = {
         url: process.env.PROVIDER_URL as string,
       },
     },
-    "linea-goerli": {
-      chainId: 59140,
-      gasPrice: 114868572,
-      url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
-    },
-    linea: {
-      chainId: 59144,
-      url: `https://linea-mainnet.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
-    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
@@ -89,6 +78,24 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
       };
     }
   }
+}
+
+if (
+  process.env.DEPLOYER_PRIVATE_KEY &&
+  process.env.INFURA_KEY &&
+  config.networks
+) {
+  config.networks["linea-goerli"] = {
+    chainId: 59140,
+    gasPrice: 114868572,
+    url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+  };
+  config.networks["linea"] = {
+    chainId: 59144,
+    url: `https://linea-mainnet.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+  };
 }
 
 if (
