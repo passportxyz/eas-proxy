@@ -1241,6 +1241,11 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
+"@spruceid/didkit-wasm-node@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@spruceid/didkit-wasm-node/-/didkit-wasm-node-0.2.1.tgz#85f7023979b4ef84bd6de16c79c67b6e9a08e1db"
+  integrity sha512-c8e3u5FIRS/2Gf6UHnRPnfRozgKgby4avZzlvIiaJRDVLl1LaX1SE13vEvKV2rAq6NMfZrV4YG908M4uVlT90Q==
+
 "@tsconfig/node10@^1.0.7":
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/@tsconfig/node10/-/node10-1.0.9.tgz#df4907fc07a886922637b15e02d4cebc4c0021b2"

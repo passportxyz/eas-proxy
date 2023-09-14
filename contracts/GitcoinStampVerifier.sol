@@ -84,7 +84,7 @@ contract GitcoinStampVerifier {
             "Document(string[] @context,string[] type,CredentialSubject credentialSubject,string issuer,string issuanceDate,Proof proof,string expirationDate)"
         );
 
-    bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version)");
+    bytes32 private constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name)");
 
     /**
     * @notice Initializer function responsible for setting up the contract's initial state.
@@ -93,13 +93,12 @@ contract GitcoinStampVerifier {
     function initialize(address _issuer) public {
 
         issuer = _issuer;
-        name = "Gitcoin Passport Verifiable Credential of Stamp data";
+        name = "GitcoinPassportStampVerifiableCredential";
 
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 EIP712DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
-                keccak256(bytes("0"))
+                keccak256(bytes(name))
             )
         );
     }
