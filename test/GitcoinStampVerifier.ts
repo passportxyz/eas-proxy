@@ -303,7 +303,7 @@ export type VerifiableCredential = {
 };
 
 describe.only("Signature for GitcoinStampVerifier", () => {
-  let preppedCredential: any, signedCredential: any;
+  let preppedCredential: any, signedCredential: any, normalizedCredential: any;
   beforeEach(async () => {
     const preparedCredential = await DIDKit.prepareIssueCredential(
       JSON.stringify(credentialInput, undefined, 2),
@@ -319,14 +319,37 @@ describe.only("Signature for GitcoinStampVerifier", () => {
 
     preppedCredential = JSON.parse(preparedCredential) as any;
     signedCredential = JSON.parse(issuedCredential) as any;
+    normalizedCredential = normalizeDIDCredential(signedCredential) as any;
   });
   it("should normalize the credential for writing on chain", () => {
-    const normalizedCredential = normalizeDIDCredential(signedCredential);
-
     expect(normalizedCredential._context).to.be.deep.equal([
       "https://www.w3.org/2018/credentials/v1",
       "https://w3id.org/vc/status-list/2021/v1",
     ]);
+  });
+  it("should verify the VC signature on chain", async () => {
+    const [signer] = await ethers.getSigners();
+
+    const GitcoinStampVerifier = await ethers.getContractFactory(
+      "GitcoinStampVerifier"
+    );
+
+    const gitcoinStampVerifier = await GitcoinStampVerifier.deploy();
+
+    await gitcoinStampVerifier.initialize(
+      "0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e"
+    );
+
+    const standardizedTypes = preppedCredential.signingInput.types;
+
+    const signature = Signature.from(signedCredential.proof.proofValue);
+
+    const tx = await gitcoinStampVerifier.verifyStampVc(
+      normalizedCredential,
+      signedCredential.proof.proofValue
+    );
+
+    expect(tx).to.be.true;
   });
   it("sign and verify the VC using ethers", async () => {
     const standardizedTypes = preppedCredential.signingInput.types;
@@ -343,34 +366,4 @@ describe.only("Signature for GitcoinStampVerifier", () => {
 
     expect(signerAddress.toLowerCase()).to.be.equal(signedCredIssuer);
   });
-  // it("should verify the VC signature on chain", async () => {
-  //   const normalizedCredential = normalizeDIDCredential(
-  //     signedCredential
-  //   ) as DocumentStruct;
-  //   const [signer] = await ethers.getSigners();
-
-  //   const GitcoinStampVerifier = await ethers.getContractFactory(
-  //     "GitcoinStampVerifier"
-  //   );
-
-  //   const gitcoinStampVerifier = await GitcoinStampVerifier.deploy();
-
-  //   await gitcoinStampVerifier.initialize(
-  //     "0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e"
-  //   );
-
-  //   const standardizedTypes = preppedCredential.signingInput.types;
-
-  //   const signature = Signature.from(signedCredential.proof.proofValue);
-  //   const { r, s, v } = signature;
-
-  //   const tx = await gitcoinStampVerifier.verifyStampVc(
-  //     normalizedCredential,
-  //     v,
-  //     r,
-  //     s
-  //   );
-
-  //   expect(tx).to.be.true;
-  // });
 });

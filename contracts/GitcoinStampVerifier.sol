@@ -103,11 +103,7 @@ contract GitcoinStampVerifier {
         );
     }
 
-    function hashCredentialSubjectContext(CredentialSubjectContext calldata context) public view returns (bytes32) {
-        console.log(context.customInfo);
-        console.log(context._hash);
-        console.log(context.metaPointer);
-        console.log(context.provider);
+    function hashCredentialSubjectContext(CredentialSubjectContext calldata context) public pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 CREDENTIAL_SUBJECT_CONTEXT_TYPEHASH,
@@ -120,10 +116,7 @@ contract GitcoinStampVerifier {
     }
 
 
-    function hashCredentialSubject(CredentialSubject calldata subject) public view returns (bytes32) {
-        console.log(subject.id);
-        console.log(subject.provider);
-        console.log(subject._hash);
+    function hashCredentialSubject(CredentialSubject calldata subject) public pure returns (bytes32) {
         bytes32 credentialSubjectContext = hashCredentialSubjectContext(subject._context);
 
         return
@@ -138,12 +131,7 @@ contract GitcoinStampVerifier {
             );
     }
 
-    function hashCredentialProof(Proof calldata proof) public view returns (bytes32) {
-        console.log(proof._context);
-        console.log(proof._type);
-        console.log(proof.proofPurpose);
-        console.log(proof.verificationMethod);
-        console.log(proof.created);
+    function hashCredentialProof(Proof calldata proof) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -165,7 +153,7 @@ contract GitcoinStampVerifier {
         result = keccak256(abi.encodePacked(_array));
     }
 
-    function hashDocument(Document calldata document) public view returns (bytes32) {
+    function hashDocument(Document calldata document) public pure returns (bytes32) {
         bytes32 credentialSubjectHash = hashCredentialSubject(document.credentialSubject);
         bytes32 proofHash = hashCredentialProof(document.proof);
 
@@ -184,11 +172,11 @@ contract GitcoinStampVerifier {
             );
     }
 
-    function verifyStampVc(Document calldata document, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+    function verifyStampVc(Document calldata document, bytes memory signature) public view returns (bool) {
         bytes32 vcHash = hashDocument(document);
         bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, vcHash);
 
-        address recoveredAddress = ECDSA.recover(digest, v, r, s);
+        address recoveredAddress = ECDSA.recover(digest, signature);
 
         console.log(recoveredAddress, issuer, "recoveredAddress, issuer, ");
 
