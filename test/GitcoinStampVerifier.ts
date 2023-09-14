@@ -114,6 +114,7 @@ export const normalizeDIDCredential = (credential: DIDCredential) => {
   normalizedSubject["id"] = credential.credentialSubject.id;
   normalizedSubject["provider"] = credential.credentialSubject.provider;
   normalizedSubject["_hash"] = credential.credentialSubject.hash;
+  normalizedSubject["_context"] = normalizedCredentialContext;
 
   normalizedCredentialContext["customInfo"] =
     credential.credentialSubject["@context"]["customInfo"];
@@ -123,8 +124,6 @@ export const normalizeDIDCredential = (credential: DIDCredential) => {
     credential.credentialSubject["@context"]["metaPointer"];
   normalizedCredentialContext["provider"] =
     credential.credentialSubject["@context"]["provider"];
-
-  normalizedSubject["_context"] = normalizedCredentialContext;
 
   normalizedProof["_context"] = credential.proof["@context"];
   normalizedProof["created"] = credential.proof.created;
@@ -147,41 +146,94 @@ export const normalizeDIDCredential = (credential: DIDCredential) => {
 };
 
 const sampleCredential = {
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://w3id.org/vc/status-list/2021/v1",
+  ],
   type: ["VerifiableCredential"],
+  credentialSubject: {
+    id: "did:pkh:eip155:1:0xC79ABB54e4824Cdb65C71f2eeb2D7f2db5dA1fB8",
+    provider: "githubAccountCreationGte#90",
+    hash: "v0.0.0:KkYaKn2GaF55a3y/n6myG9kfrpQPHW5DnhhzO9APTGI=",
+    "@context": {
+      customInfo: "https://schema.org/Thing",
+      hash: "https://schema.org/Text",
+      metaPointer: "https://schema.org/URL",
+      provider: "https://schema.org/Text",
+    },
+  },
+  issuer: "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e",
+  issuanceDate: "2023-09-14T02:25:53.645Z",
   proof: {
-    type: "EthereumEip712Signature2021",
-    created: "2023-09-13T21:25:13.163Z",
     "@context": "https://w3id.org/security/suites/eip712sig-2021/v1",
+    type: "EthereumEip712Signature2021",
+    proofPurpose: "assertionMethod",
     proofValue:
-      "0x1139ee60eab7323a7ec73427ece720642e93b1e29ab854c6942fc04d1b08aeaa16cd6e158f721eec74d115fb8e3ea29b0dd1f4b37167325e67a905bd5abc72431b",
+      "0x08527479a9e8e4cfcabb0266bdd48b306999a354ad861663e8057c4ed6690c1a1797ae960cca559184988d841c86571a737a6a36938408c7b9d1231f8ced141a1b",
+    verificationMethod:
+      "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e#controller",
+    created: "2023-09-14T02:25:53.650Z",
     eip712Domain: {
+      domain: {
+        name: "Gitcoin Passport Verifiable Credential of Stamp data",
+        version: "0",
+      },
+      primaryType: "Document",
       types: {
-        Proof: [
-          {
-            name: "@context",
-            type: "string",
-          },
-          {
-            name: "type",
-            type: "string",
-          },
-          {
-            name: "proofPurpose",
-            type: "string",
-          },
-          {
-            name: "proofValue",
-            type: "string",
-          },
-          {
-            name: "verificationMethod",
-            type: "string",
-          },
-          {
-            name: "created",
-            type: "string",
-          },
+        Context: [
+          { name: "customInfo", type: "string" },
+          { name: "hash", type: "string" },
+          { name: "metaPointer", type: "string" },
+          { name: "provider", type: "string" },
         ],
+        CredentialSubject: [
+          { name: "id", type: "string" },
+          { name: "provider", type: "string" },
+          { name: "hash", type: "string" },
+          { name: "@context", type: "Context" },
+        ],
+        Document: [
+          { name: "@context", type: "string[]" },
+          { name: "type", type: "string[]" },
+          { name: "issuer", type: "string" },
+          { name: "issuanceDate", type: "string" },
+          { name: "expirationDate", type: "string" },
+          { name: "credentialSubject", type: "CredentialSubject" },
+          { name: "proof", type: "Proof" },
+        ],
+        EIP712Domain: [
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+        ],
+        Proof: [
+          { name: "@context", type: "string" },
+          { name: "type", type: "string" },
+          { name: "proofPurpose", type: "string" },
+          { name: "proofValue", type: "string" },
+          { name: "verificationMethod", type: "string" },
+          { name: "created", type: "string" },
+        ],
+      },
+    },
+  },
+  expirationDate: "2023-12-13T03:25:53.645Z",
+};
+
+const prepareCredential = {
+  proof: {
+    "@context": "https://w3id.org/security/suites/eip712sig-2021/v1",
+    type: "EthereumEip712Signature2021",
+    proofPurpose: "assertionMethod",
+    verificationMethod:
+      "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e#controller",
+    created: "2023-09-14T02:25:53.667Z",
+    eip712Domain: {
+      domain: {
+        name: "Gitcoin Passport Verifiable Credential of Stamp data",
+        version: "0",
+      },
+      primaryType: "Document",
+      types: {
         Context: [
           {
             name: "customInfo",
@@ -198,6 +250,24 @@ const sampleCredential = {
           {
             name: "provider",
             type: "string",
+          },
+        ],
+        CredentialSubject: [
+          {
+            name: "id",
+            type: "string",
+          },
+          {
+            name: "provider",
+            type: "string",
+          },
+          {
+            name: "hash",
+            type: "string",
+          },
+          {
+            name: "@context",
+            type: "Context",
           },
         ],
         Document: [
@@ -229,10 +299,6 @@ const sampleCredential = {
             name: "proof",
             type: "Proof",
           },
-          {
-            name: "credentialStatus",
-            type: "CredentialStatus",
-          },
         ],
         EIP712Domain: [
           {
@@ -244,9 +310,9 @@ const sampleCredential = {
             type: "string",
           },
         ],
-        CredentialStatus: [
+        Proof: [
           {
-            name: "id",
+            name: "@context",
             type: "string",
           },
           {
@@ -254,68 +320,165 @@ const sampleCredential = {
             type: "string",
           },
           {
-            name: "statusPurpose",
+            name: "proofPurpose",
             type: "string",
           },
           {
-            name: "statusListIndex",
+            name: "proofValue",
             type: "string",
           },
           {
-            name: "statusListCredential",
+            name: "verificationMethod",
+            type: "string",
+          },
+          {
+            name: "created",
             type: "string",
           },
         ],
-        CredentialSubject: [
-          {
-            name: "id",
-            type: "string",
-          },
-          {
-            name: "provider",
-            type: "string",
-          },
-          {
-            name: "metaPointer",
-            type: "string",
-          },
-          {
-            name: "hash",
-            type: "string",
-          },
-          {
-            name: "@context",
-            type: "Context",
-          },
-        ],
       },
-      domain: {
-        name: "Gitcoin Passport Verifiable Credential of Stamp data",
-        version: "0",
-      },
-      primaryType: "Document",
     },
-    proofPurpose: "assertionMethod",
-    verificationMethod:
-      "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e#controller",
   },
-  issuer: "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e",
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://w3id.org/vc/status-list/2021/v1",
-  ],
-  issuanceDate: "2023-09-13T21:25:13.150Z",
-  expirationDate: "2023-12-12T22:25:13.150Z",
-  credentialSubject: {
-    id: "did:pkh:eip155:1:0xC79ABB54e4824Cdb65C71f2eeb2D7f2db5dA1fB8",
-    hash: "v0.0.0:0xRiw2BMLTItJg8iicfNTLlzQumcF37sKIifVthEx9Y=",
-    "@context": {
-      hash: "https://schema.org/Text",
-      provider: "https://schema.org/Text",
-      customInfo: "https://schema.org/Thing",
-      metaPointer: "https://schema.org/URL",
+  jwsHeader: null,
+  signingInput: {
+    types: {
+      EIP712Domain: [
+        {
+          type: "string",
+          name: "name",
+        },
+        {
+          type: "string",
+          name: "version",
+        },
+      ],
+      CredentialSubject: [
+        {
+          type: "string",
+          name: "id",
+        },
+        {
+          type: "string",
+          name: "provider",
+        },
+        {
+          type: "string",
+          name: "hash",
+        },
+        {
+          type: "Context",
+          name: "@context",
+        },
+      ],
+      Document: [
+        {
+          type: "string[]",
+          name: "@context",
+        },
+        {
+          type: "string[]",
+          name: "type",
+        },
+        {
+          type: "string",
+          name: "issuer",
+        },
+        {
+          type: "string",
+          name: "issuanceDate",
+        },
+        {
+          type: "string",
+          name: "expirationDate",
+        },
+        {
+          type: "CredentialSubject",
+          name: "credentialSubject",
+        },
+        {
+          type: "Proof",
+          name: "proof",
+        },
+      ],
+      Proof: [
+        {
+          type: "string",
+          name: "@context",
+        },
+        {
+          type: "string",
+          name: "type",
+        },
+        {
+          type: "string",
+          name: "proofPurpose",
+        },
+        {
+          type: "string",
+          name: "proofValue",
+        },
+        {
+          type: "string",
+          name: "verificationMethod",
+        },
+        {
+          type: "string",
+          name: "created",
+        },
+      ],
+      Context: [
+        {
+          type: "string",
+          name: "customInfo",
+        },
+        {
+          type: "string",
+          name: "hash",
+        },
+        {
+          type: "string",
+          name: "metaPointer",
+        },
+        {
+          type: "string",
+          name: "provider",
+        },
+      ],
     },
-    provider: "EthGTEOneTxnProvider",
+    primaryType: "Document",
+    domain: {
+      name: "Gitcoin Passport Verifiable Credential of Stamp data",
+      version: "0",
+    },
+    message: {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://w3id.org/vc/status-list/2021/v1",
+      ],
+      credentialSubject: {
+        "@context": {
+          customInfo: "https://schema.org/Thing",
+          hash: "https://schema.org/Text",
+          metaPointer: "https://schema.org/URL",
+          provider: "https://schema.org/Text",
+        },
+        hash: "v0.0.0:KkYaKn2GaF55a3y/n6myG9kfrpQPHW5DnhhzO9APTGI=",
+        id: "did:pkh:eip155:1:0xC79ABB54e4824Cdb65C71f2eeb2D7f2db5dA1fB8",
+        provider: "githubAccountCreationGte#90",
+      },
+      expirationDate: "2023-12-13T03:25:53.645Z",
+      issuanceDate: "2023-09-14T02:25:53.645Z",
+      issuer: "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e",
+      proof: {
+        "@context": "https://w3id.org/security/suites/eip712sig-2021/v1",
+        created: "2023-09-14T02:25:53.667Z",
+        proofPurpose: "assertionMethod",
+        type: "EthereumEip712Signature2021",
+        verificationMethod:
+          "did:ethr:0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e#controller",
+      },
+      type: ["VerifiableCredential"],
+    },
   },
 };
 
@@ -324,13 +487,13 @@ describe.only("Signature for GitcoinStampVerifier", () => {
     const signature = Signature.from(sampleCredential.proof.proofValue);
     const { r, s, v } = signature;
     expect(r).to.be.equal(
-      "0x1139ee60eab7323a7ec73427ece720642e93b1e29ab854c6942fc04d1b08aeaa"
+      "0xd4952bda469284acffc0d8b7980a73894d1420b148f61af4e25cec43f4127ec8"
     );
     expect(s).to.be.equal(
-      "0x16cd6e158f721eec74d115fb8e3ea29b0dd1f4b37167325e67a905bd5abc7243"
+      "0x773bb203302d75ea5e8248b58a073a8cc2bb616fec1dbd817a074db1436466c0"
     );
 
-    expect(v).to.be.equal(27);
+    expect(v).to.be.equal(28);
   });
   it("should normalize the credential for writing on chain", () => {
     const normalizedCredential = normalizeDIDCredential(sampleCredential);
@@ -355,6 +518,22 @@ describe.only("Signature for GitcoinStampVerifier", () => {
     await gitcoinStampVerifier.initialize(
       "0xd6fc34345bc8c8e5659a35bed9629d5558d48c4e"
     );
+
+    const standardizedTypes = prepareCredential.signingInput.types;
+    // @ts-ignore
+    delete standardizedTypes.EIP712Domain;
+
+    const signerAddress = ethers.verifyTypedData(
+      prepareCredential.proof.eip712Domain.domain,
+      standardizedTypes,
+      sampleCredential,
+      sampleCredential.proof.proofValue
+    );
+
+    const signerIssuedCredential =
+      signerAddress.toLowerCase() === sampleCredential.issuer.split(":").pop();
+
+    expect(signerIssuedCredential).to.be.true;
     const signature = Signature.from(sampleCredential.proof.proofValue);
     const { r, s, v } = signature;
 
