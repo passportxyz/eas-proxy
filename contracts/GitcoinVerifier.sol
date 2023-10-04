@@ -240,8 +240,11 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
   /**
    * @dev Allows the contract owner to withdraw the contract's balance.
    */
-  function withdrawFees() external onlyOwner {
+  function withdrawFees(uint256 _amount) external onlyOwner {
     uint256 balance = address(this).balance;
-    payable(owner()).transfer(balance);
+
+    require(_amount <= balance, "Insufficient contract balance");
+
+    payable(owner()).transfer(_amount);
   }
 }
