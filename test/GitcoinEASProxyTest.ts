@@ -12,7 +12,7 @@ import {
   scorer2Score,
   EAS_CONTRACT_ADDRESS,
   fee1,
-} from "./GitcoinVerifier";
+} from "./helpers/verifierTests";
 
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";

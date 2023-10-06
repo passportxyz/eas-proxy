@@ -6,6 +6,7 @@ import "@nomicfoundation/hardhat-ethers";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-contract-sizer";
 
 dotenv.config();
 
@@ -87,7 +88,7 @@ if (
 ) {
   config.networks["linea-goerli"] = {
     chainId: 59140,
-    gasPrice: 114868572,
+    gasPrice: 582000007,
     url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
     accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
   };

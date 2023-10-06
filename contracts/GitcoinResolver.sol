@@ -11,11 +11,14 @@ import { InvalidEAS } from "@ethereum-attestation-service/eas-contracts/contract
 
 import { GitcoinAttester } from "./GitcoinAttester.sol";
 
+import { IGitcoinResolver } from "./IGitcoinResolver.sol";
+
 /**
  * @title GitcoinResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
  */
 contract GitcoinResolver is
+  IGitcoinResolver,
   Initializable,
   UUPSUpgradeable,
   OwnableUpgradeable,
@@ -25,6 +28,8 @@ contract GitcoinResolver is
   error AccessDenied();
   error InsufficientValue();
   error NotPayable();
+  error NotAllowlisted();
+  error InvalidAttester();
 
   // Mapping of addresses to schemas to an attestation UID
   mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
@@ -34,6 +39,9 @@ contract GitcoinResolver is
 
   // Gitcoin Attester contract
   GitcoinAttester public _gitcoinAttester;
+
+  // List of addresses allowed to write to this contract
+  mapping(address => bool) public allowlist;
 
   /**
    * @dev Creates a new resolver.
@@ -53,15 +61,23 @@ contract GitcoinResolver is
     }
     _eas = eas;
     _gitcoinAttester = gitcoinAttester;
+    allowlist[address(eas)] = true;
   }
 
-  /**
-   * @dev Ensures that only the EAS contract can make this call.
-   */
-  modifier _onlyEAS() {
-    require(msg.sender == address(_eas), "Only EAS can call this function");
+  modifier onlyAllowlisted() {
+    if (!allowlist[msg.sender]) {
+      revert NotAllowlisted();
+    }
 
     _;
+  }
+
+  function addToAllowlist(address addr) external onlyOwner {
+    allowlist[addr] = true;
+  }
+
+  function removeFromAllowlist(address addr) external onlyOwner {
+    allowlist[addr] = false;
   }
 
   function pause() public onlyOwner {
@@ -91,17 +107,17 @@ contract GitcoinResolver is
    */
   function attest(
     Attestation calldata attestation
-  ) external payable whenNotPaused _onlyEAS returns (bool) {
+  ) external payable whenNotPaused onlyAllowlisted returns (bool) {
     return _attest(attestation);
   }
 
   function _attest(Attestation calldata attestation) internal returns (bool) {
-    require(
-      attestation.attester == address(_gitcoinAttester),
-      "Invalid attester"
-    );
+    if (attestation.attester != address(_gitcoinAttester)) {
+      revert InvalidAttester();
+    }
 
-    userAttestations[attestation.recipient][attestation.schema] = attestation.uid;
+    userAttestations[attestation.recipient][attestation.schema] = attestation
+      .uid;
 
     return true;
   }
@@ -115,7 +131,7 @@ contract GitcoinResolver is
   function multiAttest(
     Attestation[] calldata attestations,
     uint256[] calldata
-  ) external payable whenNotPaused _onlyEAS returns (bool) {
+  ) external payable whenNotPaused onlyAllowlisted returns (bool) {
     for (uint i = 0; i < attestations.length; ) {
       _attest(attestations[i]);
 
@@ -134,7 +150,7 @@ contract GitcoinResolver is
    */
   function revoke(
     Attestation calldata attestation
-  ) external payable whenNotPaused _onlyEAS returns (bool) {
+  ) external payable whenNotPaused onlyAllowlisted returns (bool) {
     return _revoke(attestation);
   }
 
@@ -147,7 +163,7 @@ contract GitcoinResolver is
   function multiRevoke(
     Attestation[] calldata attestations,
     uint256[] calldata
-  ) external payable whenNotPaused _onlyEAS returns (bool) {
+  ) external payable whenNotPaused onlyAllowlisted returns (bool) {
     for (uint i = 0; i < attestations.length; ) {
       _revoke(attestations[i]);
 
@@ -162,5 +178,12 @@ contract GitcoinResolver is
     userAttestations[attestation.recipient][attestation.schema] = 0;
 
     return true;
+  }
+
+  function getUserAttestation(
+    address user,
+    bytes32 schema
+  ) external view returns (bytes32) {
+    return userAttestations[user][schema];
   }
 }

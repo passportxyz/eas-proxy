@@ -73,3 +73,5 @@ _Note: the issuer address is **not the attester address**_
 [Section 2: Onchain Stamp Attestation ⚠️ _not used_ ⚠️](docs/02-onchain-stamp-attestation.md)
 
 [Section 3: New Chain Deployment Process](docs/03-new-deployment.md)
+
+[Section 4: Deployment with Verax](docs/04-verax.md)
