@@ -27,7 +27,7 @@ describe("Upgrading GitcoinVerifier", function () {
   });
   it("should upgrade GitcoinVerifier", async function () {
     const GitcoinVerifierUpdate = await ethers.getContractFactory(
-      "GitcoinVerifierUpdate"
+      "GitcoinVerifier"
     );
 
     const preparedUpgradeAddress = await upgrades.prepareUpgrade(
@@ -48,7 +48,8 @@ describe("Upgrading GitcoinVerifier", function () {
     );
   });
   it("should expose public functions from proxy", async function () {
-    await this.gitcoinVerifierProxy.connect(this.owner).withdrawFees();
+    const withdrawAmount = ethers.parseUnits("0", 18);
+    await this.gitcoinVerifierProxy.connect(this.owner).withdrawFees(withdrawAmount);
   });
 });
 
