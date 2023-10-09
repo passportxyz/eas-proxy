@@ -11,20 +11,20 @@ assertEnvironment();
 
 export async function main() {
   await confirmContinue({
-    contract: "GitcoinVerifierUpdate",
+    contract: "GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
   const verifierAddress = getVerifierAddress();
 
-  const GitcoinVerifierUpdate = await ethers.getContractFactory(
-    "GitcoinVerifierUpdate"
+  const GitcoinVerifier = await ethers.getContractFactory(
+    "GitcoinVerifier"
   );
 
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
     verifierAddress,
-    GitcoinVerifierUpdate,
+    GitcoinVerifier,
     {
       kind: "uups",
       redeployImplementation: "always",
@@ -32,12 +32,10 @@ export async function main() {
   );
 
   console.log(
-    `✅ Deployed Upgraded GitcoinVerifierUpdate. ${preparedUpgradeAddress}`
+    `✅ Deployed Upgraded GitcoinVerifier. ${preparedUpgradeAddress}`
   );
 
-  await updateDeploymentsFile("GitcoinVerifier", getAbi(GitcoinVerifierUpdate));
-
-  const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
+  await updateDeploymentsFile("GitcoinVerifier", getAbi(GitcoinVerifier));
 
   const gitcoinVerifier = GitcoinVerifier.attach(verifierAddress);
 
