@@ -359,7 +359,7 @@ describe("GitcoinVerifier", function () {
         })
       ).wait();
     });
-    it("should allow the owner to withdraw all fees", async function () {
+    it("should allow the owner to withdraw a specified amount fee amount", async function () {
       const balanceBefore = await ethers.provider.getBalance(
         await this.owner.getAddress()
       );
@@ -367,19 +367,23 @@ describe("GitcoinVerifier", function () {
         await this.gitcoinVerifier.getAddress()
       );
 
-      const tx = await this.gitcoinVerifier.withdrawFees();
+      const withdrawAmount = ethers.parseUnits("0.0005", 18);
+
+      const tx = await this.gitcoinVerifier.withdrawFees(withdrawAmount);
       await tx.wait();
 
       const ownerBalanceAfter = await ethers.provider.getBalance(
         await this.owner.getAddress()
       );
-
+      
       const contractBalanceAfter = await ethers.provider.getBalance(
         await this.gitcoinVerifier.getAddress()
       );
 
+      const contractBalance = verifierBalance - withdrawAmount;
+
       expect(ownerBalanceAfter > balanceBefore).to.be.true;
-      expect(contractBalanceAfter === BigInt(0)).to.be.true;
+      expect(contractBalanceAfter === BigInt(contractBalance)).to.be.true;
     });
 
     it("should reduce the contract balance after withdrawal", async function () {
@@ -388,22 +392,42 @@ describe("GitcoinVerifier", function () {
         await this.gitcoinVerifier.getAddress()
       );
 
-      await this.gitcoinVerifier.withdrawFees();
+      const withdrawAmount = ethers.parseUnits("0.0005", 18);
+
+      await this.gitcoinVerifier.withdrawFees(withdrawAmount);
 
       const contractBalanceAfter = await ethers.provider.getBalance(
         await this.gitcoinVerifier.getAddress()
       );
 
+      const contractBalance = contractBalanceBefore - withdrawAmount;
+
       expect(contractBalanceAfter < contractBalanceBefore).to.be.true;
-      expect(contractBalanceAfter === BigInt(0)).to.be.true;
+      expect(contractBalanceAfter === BigInt(contractBalance)).to.be.true;
     });
 
     it("should not allow non-owners to withdraw fees", async function () {
       const [, nonOwner] = await ethers.getSigners();
 
+      const withdrawAmount = ethers.parseUnits("0.0005", 18);
+
       await expect(
-        this.gitcoinVerifier.connect(nonOwner).withdrawFees()
+        this.gitcoinVerifier.connect(nonOwner).withdrawFees(withdrawAmount)
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("should revert if withdrawal amount is greater than the contract balance", async function () {
+      const [owner] = await ethers.getSigners();
+
+      const contractBalanceBefore = await ethers.provider.getBalance(
+        await this.gitcoinVerifier.getAddress()
+      );
+
+      const withdrawAmount = ethers.parseUnits("0.07", 18);
+
+      await expect(
+        this.gitcoinVerifier.connect(owner).withdrawFees(withdrawAmount)
+      ).to.be.revertedWith("Insufficient contract balance");
     });
   });
 
