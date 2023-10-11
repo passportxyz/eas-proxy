@@ -11,34 +11,30 @@ assertEnvironment();
 
 export async function main() {
   await confirmContinue({
-    contract: "GitcoinResolverUpdate",
+    contract: "GitcoinResolver",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
   });
 
   const resolverAddress = getResolverAddress();
 
-  const GitcoinResolverUpdate = await ethers.getContractFactory(
-    "GitcoinResolverUpdate"
-  );
+  const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
 
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
     resolverAddress,
-    GitcoinResolverUpdate,
+    GitcoinResolver,
     {
       kind: "uups",
-      redeployImplementation: "always",
     }
   );
 
   console.log(
-    `✅ Deployed Upgraded GitcoinResolverUpdate. ${preparedUpgradeAddress}`
+    `✅ Deployed Upgraded GitcoinResolver. ${preparedUpgradeAddress}`
   );
 
-  const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
   const gitcoinResolver = GitcoinResolver.attach(resolverAddress);
 
-  await updateDeploymentsFile("GitcoinResolver", getAbi(GitcoinResolverUpdate));
+  await updateDeploymentsFile("GitcoinResolver", getAbi(GitcoinResolver));
 
   // Encode upgrade transaction
   const upgradeData = gitcoinResolver.interface.encodeFunctionData(

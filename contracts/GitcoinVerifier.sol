@@ -14,7 +14,11 @@ import "./GitcoinAttester.sol";
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
-contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract GitcoinVerifier is
+  UUPSUpgradeable,
+  OwnableUpgradeable,
+  PausableUpgradeable
+{
   using ECDSA for bytes32;
 
   // Instance of the GitcoinAttester contract
@@ -31,6 +35,10 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
   // Nonces for each recipient address
   mapping(address => uint) public recipientNonces;
+
+  error InsufficientFee();
+  error InvalidNonce();
+  error InvalidSignature();
 
   /**
    * @dev EIP712Domain represents the domain separator struct for EIP-712 typed data hashing.
@@ -59,10 +67,14 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
 
   // Hash type for the Stamp struct
   bytes32 private constant STAMP_TYPEHASH =
-    keccak256("AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)");
+    keccak256(
+      "AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)"
+    );
 
   bytes32 private constant MULTI_ATTESTATION_REQUEST_TYPEHASH =
-    keccak256("MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)");    
+    keccak256(
+      "MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)"
+    );
 
   // Hash type for the Passport struct
   bytes32 private constant PASSPORT_TYPEHASH =
@@ -76,6 +88,10 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
    * @param _attester The address of the GitcoinAttester contract.
    */
   function initialize(address _issuer, address _attester) public initializer {
+    __GitcoinVerifier_init(_issuer, _attester);
+  }
+
+  function __GitcoinVerifier_init(address _issuer, address _attester) internal onlyInitializing {
     __Ownable_init();
     __Pausable_init();
 
@@ -94,6 +110,7 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
         address(this) // verifyingContract
       )
     );
+
   }
 
   function pause() public onlyOwner {
@@ -117,33 +134,40 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
   }
 
   /**
-  * @dev Hashes the provided AttestationRequestData object. This function creates 
-  * a keccak256 hash from the recipient, expirationTime, revocable, refUID, data and value
-  * fields of the _data object. The data field is hashed separately and included 
-  * in the final hash.
-  * @param _data The AttestationRequestData object that will be hashed
-  * @return bytes32 The keccak256 hash of the _data
-  */
-  function hashAttestationRequestData(AttestationRequestData memory _data) private pure returns (bytes32) {
-    return keccak256(abi.encode(
-      STAMP_TYPEHASH,
-      _data.recipient,
-      _data.expirationTime,
-      _data.revocable,
-      _data.refUID,
-      keccak256(_data.data),
-      _data.value
-    ));
+   * @dev Hashes the provided AttestationRequestData object. This function creates
+   * a keccak256 hash from the recipient, expirationTime, revocable, refUID, data and value
+   * fields of the _data object. The data field is hashed separately and included
+   * in the final hash.
+   * @param _data The AttestationRequestData object that will be hashed
+   * @return bytes32 The keccak256 hash of the _data
+   */
+  function hashAttestationRequestData(
+    AttestationRequestData memory _data
+  ) private pure returns (bytes32) {
+    return
+      keccak256(
+        abi.encode(
+          STAMP_TYPEHASH,
+          _data.recipient,
+          _data.expirationTime,
+          _data.revocable,
+          _data.refUID,
+          keccak256(_data.data),
+          _data.value
+        )
+      );
   }
 
   /**
-  * @dev Creates a hash for the provided MultiAttestationRequest object. This function 
-  * hashes each AttestationRequestData item in the data array, then generates and returns 
-  * a final keccak256 hash combining these hashes with the schema from the _request.
-  * @param _request The MultiAttestationRequest object that will be hashed
-  * @return bytes32 The keccak256 hash of the _request
-  */
-  function hashMultiAttestationRequest(MultiAttestationRequest memory _request) private pure returns (bytes32) {
+   * @dev Creates a hash for the provided MultiAttestationRequest object. This function
+   * hashes each AttestationRequestData item in the data array, then generates and returns
+   * a final keccak256 hash combining these hashes with the schema from the _request.
+   * @param _request The MultiAttestationRequest object that will be hashed
+   * @return bytes32 The keccak256 hash of the _request
+   */
+  function hashMultiAttestationRequest(
+    MultiAttestationRequest memory _request
+  ) private pure returns (bytes32) {
     bytes32[] memory dataHashes = new bytes32[](_request.data.length);
     for (uint i = 0; i < _request.data.length; ) {
       dataHashes[i] = hashAttestationRequestData(_request.data[i]);
@@ -152,35 +176,47 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
       }
     }
 
-    return keccak256(abi.encode(
-      MULTI_ATTESTATION_REQUEST_TYPEHASH,
-      _request.schema,
-      keccak256(abi.encodePacked(dataHashes))
-    ));
+    return
+      keccak256(
+        abi.encode(
+          MULTI_ATTESTATION_REQUEST_TYPEHASH,
+          _request.schema,
+          keccak256(abi.encodePacked(dataHashes))
+        )
+      );
   }
 
   /**
-  * @dev Creates a hash for the provided PassportAttestationRequest object. This function 
-  * hashes each multiAttestationRequest, then generates and returns a final keccak256 hash 
-  * combining these hashes with additional data from the attestationRequest.
-  * @param attestationRequest The PassportAttestationRequest object that will be hashed
-  * @return bytes32 The keccak256 hash of the attestationRequest
-  */
-  function _hashAttestations(PassportAttestationRequest calldata attestationRequest) private pure returns (bytes32) {
-    bytes32[] memory multiAttestHashes = new bytes32[](attestationRequest.multiAttestationRequest.length);
+   * @dev Creates a hash for the provided PassportAttestationRequest object. This function
+   * hashes each multiAttestationRequest, then generates and returns a final keccak256 hash
+   * combining these hashes with additional data from the attestationRequest.
+   * @param attestationRequest The PassportAttestationRequest object that will be hashed
+   * @return bytes32 The keccak256 hash of the attestationRequest
+   */
+  function _hashAttestations(
+    PassportAttestationRequest calldata attestationRequest
+  ) private pure returns (bytes32) {
+    bytes32[] memory multiAttestHashes = new bytes32[](
+      attestationRequest.multiAttestationRequest.length
+    );
     for (uint i = 0; i < attestationRequest.multiAttestationRequest.length; ) {
-      multiAttestHashes[i] = hashMultiAttestationRequest(attestationRequest.multiAttestationRequest[i]);
+      multiAttestHashes[i] = hashMultiAttestationRequest(
+        attestationRequest.multiAttestationRequest[i]
+      );
       unchecked {
         ++i;
       }
     }
 
-    return keccak256(abi.encode(
-      PASSPORT_TYPEHASH,
-      keccak256(abi.encodePacked(multiAttestHashes)),
-      attestationRequest.nonce,
-      attestationRequest.fee
-    ));
+    return
+      keccak256(
+        abi.encode(
+          PASSPORT_TYPEHASH,
+          keccak256(abi.encodePacked(multiAttestHashes)),
+          attestationRequest.nonce,
+          attestationRequest.fee
+        )
+      );
   }
 
   /**
@@ -197,18 +233,20 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     PassportAttestationRequest calldata attestationRequest
   ) internal {
     // TODO: Check that all recipients are equivalent(We can currently trust this is true becuase it is being enforced when passport signs the request, but would be good to verify here as well)
-    address recipient = attestationRequest.multiAttestationRequest[0].data[0].recipient;
+    address recipient = attestationRequest
+      .multiAttestationRequest[0]
+      .data[0]
+      .recipient;
     if (attestationRequest.nonce != recipientNonces[recipient]) {
-      revert("Invalid nonce");
+      revert InvalidNonce();
     }
 
     bytes32 attestationHash = _hashAttestations(attestationRequest);
     bytes32 digest = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, attestationHash);
 
-
     // Compare the recovered signer with the expected signer
     if (ECDSA.recover(digest, v, r, s) != issuer) {
-      revert("Invalid signature");
+      revert InvalidSignature();
     }
 
     // Increment the nonce for this recipient
@@ -227,14 +265,15 @@ contract GitcoinVerifier is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public payable whenNotPaused returns (bytes32[] memory) {
+  ) public virtual payable whenNotPaused returns (bytes32[] memory) {
     _verify(v, r, s, attestationRequest);
 
     if (msg.value < attestationRequest.fee) {
-      revert("Insufficient fee");
+      revert InsufficientFee();
     }
 
-    return attester.submitAttestations(attestationRequest.multiAttestationRequest);
+    return
+      attester.submitAttestations(attestationRequest.multiAttestationRequest);
   }
 
   /**

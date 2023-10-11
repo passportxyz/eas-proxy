@@ -147,6 +147,7 @@ let thisChainInfo: {
   GitcoinResolver?: { address?: string };
   EAS?: { address?: string };
   issuer?: { address?: string };
+  Verax?: { AttestationRegistry?: { address?: string } };
 };
 
 export function getThisChainInfo() {
@@ -193,6 +194,16 @@ export function getIssuerAddress() {
   if (!resolverAddress)
     throw new Error("issuer address not found in onchainInfo");
   return resolverAddress;
+}
+
+export function getVeraxAttestationRegistryAddress() {
+  const registryAddress =
+    getThisChainInfo().Verax?.AttestationRegistry?.address;
+  if (!registryAddress)
+    throw new Error(
+      "Verax.AttestationRegistry.address not found for this chain in onchainInfo"
+    );
+  return registryAddress;
 }
 
 export function getHexChainId() {

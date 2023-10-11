@@ -18,16 +18,13 @@ export async function main() {
 
   const verifierAddress = getVerifierAddress();
 
-  const GitcoinVerifier = await ethers.getContractFactory(
-    "GitcoinVerifier"
-  );
+  const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
 
   const preparedUpgradeAddress = await upgrades.prepareUpgrade(
     verifierAddress,
     GitcoinVerifier,
     {
       kind: "uups",
-      redeployImplementation: "always",
     }
   );
 

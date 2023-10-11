@@ -129,7 +129,7 @@ describe("GitcoinResolver", function () {
     it("should revert when a non-allowed address attempts to make any attestation", async function () {
       await expect(
         gitcoinResolver.connect(iamAccount).attest(this.validAttestation)
-      ).to.be.revertedWith("Only EAS can call this function");
+      ).to.be.revertedWithCustomError(gitcoinResolver, "NotAllowlisted");
     });
 
     it("should revert if an address other than the Gitcoin attester attempts to make an attestation", async function () {
@@ -149,7 +149,7 @@ describe("GitcoinResolver", function () {
 
       await expect(
         gitcoinResolver.connect(mockEas).attest(attestation)
-      ).to.be.revertedWith("Invalid attester");
+      ).to.be.revertedWithCustomError(gitcoinResolver, "InvalidAttester");
     });
   });
 
@@ -235,7 +235,7 @@ describe("GitcoinResolver", function () {
             [validAttestation, validAttestation, validAttestation],
             []
           )
-      ).to.be.revertedWith("Only EAS can call this function");
+      ).to.be.revertedWithCustomError(gitcoinResolver, "NotAllowlisted");
     });
   });
 
