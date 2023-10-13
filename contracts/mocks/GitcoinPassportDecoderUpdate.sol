@@ -6,7 +6,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import { GitcoinResolver } from "./GitcoinResolver.sol";
+import { GitcoinResolver } from "../GitcoinResolver.sol";
 
 import "hardhat/console.sol";
 
@@ -15,7 +15,7 @@ import "hardhat/console.sol";
  * @notice This contract is used to create the bit map of stamp providers onchain, which will allow us to score Passports fully onchain
  */
 
-contract GitcoinPassportDecoder is 
+contract GitcoinPassportDecoderUpdate is 
   Initializable,
   UUPSUpgradeable,
   OwnableUpgradeable,
@@ -57,6 +57,10 @@ contract GitcoinPassportDecoder is
   }
 
   function _authorizeUpgrade(address) internal override onlyOwner {}
+
+  function finaltest() pure public returns (uint) {
+    return 1;
+  }
 
   /**
    * @dev Sets the address of the EAS contract.

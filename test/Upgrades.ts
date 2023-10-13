@@ -152,4 +152,72 @@ describe("Upgrading GitcoinResolver", function () {
       this.resolverProxyAddress
     );
   });
+
+  describe("Upgrading GitcoinPassportDecoder", function () {
+    this.beforeEach(async function () {
+      const [owner, mockEASAccount] = await ethers.getSigners();
+      this.owner = owner;
+      this.mockEAS = mockEASAccount;
+    });
+  
+    it("should deploy GitcoinPassportDecoder and proxy contract", async function () {
+      const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
+      const gitcoinAttester = await upgrades.deployProxy(GitcoinAttester, {
+        kind: "uups",
+      });
+      const gitcoinAttesterAddress = await gitcoinAttester.getAddress();
+  
+      const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
+      const gitcoinResolver = await upgrades.deployProxy(
+        GitcoinResolver,
+        [this.mockEAS.address, gitcoinAttesterAddress],
+        {
+          initializer: "initialize",
+          kind: "uups",
+        }
+      );
+
+      const gitcoinResolverAddress = await gitcoinResolver.getAddress();
+      this.resolverProxyAddress = gitcoinResolverAddress;
+      this.gitcoinResolverProxy = gitcoinResolver;
+      
+      const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
+      const gitcoinPassportDecoder = await upgrades.deployProxy(
+        GitcoinPassportDecoder,
+        [gitcoinResolverAddress],
+        {
+          initializer: "initialize",
+          kind: "uups",
+        }
+      );
+
+      const gitcoinPassportDecoderAddress = await gitcoinPassportDecoder.getAddress();
+      this.passportDecoderProxyAddress = gitcoinPassportDecoderAddress;
+      this.gitcoinPassportDecoderProxy = gitcoinPassportDecoder;
+
+      expect(gitcoinPassportDecoderAddress).to.not.be.null;
+    });
+  
+    it("should upgrade GitcoinPassportResolver implementation", async function () {
+      const GitcoinPassportDecoder = await ethers.getContractFactory(
+        "GitcoinPassportDecoder"
+      );
+  
+      const preparedUpgradeAddress = await upgrades.prepareUpgrade(
+        this.passportDecoderProxyAddress,
+        GitcoinPassportDecoder,
+        {
+          kind: "uups",
+          redeployImplementation: "always",
+        }
+      );
+  
+      const upgradeCall = await this.gitcoinPassportDecoderProxy.upgradeTo(
+        preparedUpgradeAddress as string
+      );
+      expect(await this.gitcoinPassportDecoderProxy.getAddress()).to.be.equal(
+        this.passportDecoderProxyAddress
+      );
+    });
+  });
 });
