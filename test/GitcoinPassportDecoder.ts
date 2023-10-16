@@ -11,7 +11,7 @@ import {
   passportTypes,
   fee1,
   EAS_CONTRACT_ADDRESS,
-} from "./GitcoinVerifier";
+} from "./helpers/verifierTests";
 
 const providers = [BigInt("111")];
 const issuanceDates = [1694628559, 1695047108, 1693498086];
