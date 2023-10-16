@@ -80,17 +80,17 @@ describe("GitcoinPassportDecoder", function () {
     );
     this.gitcoinAttester = await GitcoinAttester.deploy();
     await this.gitcoinAttester.connect(this.owner).initialize();
-    this.gitcoinAttesterAddress = await this.gitcoinAttester.getAddress();
-
-    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
-
+    
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory(
       "GitcoinVerifier",
       this.owner
     );
     this.gitcoinVerifier = await GitcoinVerifier.deploy();
-
+      
+    this.gitcoinAttesterAddress = await this.gitcoinAttester.getAddress();
+    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
+    
     await this.gitcoinVerifier
       .connect(this.owner)
       .initialize(
