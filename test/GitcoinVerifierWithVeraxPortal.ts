@@ -21,7 +21,7 @@ runVerifierTests(
     const registry = await MockRegistry.deploy();
 
     const gitcoinVeraxPortal = await GitcoinVeraxPortal.deploy();
-    await gitcoinVeraxPortal.initialize(
+    await gitcoinVeraxPortal["initialize(address,address,address)"](
       attester,
       await resolver.getAddress(),
       await registry.getAddress()

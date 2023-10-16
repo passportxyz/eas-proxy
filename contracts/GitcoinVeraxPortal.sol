@@ -164,10 +164,10 @@ contract GitcoinVeraxPortal is
   }
 
   /**
-    * @dev Gets an attestation from the Verax AttestationRegistry, returns it in the EAS format
-    * @param uid The UID of the attestation to get
-    * @return Attestation The EAS-formatted attestation
-    */
+   * @dev Gets an attestation from the Verax AttestationRegistry, returns it in the EAS format
+   * @param uid The UID of the attestation to get
+   * @return Attestation The EAS-formatted attestation
+   */
   function getAttestation(
     bytes32 uid
   ) public view returns (Attestation memory) {
@@ -202,7 +202,7 @@ contract GitcoinVeraxPortal is
     return new address[](0);
   }
 
-  function getAttester() external view returns (address) {
+  function _getAttester() external view returns (address) {
     return address(attester);
   }
 
@@ -249,5 +249,11 @@ contract GitcoinVeraxPortal is
   function router() external pure returns (address) {}
 
   function modules(uint256) external pure returns (address) {}
+
+  function initialize(
+    address[] calldata /* _modules */,
+    address /* _router */
+  ) public {}
+
   /* solhint-enable no-empty-blocks */
 }

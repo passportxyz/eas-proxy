@@ -12,6 +12,7 @@ interface IAbstractPortal is IERC165 {
   function portalRegistry() external view returns (address);
   function router() external view returns (address);
   function modules(uint256) external view returns (address);
+  function initialize(address[] calldata,address) external;
 
   function attest(
     AttestationPayload memory attestationPayload,
@@ -41,7 +42,7 @@ interface IAbstractPortal is IERC165 {
 
   function getModules() external view returns (address[] memory);
 
-  function getAttester() external view returns (address); 
+  function _getAttester() external view returns (address); 
 
   function supportsInterface(bytes4 interfaceId) external view override returns (bool);
 
