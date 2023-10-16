@@ -63,7 +63,7 @@ const easEncodeInvalidStamp = () => {
   return encodedData;
 }
 
-describe("GitcoinPassportDecoder", async function () {
+describe("GitcoinPassportDecoder", function () {
   this.beforeAll(async function () {
     const [ownerAccount, iamAcct, recipientAccount, otherAccount] =
       await ethers.getSigners();
@@ -82,6 +82,8 @@ describe("GitcoinPassportDecoder", async function () {
     await this.gitcoinAttester.connect(this.owner).initialize();
     this.gitcoinAttesterAddress = await this.gitcoinAttester.getAddress();
 
+    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
+
     // Deploy GitcoinVerifier
     const GitcoinVerifier = await ethers.getContractFactory(
       "GitcoinVerifier",
@@ -95,9 +97,6 @@ describe("GitcoinPassportDecoder", async function () {
         await this.iamAccount.getAddress(),
         await this.gitcoinAttester.getAddress()
       );
-
-    this.eas = new EAS(EAS_CONTRACT_ADDRESS);
-    await this.gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
     const chainId = await ethers.provider
       .getNetwork()
