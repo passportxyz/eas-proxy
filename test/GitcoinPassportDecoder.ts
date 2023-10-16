@@ -23,6 +23,16 @@ const hashes = [
 ];
 const providerMapVersion = 1;
 
+const invalidIssuanceDates = [1694628559, 1695047108, 1693498086, 1695047109];
+const invalidExpirationDates = [1702404559, 1702823108];
+const invalidHashes = [
+  ethers.getBytes("0xf760285ed09eb7bb0da39df5abd0adb608d410b357ab6415644d2b49aa64e5f1"),
+  ethers.getBytes("0x29b3eb7b8ee47cb0a9d83e7888f05ea5f61e3437752602282e18129d2d8b4024"),
+  ethers.getBytes("0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219ae0d13"),
+  ethers.getBytes("0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219ab1d24"),
+  ethers.getBytes("0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219af2d35"),
+];
+
 const easEncodeStamp = () => {
   const schemaEncoder = new SchemaEncoder(
     "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
@@ -33,6 +43,21 @@ const easEncodeStamp = () => {
     { name: "hashes", value: hashes, type: "bytes32[]" },
     { name: "issuanceDates", value: issuanceDates, type: "uint64[]" },
     { name: "expirationDates", value: expirationDates, type: "uint64[]" },
+    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
+  ]);
+  return encodedData;
+}
+
+const easEncodeInvalidStamp = () => {
+  const schemaEncoder = new SchemaEncoder(
+    "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
+  );
+
+  const encodedData = schemaEncoder.encodeData([
+    { name: "providers", value: providers, type: "uint256[]" },
+    { name: "hashes", value: invalidHashes, type: "bytes32[]" },
+    { name: "issuanceDates", value: invalidIssuanceDates, type: "uint64[]" },
+    { name: "expirationDates", value: invalidExpirationDates, type: "uint64[]" },
     { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
   ]);
   return encodedData;
@@ -149,6 +174,26 @@ describe("GitcoinPassportDecoder", async function () {
       fee: fee1,
     };
 
+    this.invalidPassport = {
+      multiAttestationRequest: [
+        {
+          schema: this.passportSchemaUID,
+          data: [
+            {
+              recipient: this.recipient.address,
+              expirationTime: 1708741995,
+              revocable: true,
+              refUID: ZERO_BYTES32,
+              data: easEncodeInvalidStamp(),
+              value: 0,
+            },
+          ],
+        },
+      ],
+      nonce: await this.getNonce(this.recipient.address),
+      fee: fee1,
+    };
+
     const addVerifierResult = await this.gitcoinAttester
       .connect(this.owner)
       .addVerifier(await this.gitcoinVerifier.getAddress());
@@ -164,10 +209,11 @@ describe("GitcoinPassportDecoder", async function () {
 
     await this.gitcoinPassportDecoder
       .connect(this.owner)
-      .initialize(this.resolverAddress);
+      .initialize();
 
     // Initialize the sdk with the address of the EAS Schema contract address
     await this.gitcoinPassportDecoder.setEASAddress(EAS_CONTRACT_ADDRESS);
+    await this.gitcoinPassportDecoder.setGitcoinResolver(this.resolverAddress);
   });
   
   this.beforeEach(async function () {
@@ -180,14 +226,14 @@ describe("GitcoinPassportDecoder", async function () {
     it("should add new providers to the providers mapping and increment the version", async function () {
       const providers = ["NewStamp1", "NewStamp2"];
       // Get the 0th version
-      const versionZero = await this.gitcoinPassportDecoder.version();
+      const versionZero = await this.gitcoinPassportDecoder.currentVersion();
 
       expect(versionZero === 0);
 
       await this.gitcoinPassportDecoder.connect(this.owner).createNewVersion(providers);
 
       // Get the current version
-      const currentVersion = await this.gitcoinPassportDecoder.version();
+      const currentVersion = await this.gitcoinPassportDecoder.currentVersion();
 
       expect(currentVersion === 1);
 
@@ -199,7 +245,7 @@ describe("GitcoinPassportDecoder", async function () {
     it("should not allow anyone other than owner to add new providers to the mapping", async function () {
       const providers = ["NewStamp1", "NewStamp2"];
       // Get the 0th version
-      const versionZero = await this.gitcoinPassportDecoder.version();
+      const versionZero = await this.gitcoinPassportDecoder.currentVersion();
 
       expect(versionZero === 0);
 
@@ -215,7 +261,7 @@ describe("GitcoinPassportDecoder", async function () {
 
       await this.gitcoinPassportDecoder.connect(this.owner).addProvider("NewStamp3");
 
-      const currentVersion = await this.gitcoinPassportDecoder.version();
+      const currentVersion = await this.gitcoinPassportDecoder.currentVersion();
 
       const lastProvider = await this.gitcoinPassportDecoder.providerVersions(currentVersion, 2);
 
@@ -232,7 +278,7 @@ describe("GitcoinPassportDecoder", async function () {
   describe("Decoding Passports", async function () {
     const mappedProviders = ["Twitter", "Google", "Ens"];
 
-    this.beforeEach(async function () {
+    it("should decode a user's passport", async function () {
       await this.gitcoinPassportDecoder.connect(this.owner).createNewVersion(mappedProviders);
 
       const signature = await this.iamAccount.signTypedData(
@@ -255,12 +301,12 @@ describe("GitcoinPassportDecoder", async function () {
       );
 
       await verifiedPassport.wait();
-    });
 
-    it("should decode a user's passport", async function () {
       const passportTx = await this.gitcoinPassportDecoder
         .connect(this.owner)
         .getPassport(this.recipient.address, this.passportSchemaUID);
+
+      expect(passportTx.length === mappedProviders.length);
 
       passportTx.forEach((cred: any) => {
         mappedProviders.forEach((provider: string) => {
@@ -279,9 +325,34 @@ describe("GitcoinPassportDecoder", async function () {
     });
 
     it("should allow non-owners to decode a user's passport", async function () {
+      await this.gitcoinPassportDecoder.connect(this.owner).createNewVersion(mappedProviders);
+
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        this.passport
+      );
+
+      const { v, r, s } = ethers.Signature.from(signature);
+
+      // Submit attestations
+      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+        this.passport,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
+
+      await verifiedPassport.wait();
+
       const passportTx = await this.gitcoinPassportDecoder
         .connect(this.otherAcct)
         .getPassport(this.recipient.address, this.passportSchemaUID);
+
+      expect(passportTx.length === mappedProviders.length);
       
       passportTx.forEach((cred: any) => {
         mappedProviders.forEach((provider: string) => {
@@ -297,6 +368,40 @@ describe("GitcoinPassportDecoder", async function () {
           expect(cred[3] === expirationDate);
         });
       });
+    });
+
+    it("should verify assertions in contract are working via invalid data", async function () {
+      this.invalidPassport.nonce = await this.gitcoinVerifier.recipientNonces(
+        this.invalidPassport.multiAttestationRequest[0].data[0].recipient
+      );
+
+      await this.gitcoinPassportDecoder.connect(this.owner).createNewVersion(mappedProviders);
+
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        this.invalidPassport
+      );
+
+      const { v, r, s } = ethers.Signature.from(signature);
+
+      // Submit attestations
+      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+        this.invalidPassport,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
+
+      await verifiedPassport.wait();
+
+      expect(this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .getPassport(this.recipient.address, this.passportSchemaUID)
+      ).to.be.revertedWithPanic();
     });
   });
 });

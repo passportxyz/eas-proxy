@@ -8,8 +8,6 @@ import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/c
 
 import { GitcoinResolver } from "./GitcoinResolver.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title GitcoinPassportDecoder
  * @notice This contract is used to create the bit map of stamp providers onchain, which will allow us to score Passports fully onchain
@@ -24,14 +22,14 @@ contract GitcoinPassportDecoder is
   // The instance of the EAS contract.
   IEAS eas;
 
-  // Mapping of version to provider arrays
+  // Mapping of the current version to provider arrays
   mapping(uint32 => string[]) public providerVersions;
 
-  // Version number
-  uint32 public version;
+  // Current version number
+  uint32 public currentVersion;
 
-  // Address of the GitcoinResolver contract
-  address public gitcoinResolverAddress;
+  // Instance of the GitcoinResolver contract
+  GitcoinResolver public gitcoinResolver;
 
   // Passport credential struct
   struct Credential {
@@ -41,11 +39,9 @@ contract GitcoinPassportDecoder is
     uint64 expirationDate;
   }
 
-  function initialize(address _gitcoinResolverAddress) public initializer {
+  function initialize() public initializer {
     __Ownable_init();
     __Pausable_init();
-
-    gitcoinResolverAddress = _gitcoinResolverAddress;
   }
 
   function pause() public onlyOwner {
@@ -67,11 +63,19 @@ contract GitcoinPassportDecoder is
   }
 
   /**
+   * @dev Sets the GitcoinResolver contract.
+   * @param _gitcoinResolver The address of the GitcoinResolver contract.
+   */
+  function setGitcoinResolver(address _gitcoinResolver) public onlyOwner {
+    gitcoinResolver = GitcoinResolver(_gitcoinResolver);
+  }
+
+  /**
    * @dev Adds a new provider to the end of the providerVersions mapping
    * @param provider Name of individual provider
    */
   function addProvider(string memory provider) external onlyOwner {
-    providerVersions[version].push(provider);
+    providerVersions[currentVersion].push(provider);
   }
 
   /**
@@ -79,8 +83,8 @@ contract GitcoinPassportDecoder is
    * @param providerNames Array of provider names
    */
   function createNewVersion(string[] memory providerNames) external onlyOwner {
-    version++;
-    providerVersions[version] = providerNames;
+    currentVersion++;
+    providerVersions[currentVersion] = providerNames;
   }
 
   function getAttestation(bytes32 attestationUID) public view returns (Attestation memory) {
@@ -95,11 +99,8 @@ contract GitcoinPassportDecoder is
    */
   // getPassport(address): Calls GitcoinResolver to get the passport, then uses the provider mapping to decode the bits in the provider bitmap. This function can handle any bitmap version. The version is stored in the attestation, and the contract has all the data for historical bitmap versions. This should also demux the dates and hashes, so that the user gets back a normal looking passport object.
   function getPassport(address userAddress, bytes32 schemaUID) public view returns (Credential[] memory) {
-    // Set the GitcoinResolver
-    GitcoinResolver resolver = GitcoinResolver(gitcoinResolverAddress);
-
     // Get the attestation UID from the user's attestations
-    bytes32 attestationUID = resolver.userAttestations(userAddress, schemaUID);
+    bytes32 attestationUID = gitcoinResolver.userAttestations(userAddress, schemaUID);
 
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
@@ -124,49 +125,58 @@ contract GitcoinPassportDecoder is
     // Set the list of providers to the provider map version
     string[] memory mappedProviders = providerVersions[providerMapVersion];
 
+    // Check to make sure that the lengths of the hashes, issuanceDates, and expirationDates match, otherwise end the function call
+    assert(hashes.length == issuanceDates.length && hashes.length == expirationDates.length);
+
+    // Set the in-memory passport array to be returned to equal the length of the hashes array
+    Credential[] memory passportMemoryArray = new Credential[](hashes.length);
+
     // Now we iterate over the providers array and check each bit that is set
     // If a bit is set
     // we set the hash, issuanceDate, expirationDate, and provider to a Credential struct
-    // then we push that struct to the passport storage array
-
-    // Set the passport array to be returned to equal the length of the passport saved to storage (for the duration of the function call)
-    Credential[] memory passportMemoryArray = new Credential[](hashes.length);
-
-    // Populate the passportMemoryArray
+    // then we push that struct to the passport storage array and populate the passportMemoryArray
     for (uint256 i = 0; i < providers.length; ) {
       bit = 1;
+
+      // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
+      if (hashIndex >= expirationDates.length) {
+        break;
+      }
+
       uint256 provider = uint256(providers[i]);
+
       for (uint256 j = 0; j < 256; ) {
+        // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
+        if (hashIndex >= expirationDates.length) {
+          break;
+        }
+
+        uint256 mappedProvidersIndex = i * 256 + j;
+
+        if (mappedProvidersIndex < mappedProviders.length) {
+          break;
+        }
+
         // Check that the provider bit is set
-        // The provider bit is set --> set the provider, hash, issuance date, and expiration date to the stuct
+        // The provider bit is set --> set the provider, hash, issuance date, and expiration date to the struct
         if (provider & bit > 0) {
           Credential memory credential;
-          uint256 mappedProvidersIndex = i * 256 + j;
-
-          if (mappedProvidersIndex < mappedProviders.length) {
-            credential.provider = mappedProviders[mappedProvidersIndex];
-          }
-
-          if (hashIndex < hashes.length) {
-            credential.hash = hashes[hashIndex];
-          }
-
-          if (hashIndex < issuanceDates.length) {
-            credential.issuanceDate = issuanceDates[hashIndex];
-          }
-
-          if (hashIndex < expirationDates.length) {
-            credential.expirationDate = expirationDates[hashIndex];
-          }
-
-          if (hashIndex < hashes.length) {
-            passportMemoryArray[hashIndex] = credential;
-          }
+          // Set provider to the credential struct from the mappedProviders mapping
+          credential.provider = mappedProviders[mappedProvidersIndex];
+          // Set the hash to the credential struct from the hashes array
+          credential.hash = hashes[hashIndex];
+          // Set the issuanceDate of the credential struct to the item at the current index of the issuanceDates array
+          credential.issuanceDate = issuanceDates[hashIndex];
+          // Set the expirationDate of the credential struct to the item at the current index of the expirationDates array
+          credential.expirationDate = expirationDates[hashIndex];
+          
+          // Set the hashIndex with the finished credential struct
+          passportMemoryArray[hashIndex] = credential;
 
           hashIndex += 1;
         }
-        bit <<= 1;
         unchecked {
+          bit <<= 1;
           ++j;
         }
       }

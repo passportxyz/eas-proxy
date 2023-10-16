@@ -184,7 +184,6 @@ describe("Upgrading GitcoinResolver", function () {
       const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
       const gitcoinPassportDecoder = await upgrades.deployProxy(
         GitcoinPassportDecoder,
-        [gitcoinResolverAddress],
         {
           initializer: "initialize",
           kind: "uups",

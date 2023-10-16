@@ -20,12 +20,9 @@ export async function main() {
     chainId: hre.network.config.chainId,
   });
 
-  const resolverAddress = getResolverAddress();
-
   const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
   const passportDecoder = await upgrades.deployProxy(
     GitcoinPassportDecoder,
-    [resolverAddress],
     {
       initializer: "initialize",
       kind: "uups",
