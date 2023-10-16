@@ -22,6 +22,14 @@ let config: HardhatUserConfig = {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
     customChains: [
       {
+        network: "linea_mainnet",
+        chainId: 59144,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build/",
+        },
+      },
+      {
         network: "baseGoerli",
         chainId: 84531,
         urls: {

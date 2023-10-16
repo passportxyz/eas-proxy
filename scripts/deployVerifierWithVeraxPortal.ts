@@ -46,7 +46,7 @@ export async function main() {
       getResolverAddress(),
       veraxAttestationRegistryAddress,
     ],
-    { kind: "uups" }
+    { kind: "uups", initializer: "initialize(address,address,address)" }
   );
 
   const portalDeployment = await veraxPortal.waitForDeployment();

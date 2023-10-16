@@ -37,7 +37,7 @@ describe("GitcoinVeraxPortal", function () {
     attester = addr2.address;
 
     gitcoinVeraxPortal = await GitcoinVeraxPortal.deploy();
-    await gitcoinVeraxPortal.initialize(
+    await gitcoinVeraxPortal["initialize(address,address,address)"](
       attester,
       await resolver.getAddress(),
       await registry.getAddress()
