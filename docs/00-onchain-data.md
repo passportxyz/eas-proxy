@@ -52,6 +52,8 @@ sequenceDiagram
     participant Attester as Attester (gitcoin, onchain)
     participant EAS
     participant Resolver as Resolver (gitcoin, onchain)
+    participant Decoder as Gitcoin Passport Decoder
+    participant External as Passport Integrator
     User->>App: "Write stamps onchain"
     App->>IAM: "Verify and attest payload"
     IAM-->>App: PassportAttestationRequest
@@ -74,6 +76,24 @@ sequenceDiagram
     Verifier-->>App : 
     deactivate Verifier
     App-->>User : display onchain status
+
+    activate Decoder
+    External->>Decoder : getPassport(address)
+
+    activate Resolver
+    Decoder->>Resolver : userAttestations(userAddress, schemaUID);
+    Resolver-->>Decoder : attestationUID
+    deactivate Resolver
+
+    activate EAS
+    Decoder->>EAS : getAttestation(attestationUID)
+    EAS-->>Decoder : attestation
+    deactivate EAS
+
+    Decoder->>Decoder : decodeAttestation(attestation);
+
+    Decoder-->>External : Credential[]
+    deactivate Decoder
 ```
 
 

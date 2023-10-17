@@ -1,48 +1,62 @@
-# How to Decode Passport and Score Attestations Onchain
+# How to Decode Passport Attestations
 
 
 ## Intro
 
-The purpose of this document is to provide instructions on how to decode Passport and Score attestions onchain.
+The purpose of this document is to provide instructions on how to load and decode both Passport and Score attestions onchain for a given ETH address. Also this outlines the implementation considerations for the `GitcoinPassportDecoder` smart contract.
 
-For details on the EAS schema used to store Gitcoin Passports onchain, please see: [Onchain Passport Attestation](https://github.com/gitcoinco/eas-proxy/blob/main/docs/01-onchain-passport-attestation.md)
+For details on the EAS schema used to store Gitcoin Passports onchain, please see: [Onchain Passport Attestation](./01-onchain-passport-attestation.md)
 
 ## Explanation of the Smart Contracts Involved
 
-In order to understand how Passport and Passports Scores exist onchain, take a read of [Bringing Passport Data Onchain](https://github.com/gitcoinco/eas-proxy/blob/main/docs/00-onchain-data.md#bringing-passport-data-onchain).
+In order to understand how Passport and Passports Scores exist onchain, take a read of [Bringing Passport Data Onchain](./00-onchain-data.md#bringing-passport-data-onchain).
 
-In order to query Passport attestations, we call on the `getPassport` function from the `GitcoinPassportDecoder` smart contract, which creates instances of both the `GitcoinResolver` and the interface of the EAS smart contracts. 
+In order to load the latest Passport or Score attestations from EAS, we need to perform the following steps:
 
-Within the `getPassport` function call, the `userAttestations` function from `GitcoinResolver` is called in order to pull in the UID of the desired Passport attestation. Using this UID, the `getAttestation` function from EAS is called in order to pull in the attestation data.
+### Step 1: get the attestation UID
 
-This data is then decoded and iterated over to pull out the stamp name, issuance dates, expiration dates, and hashes for each individual stamp, and returned as an array of structs for your final use.
+In order to find the attestation UID that is owned by a given ETH address for a given schema (like the passport schema) we will need to use the  `GitcoinResolver` as this plays the role of an 'indexer' and will store the latest attestation UID for a given schema and for a given recipient.
+This means that knowing the schema UID and an eth address we can get the attestation UID for a users.
 
-## Query a Decoded Passport via a Block Explorer
+### Step 2: get the attestation
 
-*We'll be using the Base Goerli ("0x14a33") block explorer to query a decoded Passport in this example.*
+Having the attestaion UID from Step1 we can just use the `getAttestation` method of the EAS smart contract to load a users attestation.
 
-You'll need the following items copied and pasted somewhere handy, all located here (except for the wallet address to be queried): [onchaininfo.json](https://github.com/gitcoinco/eas-proxy/blob/main/deployments/onchainInfo.json)
-- `GitcoinPassportDecoder` proxy contract address for Base Goerli
-- `EAS` contract address for Base Goerli
-- `GitcoinResolver` proxy contract address for Base Goerli
-- wallet address of the Passport you'd like to query
-- `schemaUID` of the Passport
+### Step 3: decode the attestation data
 
-<!-- TODO: Add images for each step -->
-1. Visit the [Base Goerli block explorer](https://goerli.basescan.org/)
-2. Paste the `GitcoinPassportDecoder` proxy contract address into the search bar
-3. Click on the Contract tab
-4. Click on the Write as Proxy button
-5. Connect your wallet
-5. Initialize the `EAS` contract by adding its address to the `setEASAddress` function
-6. Initialize the `GitcoinResolver` contract by adding its address to the `setGitcoinResolver` function
-7. Next, click on the Read as Proxy button
-8. Click on the `getPassport` accordion
-9. Add the `userAddress` and `schemaUID` to the `getPassport` form and query it. 
-<!-- A (TODO: UPDATE THIS) will be return -->
+The schema of the passport attestation is documented in [Onchain Passport Attestation](./01-onchain-passport-attestation.md). In order to decode it one will need to use the `abi.decode` function as shown in the snippet below:
 
-## Query a Decoded Passport via a Script
+```sol
+    // Decode the attestion output
+    (providers, hashes, issuanceDates, expirationDates, providerMapVersion) = abi.decode(
+      attestation.data,
+      (uint256[], bytes32[], uint64[], uint64[], uint16)
+    );
+```
 
-In order to query one or more Passports, you can create a script using a library like `ethers.js`. In this example, we'll be using `ethers.js` and `node`.
+### Step 4: load the stamp / VC data from the attestation
 
-## FAQs
+The format of the passport attestation (what each individual field contains) is described in the document [Onchain Passport Attestation](./01-onchain-passport-attestation.md).
+
+In order to decode the stamps that are saved in a Passport attestation, one needs to understand and keep track of all the stamp providers.
+To optimise for space and gas costs, the `providers` field has been used as a bit array, which each bit being assigned to a given provider.
+But this bit map is not fixed, and can potentially change over time as some providers are removed and others are added to the providers of Gitcoin Passport.
+This is why we need to track the versions of the provider map. This can be achieved in a simple mapping like:
+
+```sol
+mapping(uint32 => string[]) public providerVersions;
+```
+
+This is how the `providerVersions` shall be used:
+
+- keep a list of strings (provider names), for each version
+- each position in the array coresponds to 1 bit in the `providers` field in the attestation
+- new providers can be added to any array in this map
+
+This how the `providerVersions` is meant to be used:
+
+- the current version used for pushing stamps on-chain is typically the latest version present in this map
+- adding new providers for the current version of the providers list can be done by simply appending new elements to the array
+- removing providers from an array is not possible. When providers are removed from the Passport Application, then there are 2 ways to deal with this in the `providerVersions`:
+  - keep the current version of the providers array, and the deprecated providers will simply not be written on-chain any more (1 bit the the `providers` field of the attestation will be unused). This typically makes sense when there is only a small number of unused field
+  - create a new `provider` list version. This makes sense if the number of unused bits in the `providers` field is higher and we want to reset this
