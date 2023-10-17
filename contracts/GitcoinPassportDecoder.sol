@@ -6,14 +6,16 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import { GitcoinResolver } from "./GitcoinResolver.sol";
+import { IGitcoinResolver } from "./IGitcoinResolver.sol";
+import { Credential, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
 
 /**
  * @title GitcoinPassportDecoder
  * @notice This contract is used to create the bit map of stamp providers onchain, which will allow us to score Passports fully onchain
  */
 
-contract GitcoinPassportDecoder is 
+contract GitcoinPassportDecoder is
+  IGitcoinPassportDecoder,
   Initializable,
   UUPSUpgradeable,
   OwnableUpgradeable,
@@ -29,18 +31,10 @@ contract GitcoinPassportDecoder is
   uint32 public currentVersion;
 
   // Instance of the GitcoinResolver contract
-  GitcoinResolver public gitcoinResolver;
+  IGitcoinResolver public gitcoinResolver;
 
   // Passport attestation schema UID
   bytes32 public schemaUID;
-
-  // Passport credential struct
-  struct Credential {
-    string provider;
-    bytes32 hash;
-    uint64 issuanceDate;
-    uint64 expirationDate;
-  }
 
   function initialize() public initializer {
     __Ownable_init();
@@ -70,7 +64,7 @@ contract GitcoinPassportDecoder is
    * @param _gitcoinResolver The address of the GitcoinResolver contract.
    */
   function setGitcoinResolver(address _gitcoinResolver) public onlyOwner {
-    gitcoinResolver = GitcoinResolver(_gitcoinResolver);
+    gitcoinResolver = IGitcoinResolver(_gitcoinResolver);
   }
 
   /**
@@ -98,7 +92,9 @@ contract GitcoinPassportDecoder is
     providerVersions[currentVersion] = providerNames;
   }
 
-  function getAttestation(bytes32 attestationUID) public view returns (Attestation memory) {
+  function getAttestation(
+    bytes32 attestationUID
+  ) public view returns (Attestation memory) {
     Attestation memory attestation = eas.getAttestation(attestationUID);
     return attestation;
   }
@@ -107,9 +103,14 @@ contract GitcoinPassportDecoder is
    * @dev Retrieves the user's Passport attestation via the GitcoinResolver and IEAS and decodes the bits in the provider map to output a readable Passport
    * @param userAddress User's address
    */
-  function getPassport(address userAddress) public view returns (Credential[] memory) {
+  function getPassport(
+    address userAddress
+  ) public view returns (Credential[] memory) {
     // Get the attestation UID from the user's attestations
-    bytes32 attestationUID = gitcoinResolver.userAttestations(userAddress, schemaUID);
+    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
+      userAddress,
+      schemaUID
+    );
 
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
@@ -122,7 +123,13 @@ contract GitcoinPassportDecoder is
     uint16 providerMapVersion;
 
     // Decode the attestion output
-    (providers, hashes, issuanceDates, expirationDates, providerMapVersion) = abi.decode(
+    (
+      providers,
+      hashes,
+      issuanceDates,
+      expirationDates,
+      providerMapVersion
+    ) = abi.decode(
       attestation.data,
       (uint256[], bytes32[], uint64[], uint64[], uint16)
     );
@@ -135,7 +142,10 @@ contract GitcoinPassportDecoder is
     string[] memory mappedProviders = providerVersions[providerMapVersion];
 
     // Check to make sure that the lengths of the hashes, issuanceDates, and expirationDates match, otherwise end the function call
-    assert(hashes.length == issuanceDates.length && hashes.length == expirationDates.length);
+    assert(
+      hashes.length == issuanceDates.length &&
+        hashes.length == expirationDates.length
+    );
 
     // Set the in-memory passport array to be returned to equal the length of the hashes array
     Credential[] memory passportMemoryArray = new Credential[](hashes.length);
@@ -178,7 +188,7 @@ contract GitcoinPassportDecoder is
           credential.issuanceDate = issuanceDates[hashIndex];
           // Set the expirationDate of the credential struct to the item at the current index of the expirationDates array
           credential.expirationDate = expirationDates[hashIndex];
-          
+
           // Set the hashIndex with the finished credential struct
           passportMemoryArray[hashIndex] = credential;
 
@@ -198,3 +208,4 @@ contract GitcoinPassportDecoder is
     return passportMemoryArray;
   }
 }
+
