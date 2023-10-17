@@ -31,6 +31,9 @@ contract GitcoinPassportDecoder is
   // Instance of the GitcoinResolver contract
   GitcoinResolver public gitcoinResolver;
 
+  // Passport attestation schema UID
+  bytes32 public schemaUID;
+
   // Passport credential struct
   struct Credential {
     string provider;
@@ -71,10 +74,18 @@ contract GitcoinPassportDecoder is
   }
 
   /**
+   * @dev Sets the schemaUID for the Passport Attestation.
+   * @param _schemaUID The UID of the schema used to make the user's attestation
+   */
+  function setSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    schemaUID = _schemaUID;
+  }
+
+  /**
    * @dev Adds a new provider to the end of the providerVersions mapping
    * @param provider Name of individual provider
    */
-  function addProvider(string memory provider) external onlyOwner {
+  function addProvider(string memory provider) public onlyOwner {
     providerVersions[currentVersion].push(provider);
   }
 
@@ -93,12 +104,10 @@ contract GitcoinPassportDecoder is
   }
 
   /**
-   * @dev Retrieves the user's Passport via the GitcoinResolver and decodes the bits in the provider map to output a readable Passport
+   * @dev Retrieves the user's Passport attestation via the GitcoinResolver and IEAS and decodes the bits in the provider map to output a readable Passport
    * @param userAddress User's address
-   * @param schemaUID The UID of the schema used to make the user's attestation
    */
-  // getPassport(address): Calls GitcoinResolver to get the passport, then uses the provider mapping to decode the bits in the provider bitmap. This function can handle any bitmap version. The version is stored in the attestation, and the contract has all the data for historical bitmap versions. This should also demux the dates and hashes, so that the user gets back a normal looking passport object.
-  function getPassport(address userAddress, bytes32 schemaUID) public view returns (Credential[] memory) {
+  function getPassport(address userAddress) public view returns (Credential[] memory) {
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.userAttestations(userAddress, schemaUID);
 

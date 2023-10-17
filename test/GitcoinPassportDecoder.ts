@@ -3,7 +3,6 @@ import { ethers } from "hardhat";
 import {
   SchemaEncoder,
   ZERO_BYTES32,
-  EAS,
 } from "@ethereum-attestation-service/eas-sdk";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
@@ -213,6 +212,7 @@ describe("GitcoinPassportDecoder", function () {
     // Initialize the sdk with the address of the EAS Schema contract address
     await this.gitcoinPassportDecoder.setEASAddress(EAS_CONTRACT_ADDRESS);
     await this.gitcoinPassportDecoder.setGitcoinResolver(this.resolverAddress);
+    await this.gitcoinPassportDecoder.setSchemaUID(this.passportSchemaUID);
   });
   
   this.beforeEach(async function () {
@@ -303,7 +303,7 @@ describe("GitcoinPassportDecoder", function () {
 
       const passportTx = await this.gitcoinPassportDecoder
         .connect(this.owner)
-        .getPassport(this.recipient.address, this.passportSchemaUID);
+        .getPassport(this.recipient.address);
 
       expect(passportTx.length === mappedProviders.length);
 
@@ -349,7 +349,7 @@ describe("GitcoinPassportDecoder", function () {
 
       const passportTx = await this.gitcoinPassportDecoder
         .connect(this.otherAcct)
-        .getPassport(this.recipient.address, this.passportSchemaUID);
+        .getPassport(this.recipient.address);
 
       expect(passportTx.length === mappedProviders.length);
       
@@ -399,7 +399,7 @@ describe("GitcoinPassportDecoder", function () {
 
       expect(this.gitcoinPassportDecoder
         .connect(this.owner)
-        .getPassport(this.recipient.address, this.passportSchemaUID)
+        .getPassport(this.recipient.address)
       ).to.be.revertedWithPanic();
     });
   });
