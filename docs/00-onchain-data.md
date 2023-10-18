@@ -48,10 +48,12 @@ sequenceDiagram
     actor User
     participant App as Passport App
     participant IAM as IAM Service
-    participant Verifier as Verifier (gitcoin, onchain)
-    participant Attester as Attester (gitcoin, onchain)
+    participant Verifier as GitcoinVerifier (onchain)
+    participant Attester as GitcoinAttester (onchain)
     participant EAS
-    participant Resolver as Resolver (gitcoin, onchain)
+    participant Resolver as GitcoinResolver (onchain)
+    participant Decoder as GitcoinPassportDecoder
+    participant External as Passport Integrator (external)
     User->>App: "Write stamps onchain"
     App->>IAM: "Verify and attest payload"
     IAM-->>App: PassportAttestationRequest
@@ -74,6 +76,24 @@ sequenceDiagram
     Verifier-->>App : 
     deactivate Verifier
     App-->>User : display onchain status
+
+    activate Decoder
+    External->>Decoder : getPassport(address)
+
+    activate Resolver
+    Decoder->>Resolver : userAttestations(userAddress, schemaUID);
+    Resolver-->>Decoder : attestationUID
+    deactivate Resolver
+
+    activate EAS
+    Decoder->>EAS : getAttestation(attestationUID)
+    EAS-->>Decoder : attestation
+    deactivate EAS
+
+    Decoder->>Decoder : decodeAttestation(attestation);
+
+    Decoder-->>External : Credential[]
+    deactivate Decoder
 ```
 
 
@@ -161,5 +181,12 @@ smart contract shall only validate and store date from trusted sources:
 
 - a trusted EAS contract
 - a trusted Attester
+
+
+## GitcoinPassportDecoder
+
+This is a convenience smart contract that can be used by any party to check for the on-chain passport attestation for a given ETH address.
+See the documentation [How to Decode Passport Attestations
+](./05-querying-passport-attestations-onchain.md) for more details.
 
 _[← Back to README](..#other-topics)_

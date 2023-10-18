@@ -75,3 +75,5 @@ _Note: the issuer address is **not the attester address**_
 [Section 3: New Chain Deployment Process](docs/03-new-deployment.md)
 
 [Section 4: Deployment with Verax](docs/04-verax.md)
+
+[Section 5: Querying Passport Attestations Onchain](docs/05-querying-passport-attestations-onchain.md)

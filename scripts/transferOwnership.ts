@@ -7,6 +7,7 @@ import {
   getAttesterAddress,
   getVerifierAddress,
   getResolverAddress,
+  getPassportDecoderAddress,
 } from "./lib/utils";
 
 assertEnvironment();
@@ -31,9 +32,13 @@ export async function main() {
   const GitcoinAttester = await ethers.getContractFactory("GitcoinAttester");
   const attester = GitcoinAttester.attach(getAttesterAddress());
 
+  const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
+  const passportDecoder = GitcoinPassportDecoder.attach(getPassportDecoderAddress());
+
   await transferOwnershipToMultisig(resolver);
   await transferOwnershipToMultisig(verifier);
   await transferOwnershipToMultisig(attester);
+  await transferOwnershipToMultisig(passportDecoder);
 }
 
 main().catch((error) => {

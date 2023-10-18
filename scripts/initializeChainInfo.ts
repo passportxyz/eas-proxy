@@ -27,6 +27,7 @@ export async function main() {
         GitcoinAttester: {},
         GitcoinVerifier: {},
         GitcoinResolver: {},
+        GitcoinPassportDecoder: {},
         easSchemas: {
           passport: {
             uid: "",

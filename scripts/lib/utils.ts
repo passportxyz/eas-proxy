@@ -145,6 +145,7 @@ let thisChainInfo: {
   GitcoinAttester?: { address?: string };
   GitcoinVerifier?: { address?: string };
   GitcoinResolver?: { address?: string };
+  GitcoinPassportDecoder?: { address?: string };
   EAS?: { address?: string };
   issuer?: { address?: string };
   Verax?: { AttestationRegistry?: { address?: string } };
@@ -187,6 +188,13 @@ export function getResolverAddress() {
   if (!resolverAddress)
     throw new Error("GitcoinResolver address not found in onchainInfo");
   return resolverAddress;
+}
+
+export function getPassportDecoderAddress() {
+  const passportDecoderAddress = getThisChainInfo().GitcoinPassportDecoder?.address;
+  if (!passportDecoderAddress)
+    throw new Error("GitcoinPassportDecoder address not found in onchainInfo");
+  return passportDecoderAddress;
 }
 
 export function getIssuerAddress() {
