@@ -14,7 +14,7 @@ How does this work?
 2. Once the schema was created, you can write data to it by calling one of the
    EAS smart contracts functions, for example
    `attest(AttestationRequest calldata request)`
-   (see [IEAS.sol](https://github.com/ethereum-attestation-service/eas-contracts/blob/master/contracts/IEAS.sol#L148-L169))
+   (see [IEAS.sol](https://github.com/ethereum-attestation-service/eas-contracts/blob/c4c63775094e9104d0b4335ac8428f8d10f6d589/contracts/IEAS.sol#L116-L132))
 3. The following data will be registered in the attestation:
    1. the attester (this will be the`msg.sender`)
    2. the recipient (an ETH address)
@@ -177,10 +177,9 @@ mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 ```
 
 In order to ensure the integrity of the data that a resolver stores, resolver
-smart contract shall only validate and store date from trusted sources:
-
-- a trusted EAS contract
-- a trusted Attester
+smart contract shall 
+- only allow calls from a trusted EAS smart contract
+- only accept data coming from a trusted attester
 
 
 ## GitcoinPassportDecoder

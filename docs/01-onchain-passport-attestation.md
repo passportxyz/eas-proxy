@@ -61,9 +61,6 @@ new SchemaEncoder(
   hashes field, this is an ordered array, containing th expiration date for each
   stamp.
 
-Considering the list of providers above if a user has the `BrightId`,
-`CommunityStakingSilver` and `Discord` stamps, their attestation will look like:
-
 #### providerMapVersion
 
 - this field will be used to indicate the version of the provider map used to
@@ -71,10 +68,13 @@ Considering the list of providers above if a user has the `BrightId`,
   if there are a large amount of stamps that need to be replaced/removed in the
   future. If new providers are only added, the providerMapVersion does not change.
 
+Considering the list of providers above if a user has the `BrightId`,
+`CommunityStakingSilver` and `Discord` stamps, their attestation will look like:
+
 ```json
 {
-  "providers": ["12983612785124"],
-  "hashes": ["0x0000000000000001", "0x0000000000000002", "0x0000000000000003"],
+  "providers": ["0x0000000000000029"], // 01 + 08 + 20
+  "hashes": ["0x0000000000000001", "0x0000000000000008", "0x0000000000000020"], // [BrightId, CommunityStakingSilver, Discord]
   "issuanceDates": ["123456789", "123456789", "123456789"],
   "expirationDates": ["123456789", "123456789", "123456789"]
 }
