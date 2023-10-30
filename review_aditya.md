@@ -1,5 +1,6 @@
 **General**
 - Improve natspec documentation to capture input params and return value
+- Nitpick but you could explore moving all the interfaces to it's own folder
 
 # GitcoinVerifier
 
