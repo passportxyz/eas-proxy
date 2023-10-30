@@ -1,6 +1,6 @@
 **General**
 - Improve natspec documentation to capture input params and return value
-- Nitpick but you could explore moving all the interfaces to it's own folder
+- Nitpick but you could explore moving all the interfaces to it's
 
 # GitcoinVerifier
 
@@ -64,3 +64,9 @@ for (uint i = 0; i < attestationsLength; ) {
 - `L82`: Emit event `addProvider`. Add zero check
 - `L90`: Emit event `createNewVersion`.
 - `L146`, `L147`: Store .length as variables as use them in the for loop to save gas
+
+**High**
+
+- `L106`: It looks like we generate 1 attestation for all the stamps. The fact that we have nested loops makes this function quite expensive. Would recommend seeing if this can be done offchain instead.
+If the goal of this function is to be consumed by other contracts, I fear it might be expensive for a protocol to make this call, fetch all the stamps and then run their computation. It may exceed the block limit as the project scales 
+- `L167`: as opposed to hardcoding it to 256 , could we instead have a provider count variable / something else equivalent?i
