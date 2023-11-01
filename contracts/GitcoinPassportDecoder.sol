@@ -7,7 +7,16 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgrade
 import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
 import { IGitcoinResolver } from "./IGitcoinResolver.sol";
-import { Credential, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
+import { Credential, Score, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
+
+/// An attestation for the specified ETH address does not exist
+error AttestationDoesNotExist();
+
+/// An attestation was found but it has been revoked
+error AttestationRevoked(uint64 revocationTime);
+
+/// An attestation was found but it is expired
+error AttestationExpired(uint64 expirationTime);
 
 /**
  * @title GitcoinPassportDecoder
@@ -34,7 +43,10 @@ contract GitcoinPassportDecoder is
   IGitcoinResolver public gitcoinResolver;
 
   // Passport attestation schema UID
-  bytes32 public schemaUID;
+  bytes32 public passportSchemaUID;
+
+  // Score attestation schema UID
+  bytes32 public scoreSchemaUID;
 
   function initialize() public initializer {
     __Ownable_init();
@@ -69,10 +81,18 @@ contract GitcoinPassportDecoder is
 
   /**
    * @dev Sets the schemaUID for the Passport Attestation.
-   * @param _schemaUID The UID of the schema used to make the user's attestation
+   * @param _schemaUID The UID of the schema used to make the user's passport attestation
    */
-  function setSchemaUID(bytes32 _schemaUID) public onlyOwner {
-    schemaUID = _schemaUID;
+  function setPassportSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    passportSchemaUID = _schemaUID;
+  }
+
+  /**
+   * @dev Sets the schemaUID for the Score Attestation.
+   * @param _schemaUID The UID of the schema used to make the user's score attestation
+   */
+  function setScoreSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    scoreSchemaUID = _schemaUID;
   }
 
   /**
@@ -109,12 +129,24 @@ contract GitcoinPassportDecoder is
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.getUserAttestation(
       userAddress,
-      schemaUID
+      passportSchemaUID
     );
 
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
 
+    // Check for revocation time
+    if (attestation.revocationTime > 0) {
+      revert AttestationRevoked(attestation.revocationTime);
+    }
+
+    // Check for expiration time
+    if (
+      attestation.expirationTime > 0 &&
+      attestation.expirationTime <= block.timestamp
+    ) {
+      revert AttestationExpired(attestation.expirationTime);
+    }
     // Set up the variables to assign the attestion data output to
     uint256[] memory providers;
     bytes32[] memory hashes;
@@ -207,5 +239,49 @@ contract GitcoinPassportDecoder is
     // Return the memory passport array
     return passportMemoryArray;
   }
-}
 
+  /**
+   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
+   * @param userAddress User's address
+   */
+  function getScore(address userAddress) public view returns (Score memory) {
+    // Get the attestation UID from the user's attestations
+    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
+      userAddress,
+      scoreSchemaUID
+    );
+
+    // Check for revocation time
+    if (attestationUID == 0) {
+      revert AttestationDoesNotExist();
+    }
+
+    // Get the attestation from the user's attestation UID
+    Attestation memory attestation = getAttestation(attestationUID);
+
+    // Check for revocation time
+    if (attestation.revocationTime > 0) {
+      revert AttestationRevoked(attestation.revocationTime);
+    }
+
+    // Check for expiration time
+    if (
+      attestation.expirationTime > 0 &&
+      attestation.expirationTime <= block.timestamp
+    ) {
+      revert AttestationExpired(attestation.expirationTime);
+    }
+
+    // Set up the variables to assign the attestion data output to
+    Score memory score;
+
+    // Decode the attestion output
+    (score.score, score.scorerID, score.decimals) = abi.decode(
+      attestation.data,
+      (uint256, uint256, uint256)
+    );
+
+    // Return the score attestation
+    return score;
+  }
+}
