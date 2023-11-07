@@ -7,7 +7,7 @@
       "address": "0xAcfE09Fd03f7812F022FBf636700AdEA18Fd2A7A"
     },
     "GitcoinResolver": {
-      "address": "0xA10606c17d94a4DBDc4dD804d1B88fF5030aeE94"
+      "address": "0xAb4124548751C15d002b9c7cb9488190847b1fe1"
     },
     "GitcoinVerifier": {
       "address": "0x5bC95C6e11520D25BE8c7bDf7AAc3E2eEAbD8564"
@@ -22,6 +22,9 @@
       "score": {
         "uid": "0xf72ba57b5fb4c12a5f967574bc44a11efb8be76bcfbf47ced36e1afe226ba702"
       }
+    },
+    "GitcoinPassportDecoder": {
+      "address": "0x6BDb1C8EDa7cC998435598E43ddd346A3a9aC832"
     }
   },
   "0xa": {
