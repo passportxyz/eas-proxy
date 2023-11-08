@@ -130,6 +130,7 @@ if (
 ) {
   if (config.networks) {
     config.networks["baseGoerli"] = {
+      gasPrice: 1000005,
       url: process.env.CB_PROVIDER_URL as string,
       accounts: [process.env.CB_PRIVATE_KEY as string],
       chainId: 84531,

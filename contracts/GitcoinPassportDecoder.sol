@@ -27,6 +27,9 @@ contract GitcoinPassportDecoder is
   // Mapping of the current version to provider arrays
   mapping(uint32 => string[]) public providerVersions;
 
+  // Mapping of previously stored providers
+  mapping(string => uint256) public savedProviders;
+
   // Current version number
   uint32 public currentVersion;
 
@@ -35,6 +38,9 @@ contract GitcoinPassportDecoder is
 
   // Passport attestation schema UID
   bytes32 public schemaUID;
+
+  // Errors
+  error ProviderAlreadyExists();
 
   function initialize() public initializer {
     __Ownable_init();
@@ -77,10 +83,21 @@ contract GitcoinPassportDecoder is
 
   /**
    * @dev Adds a new provider to the end of the providerVersions mapping
-   * @param provider Name of individual provider
+   * @param providers provider name
    */
-  function addProvider(string memory provider) public onlyOwner {
-    providerVersions[currentVersion].push(provider);
+  function addProviders(string[] memory providers) public onlyOwner {
+    for (uint256 i = 0; i < providers.length; ) {
+      if (savedProviders[providers[i]] == 1) {
+        revert ProviderAlreadyExists();
+      }
+
+      providerVersions[currentVersion].push(providers[i]);  
+      savedProviders[providers[i]] = 1;
+
+      unchecked {
+        ++i;
+      }
+    }
   }
 
   /**
@@ -172,7 +189,7 @@ contract GitcoinPassportDecoder is
 
         uint256 mappedProvidersIndex = i * 256 + j;
 
-        if (mappedProvidersIndex < mappedProviders.length) {
+        if (mappedProvidersIndex > mappedProviders.length) {
           break;
         }
 
@@ -194,6 +211,7 @@ contract GitcoinPassportDecoder is
 
           hashIndex += 1;
         }
+
         unchecked {
           bit <<= 1;
           ++j;

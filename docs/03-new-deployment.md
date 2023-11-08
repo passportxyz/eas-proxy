@@ -7,13 +7,15 @@ This is the process to deploy these contracts to a new chain:
 2. Run `initializeChainInfo.ts` and follow instructions
 3. Run `deployVerifierAndAttester.ts` (this calls addVerifier and setEASAddress)
 4. Run `deployResolver.ts`
-5. Verify contracts, make sure everything looks good
-6. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
-7. Create EAS schemas pointing to the new resolver,
+5. Run `deployPassportDecoder.ts`
+6. Run `setupDecoder.ts`
+7. Verify contracts, make sure everything looks good
+8. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
+9. Create EAS schemas pointing to the new resolver,
    add to `onChainInfo.json`
-8. In the Passport app, copy over the new `deployments` directory and
-   configure `NEXT_PUBLIC_ACTIVE_ON_CHAIN_PASSPORT_CHAINIDS`
-   and `NEXT_PUBLIC_POSSIBLE_ON_CHAIN_PASSPORT_CHAINIDS`
+10. In the Passport app, copy over the new `deployments` directory and
+    configure `NEXT_PUBLIC_ACTIVE_ON_CHAIN_PASSPORT_CHAINIDS`
+    and `NEXT_PUBLIC_POSSIBLE_ON_CHAIN_PASSPORT_CHAINIDS`
 
 ## Notes
 

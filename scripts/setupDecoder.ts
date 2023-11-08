@@ -45,7 +45,7 @@ export async function main() {
   );
 
   const providers = newBitMap.map((bit) => bit.name);
-  await passportDecoder.createNewVersion(providers);
+  await passportDecoder.addProviders(providers);
 
   console.log(`✅ Added providers to GitcoinPassportDecoder.`);
 }
