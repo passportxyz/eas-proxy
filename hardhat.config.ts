@@ -37,6 +37,14 @@ let config: HardhatUserConfig = {
           browserURL: "https://goerli.basescan.org/",
         },
       },
+      {
+        network: "linea-goerli",
+        chainId: 59140,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://goerli.lineascan.build/",
+        },
+      },
     ],
   },
   gasReporter: {
@@ -86,6 +94,14 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         from: process.env.DEPLOYER_ADDRESS as string,
       };
     }
+    if (process.env.OP_GOERLI_PROVIDER_URL) {
+      config.networks["optimism-goerli"] = {
+        url: process.env.OP_GOERLI_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 420,
+        from: process.env.DEPLOYER_ADDRESS as string,
+      };
+    }
   }
 }
 
@@ -114,6 +130,7 @@ if (
 ) {
   if (config.networks) {
     config.networks["baseGoerli"] = {
+      gasPrice: 1000005,
       url: process.env.CB_PROVIDER_URL as string,
       accounts: [process.env.CB_PRIVATE_KEY as string],
       chainId: 84531,
