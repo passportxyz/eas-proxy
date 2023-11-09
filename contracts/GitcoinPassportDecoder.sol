@@ -40,7 +40,7 @@ contract GitcoinPassportDecoder is
   bytes32 public schemaUID;
 
   // Errors
-  error ProviderAlreadyExists();
+  error ProviderAlreadyExists(string provider);
 
   function initialize() public initializer {
     __Ownable_init();
@@ -88,10 +88,10 @@ contract GitcoinPassportDecoder is
   function addProviders(string[] memory providers) public onlyOwner {
     for (uint256 i = 0; i < providers.length; ) {
       if (savedProviders[providers[i]] == 1) {
-        revert ProviderAlreadyExists();
+        revert ProviderAlreadyExists(providers[i]);
       }
 
-      providerVersions[currentVersion].push(providers[i]);  
+      providerVersions[currentVersion].push(providers[i]);
       savedProviders[providers[i]] = 1;
 
       unchecked {
@@ -226,4 +226,3 @@ contract GitcoinPassportDecoder is
     return passportMemoryArray;
   }
 }
-

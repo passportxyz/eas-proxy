@@ -83,8 +83,9 @@ const easEncodeInvalidStamp = () => {
   return encodedData;
 };
 
-describe.only("GitcoinPassportDecoder", function () {
-  this.beforeAll(async function () {
+describe("GitcoinPassportDecoder", function () {
+  this.beforeEach(async function () {
+    // this.beforeAll(async function () {
     const [ownerAccount, iamAcct, recipientAccount, otherAccount] =
       await ethers.getSigners();
 
@@ -233,9 +234,7 @@ describe.only("GitcoinPassportDecoder", function () {
     await this.gitcoinPassportDecoder.setEASAddress(EAS_CONTRACT_ADDRESS);
     await this.gitcoinPassportDecoder.setGitcoinResolver(this.resolverAddress);
     await this.gitcoinPassportDecoder.setSchemaUID(this.passportSchemaUID);
-  });
 
-  this.beforeEach(async function () {
     this.passport.nonce = await this.gitcoinVerifier.recipientNonces(
       this.passport.multiAttestationRequest[0].data[0].recipient
     );
@@ -270,6 +269,42 @@ describe.only("GitcoinPassportDecoder", function () {
           .addProviders(["NewStamp3"])
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
+
+    it("should throw an error when trying to add the same provider twice in different function calls", async function () {
+      const providersForCall1 = ["NewStamp1", "NewStamp2"];
+      const providersForCall2 = ["NewStamp3", "NewStamp2"];
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(providersForCall1);
+
+      await expect(
+        this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .addProviders(providersForCall2)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinPassportDecoder,
+        "ProviderAlreadyExists"
+      );
+    });
+
+    it("should throw an error when trying to add the same provider twice in the same function call", async function () {
+      const providersForCall1 = [
+        "NewStamp1",
+        "NewStamp2",
+        "NewStamp3",
+        "NewStamp2",
+      ];
+
+      await expect(
+        this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .addProviders(providersForCall1)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinPassportDecoder,
+        "ProviderAlreadyExists"
+      );
+    });
   });
 
   describe("Decoding Passports", async function () {
@@ -283,6 +318,10 @@ describe.only("GitcoinPassportDecoder", function () {
       );
 
       const { v, r, s } = ethers.Signature.from(signature);
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(providers);
 
       // Submit attestations
       const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
@@ -319,6 +358,10 @@ describe.only("GitcoinPassportDecoder", function () {
       );
 
       const { v, r, s } = ethers.Signature.from(signature);
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(providers);
 
       // Submit attestations
       const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
