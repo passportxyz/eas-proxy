@@ -68,11 +68,18 @@ contract GitcoinPassportDecoder is
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
   /**
-  1 * @dev Gets the EAS contract.
+   * @dev Gets the EAS contract.
    */
   function getEASAddress() public view returns (IEAS) {
     return eas;
   }
+
+  /**
+    * @dev Gets providers by version.
+   */
+   function getProviders(uint32 version) public view returns (string[] memory) {
+     return providerVersions[version];
+   }
 
   /**
    * @dev Sets the address of the EAS contract.

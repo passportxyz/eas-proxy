@@ -263,6 +263,22 @@ describe("GitcoinPassportDecoder", function () {
       expect(lastProvider === "NewStamp3");
     });
 
+    it("should return provider given a version", async function () {
+      const providers = ["NewStamp1", "NewStamp2"];
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(providers);
+
+      const currentVersion = await this.gitcoinPassportDecoder.currentVersion();
+
+      const savedProviders = await this.gitcoinPassportDecoder.getProviders(
+        currentVersion
+      );
+
+      expect(savedProviders.length === providers.length);
+      expect(savedProviders).to.eql(providers);
+    });
+
     it("should not allow anyone other than owner to append new providers array in the provider mapping", async function () {
       await expect(
         this.gitcoinPassportDecoder
