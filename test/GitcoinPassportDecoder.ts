@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
   SchemaEncoder,
+  ZERO_ADDRESS,
   ZERO_BYTES32,
 } from "@ethereum-attestation-service/eas-sdk";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
@@ -305,6 +306,45 @@ describe("GitcoinPassportDecoder", function () {
         "ProviderAlreadyExists"
       );
     });
+
+    it("should throw an error when trying to add a provider with a zero value", async function () {
+      const providersForCall1 = [""];
+      await expect(
+        this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .addProviders(providersForCall1)
+      ).to.be.revertedWithCustomError(this.gitcoinPassportDecoder, "ZeroValue");
+    });
+
+    it("should allow adding providers with the same name but different version", async function () {
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(["NewStamp1", "NewStamp2"]);
+
+      const currentVersion = await this.gitcoinPassportDecoder.currentVersion();
+
+      const lastProvider = await this.gitcoinPassportDecoder.providerVersions(
+        currentVersion,
+        1
+      );
+
+      expect(lastProvider === "NewStamp2");
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .createNewVersion(["NewStamp1"]);
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(["NewStamp2"]);
+
+      const updatedVersion = await this.gitcoinPassportDecoder.currentVersion();
+
+      const updatedLastProvider =
+        await this.gitcoinPassportDecoder.providerVersions(updatedVersion, 1);
+
+      expect(updatedLastProvider === "NewStamp2");
+    });
   });
 
   describe("Decoding Passports", async function () {
@@ -468,6 +508,55 @@ describe("GitcoinPassportDecoder", function () {
           .connect(this.recipient)
           .addProviders(providers)
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+  describe("Contract configuration", function () {
+    const mockAddress = "0x8869E49DE43ca33026D9feB8580977333F07A228";
+    const mockBytes32 =
+      "0xadc444fd654fe0a6aedaa8fadd67d791941738b645c9955f4a1dd66a7af1aae1";
+    async function testSetAddress(
+      functionName: string,
+      addressConstant: string,
+      error: string,
+      addressParam: boolean
+    ) {
+      let mockValue = mockAddress;
+      if (!addressParam) {
+        mockValue = mockBytes32;
+      }
+      it(`should set the ${addressConstant}`, async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          [functionName](mockValue);
+      });
+
+      it(`should not allow anyone other than owner to set the ${addressConstant}`, async function () {
+        await expect(
+          this.gitcoinPassportDecoder
+            .connect(this.recipient)
+            [functionName](mockValue)
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it(`should not allow ${addressConstant} to be set to zero address`, async function () {
+        await expect(
+          this.gitcoinPassportDecoder
+            .connect(this.owner)
+            [functionName](addressParam ? ZERO_ADDRESS : ZERO_BYTES32)
+        ).to.be.revertedWithCustomError(this.gitcoinPassportDecoder, error);
+      });
+    }
+
+    describe("getting and setting EAS address", function () {
+      testSetAddress("setEASAddress", "EAS", "ZeroValue", true);
+    });
+
+    describe("setting resolver address", function () {
+      testSetAddress("setGitcoinResolver", "Resolver", "ZeroValue", true);
+    });
+
+    describe("setting schema", function () {
+      testSetAddress("setSchemaUID", "SchemaUID", "ZeroValue", false);
     });
   });
 });

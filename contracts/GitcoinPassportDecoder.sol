@@ -9,6 +9,8 @@ import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/c
 import { IGitcoinResolver } from "./IGitcoinResolver.sol";
 import { Credential, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title GitcoinPassportDecoder
  * @notice This contract is used to create the bit map of stamp providers onchain, which will allow us to score Passports fully onchain
@@ -22,13 +24,13 @@ contract GitcoinPassportDecoder is
   PausableUpgradeable
 {
   // The instance of the EAS contract.
-  IEAS eas;
+  IEAS public eas;
 
   // Mapping of the current version to provider arrays
   mapping(uint32 => string[]) public providerVersions;
 
   // Mapping of previously stored providers
-  mapping(string => uint256) public savedProviders;
+  mapping(uint32 => mapping(string => uint256)) public savedProviders;
 
   // Current version number
   uint32 public currentVersion;
@@ -41,6 +43,14 @@ contract GitcoinPassportDecoder is
 
   // Errors
   error ProviderAlreadyExists(string provider);
+  error ZeroValue();
+
+  // Events
+  event EASSet(address easAddress);
+  event ResolverSet(address resolverAddress);
+  event SchemaSet(bytes32 schemaUID);
+  event ProvidersAdded(string[] providers);
+  event NewVersionCreated();
 
   function initialize() public initializer {
     __Ownable_init();
@@ -58,55 +68,89 @@ contract GitcoinPassportDecoder is
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
   /**
+  1 * @dev Gets the EAS contract.
+   */
+  function getEASAddress() public view returns (IEAS) {
+    return eas;
+  }
+
+  /**
    * @dev Sets the address of the EAS contract.
    * @param _easContractAddress The address of the EAS contract.
    */
-  function setEASAddress(address _easContractAddress) public onlyOwner {
+  function setEASAddress(address _easContractAddress) external onlyOwner {
+    if (_easContractAddress == address(0)) {
+      revert ZeroValue();
+    }
     eas = IEAS(_easContractAddress);
+    emit EASSet(_easContractAddress);
   }
 
   /**
    * @dev Sets the GitcoinResolver contract.
    * @param _gitcoinResolver The address of the GitcoinResolver contract.
    */
-  function setGitcoinResolver(address _gitcoinResolver) public onlyOwner {
+  function setGitcoinResolver(address _gitcoinResolver) external onlyOwner {
+    if (_gitcoinResolver == address(0)) {
+      revert ZeroValue();
+    }
     gitcoinResolver = IGitcoinResolver(_gitcoinResolver);
+    emit ResolverSet(_gitcoinResolver);
   }
 
   /**
    * @dev Sets the schemaUID for the Passport Attestation.
    * @param _schemaUID The UID of the schema used to make the user's attestation
    */
-  function setSchemaUID(bytes32 _schemaUID) public onlyOwner {
+  function setSchemaUID(bytes32 _schemaUID) external onlyOwner {
+    if (_schemaUID == bytes32(0)) {
+      revert ZeroValue();
+    }
     schemaUID = _schemaUID;
+    emit SchemaSet(_schemaUID);
   }
 
   /**
    * @dev Adds a new provider to the end of the providerVersions mapping
    * @param providers provider name
    */
-  function addProviders(string[] memory providers) public onlyOwner {
+  function addProviders(string[] memory providers) external onlyOwner {
     for (uint256 i = 0; i < providers.length; ) {
-      if (savedProviders[providers[i]] == 1) {
+      if (bytes(providers[i]).length == 0) {
+        revert ZeroValue();
+      }
+
+      if (savedProviders[currentVersion][providers[i]] == 1) {
         revert ProviderAlreadyExists(providers[i]);
       }
 
       providerVersions[currentVersion].push(providers[i]);
-      savedProviders[providers[i]] = 1;
+      savedProviders[currentVersion][providers[i]] = 1;
 
       unchecked {
         ++i;
       }
     }
+    emit ProvidersAdded(providers);
   }
 
   /**
    * @dev Creates a new provider.
-   * @param providerNames Array of provider names
+   * @param providers Array of provider names
    */
-  function createNewVersion(string[] memory providerNames) external onlyOwner {
+  function createNewVersion(string[] memory providers) external onlyOwner {
+    for (uint256 i = 0; i < providers.length; ) {
+      if (bytes(providers[i]).length == 0) {
+        revert ZeroValue();
+      }
+
+      unchecked {
+        ++i;
+      }
+    }
     currentVersion++;
-    providerVersions[currentVersion] = providerNames;
+    providerVersions[currentVersion] = providers;
+    emit NewVersionCreated();
   }
 
   function getAttestation(
@@ -122,7 +166,7 @@ contract GitcoinPassportDecoder is
    */
   function getPassport(
     address userAddress
-  ) public view returns (Credential[] memory) {
+  ) external view returns (Credential[] memory) {
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.getUserAttestation(
       userAddress,
@@ -158,14 +202,17 @@ contract GitcoinPassportDecoder is
     // Set the list of providers to the provider map version
     string[] memory mappedProviders = providerVersions[providerMapVersion];
 
+    uint256 hashLength = uint256(hashes.length);    
+    uint256 expirationLength = uint256(expirationDates.length);
+
     // Check to make sure that the lengths of the hashes, issuanceDates, and expirationDates match, otherwise end the function call
     assert(
-      hashes.length == issuanceDates.length &&
-        hashes.length == expirationDates.length
+      hashLength == issuanceDates.length &&
+        hashLength == expirationLength
     );
 
     // Set the in-memory passport array to be returned to equal the length of the hashes array
-    Credential[] memory passportMemoryArray = new Credential[](hashes.length);
+    Credential[] memory passportMemoryArray = new Credential[](hashLength);
 
     // Now we iterate over the providers array and check each bit that is set
     // If a bit is set
@@ -175,7 +222,7 @@ contract GitcoinPassportDecoder is
       bit = 1;
 
       // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-      if (hashIndex >= expirationDates.length) {
+      if (hashIndex >= expirationLength) {
         break;
       }
 
@@ -183,7 +230,7 @@ contract GitcoinPassportDecoder is
 
       for (uint256 j = 0; j < 256; ) {
         // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-        if (hashIndex >= expirationDates.length) {
+        if (hashIndex >= expirationLength) {
           break;
         }
 
