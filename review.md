@@ -10,7 +10,9 @@
 
 **Questions**
 - `L282`: Thoughts on just withdrawing contract balance as opposed to specifying an amount ?
+  => 💬 This was a specific feature request
 - `L182`: When encoding, why include MULTI_ATTESTATION_REQUEST_TYPEHASH ? Is it cause passport aims to supports another verifier which could use a different format ?
+  => 💬 We are just using EIP712 signatures
 
 **Low**
 - `L6` : Recommend using `@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol`
@@ -112,6 +114,7 @@ for (uint i = 0; i < attestationsLength; ) {
 **Low**
 - `L20`: Mark the visibility of IEAS as `public` / `private` and then add a external function to read that
 - `Pausable` is imported, initialized, but never used. Recommendation: remove Pausable
+  => 💬 we are going to add the pausable functions
 - `L58`: `setEASAddress` can be marked as external
 - `L58`: Emit event `setEASAddress`. Add zero check
 - `L66`: `setGitcoinResolver`  can be marked as external
