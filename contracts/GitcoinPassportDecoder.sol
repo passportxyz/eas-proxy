@@ -9,15 +9,6 @@ import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/c
 import { IGitcoinResolver } from "./IGitcoinResolver.sol";
 import { Credential, Score, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
 
-/// An attestation for the specified ETH address does not exist
-error AttestationDoesNotExist();
-
-/// An attestation was found but it has been revoked
-error AttestationRevoked(uint64 revocationTime);
-
-/// An attestation was found but it is expired
-error AttestationExpired(uint64 expirationTime);
-
 import "hardhat/console.sol";
 
 /**
@@ -53,9 +44,23 @@ contract GitcoinPassportDecoder is
   // Score attestation schema UID
   bytes32 public scoreSchemaUID;
 
-  // Errors
+  /// A provider with the same name already exists
+  /// @param provider the name of the duplicate provider
   error ProviderAlreadyExists(string provider);
+
+  /// TODO: check the usage of this
   error ZeroValue();
+
+  /// An attestation for the specified ETH address does not exist
+  error AttestationDoesNotExist();
+
+  /// An attestation was found but it has been revoked
+  /// @param revocationTime the revocation time of the attestation
+  error AttestationRevoked(uint64 revocationTime);
+
+  /// An attestation was found but it is expired
+  /// @param expirationTime the expiration time of the attestation
+  error AttestationExpired(uint64 expirationTime);
 
   // Events
   event EASSet(address easAddress);
@@ -181,6 +186,11 @@ contract GitcoinPassportDecoder is
     emit NewVersionCreated();
   }
 
+  /**
+   * Return an attestation for a given UID
+   * @param attestationUID The UID of the attestation
+   * TODO: do we really need this helper?
+   */
   function getAttestation(
     bytes32 attestationUID
   ) public view returns (Attestation memory) {
