@@ -1,3 +1,6 @@
+Original review file from the Allo Team: https://github.com/thelostone-mc/eas-proxy/blob/review/review.md
+This version contains comments added by the Passport Team.
+
 ## General
 
 - **Replace `require` with custom errors to save gas:** Consider using custom error handling to replace `require` statements to provide more descriptive error messages without removing any code.
