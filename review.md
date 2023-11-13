@@ -10,9 +10,9 @@
 
 **Questions**
 - `L282`: Thoughts on just withdrawing contract balance as opposed to specifying an amount ?
-  => 💬 This was a specific feature request
+> This was a specific feature request
 - `L182`: When encoding, why include MULTI_ATTESTATION_REQUEST_TYPEHASH ? Is it cause passport aims to supports another verifier which could use a different format ?
-  => 💬 We are just using EIP712 signatures
+> We are just using EIP712 signatures
 
 **Low**
 - `L6` : Recommend using `@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol`
@@ -114,7 +114,7 @@ for (uint i = 0; i < attestationsLength; ) {
 **Low**
 - `L20`: Mark the visibility of IEAS as `public` / `private` and then add a external function to read that
 - `Pausable` is imported, initialized, but never used. Recommendation: remove Pausable
-  => 💬 we are going to add the pausable functions
+> we are going to add the pausable functions
 - `L58`: `setEASAddress` can be marked as external
 - `L58`: Emit event `setEASAddress`. Add zero check
 - `L66`: `setGitcoinResolver`  can be marked as external
@@ -135,7 +135,19 @@ Consider exploring if there can be an attestation for every stamp and the creati
 If the goal of this function is to be consumed by other contracts, I fear it might be expensive for a protocol to make this call, fetch all the stamps and then run their computation. It may exceed the block limit as the project scales 
 - `L167`: as opposed to hardcoding it to 256 , could we instead have a provider count variable / something else equivalent?
 
-
+**Response to High concerns**
+> - in our current setup, the number of stamp providers that we have is < 100. This means, that all the providers that we have will be encoded in only 1 element of the providers array in the attestation
+> - it is highly unlikely that we will reach more than 256 providers anytime soon, we are not in a race to increase our number of providers
+> - we are revamping some of our stamps, which has the effect that we are removing some providers and introducing new ones. This is precisely why we have introduced a versioning for the stamps, for each version we will have a specific list of providers that can be stored in a passport attestation and a specific bitmap indicating how the bits in the providers array are allocated
+> - so it seems that in the nested for-loop implementation in the `getPassport` implementation, the outer loop will never loop more than 1 element for the foreseeable future. The possibility to have more elements in the array still exists, but it is not yet on the horizon, and by the time we get to that point, there will probably be things to consider as well
+> - regarding the suggestion `L167: as opposed to hardcoding it to 256 , could we instead have a provider count variable / something else equivalent?`
+>   - this is not necessary, as that count would be equal to the length of any of the other arrays (`hashes`, `issuanceDates`, `expirationDates`), and in the current line 170 we already exit the loop if any of those lengths is reached:
+> ```sol
+>         // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
+>         if (hashIndex >= expirationDates.length) {
+>           break;
+>         }
+> ```
 
 # GitcoinVerifierWithVeraxPortal.sol
 
