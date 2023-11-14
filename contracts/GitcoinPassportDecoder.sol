@@ -28,7 +28,7 @@ contract GitcoinPassportDecoder is
   mapping(uint32 => string[]) public providerVersions;
 
   // Mapping of previously stored providers
-  mapping(uint32 => mapping(string => uint256)) public savedProviders;
+  mapping(uint32 => mapping(string => uint256)) public reversedMappingVersions;
 
   // Current version number
   uint32 public currentVersion;
@@ -153,12 +153,12 @@ contract GitcoinPassportDecoder is
         revert EmptyProvider();
       }
 
-      if (savedProviders[currentVersion][providers[i]] == 1) {
+      if (reversedMappingVersions[currentVersion][providers[i]] == 1) {
         revert ProviderAlreadyExists(providers[i]);
       }
 
       providerVersions[currentVersion].push(providers[i]);
-      savedProviders[currentVersion][providers[i]] = 1;
+      reversedMappingVersions[currentVersion][providers[i]] = 1;
 
       unchecked {
         ++i;

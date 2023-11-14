@@ -8,14 +8,12 @@ import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/c
 
 import { GitcoinResolver } from "../GitcoinResolver.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title GitcoinPassportDecoder
  * @notice This contract is used to create the bit map of stamp providers onchain, which will allow us to score Passports fully onchain
  */
 
-contract GitcoinPassportDecoderUpdate is 
+contract GitcoinPassportDecoderUpdate is
   Initializable,
   UUPSUpgradeable,
   OwnableUpgradeable,
@@ -58,7 +56,7 @@ contract GitcoinPassportDecoderUpdate is
 
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
-  function finaltest() pure public returns (uint) {
+  function finaltest() public pure returns (uint) {
     return 1;
   }
 
@@ -87,7 +85,9 @@ contract GitcoinPassportDecoderUpdate is
     providerVersions[version] = providerNames;
   }
 
-  function getAttestation(bytes32 attestationUID) public view returns (Attestation memory) {
+  function getAttestation(
+    bytes32 attestationUID
+  ) public view returns (Attestation memory) {
     Attestation memory attestation = eas.getAttestation(attestationUID);
     return attestation;
   }
@@ -98,7 +98,10 @@ contract GitcoinPassportDecoderUpdate is
    * @param schemaUID The UID of the schema used to make the user's attestation
    */
   // getPassport(address): Calls GitcoinResolver to get the passport, then uses the provider mapping to decode the bits in the provider bitmap. This function can handle any bitmap version. The version is stored in the attestation, and the contract has all the data for historical bitmap versions. This should also demux the dates and hashes, so that the user gets back a normal looking passport object.
-  function getPassport(address userAddress, bytes32 schemaUID) public view returns (Credential[] memory) {
+  function getPassport(
+    address userAddress,
+    bytes32 schemaUID
+  ) public view returns (Credential[] memory) {
     // Set the GitcoinResolver
     GitcoinResolver resolver = GitcoinResolver(gitcoinResolverAddress);
 
@@ -116,7 +119,13 @@ contract GitcoinPassportDecoderUpdate is
     uint16 providerMapVersion;
 
     // Decode the attestion output
-    (providers, hashes, issuanceDates, expirationDates, providerMapVersion) = abi.decode(
+    (
+      providers,
+      hashes,
+      issuanceDates,
+      expirationDates,
+      providerMapVersion
+    ) = abi.decode(
       attestation.data,
       (uint256[], bytes32[], uint64[], uint64[], uint16)
     );
