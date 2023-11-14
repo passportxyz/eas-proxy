@@ -380,7 +380,10 @@ describe("GitcoinPassportDecoder", function () {
         this.gitcoinPassportDecoder
           .connect(this.owner)
           .addProviders(providersForCall1)
-      ).to.be.revertedWithCustomError(this.gitcoinPassportDecoder, "ZeroValue");
+      ).to.be.revertedWithCustomError(
+        this.gitcoinPassportDecoder,
+        "EmptyProvider"
+      );
     });
 
     it("should allow adding providers with the same name but different version", async function () {
@@ -640,7 +643,7 @@ describe("GitcoinPassportDecoder", function () {
       );
     });
   });
-  describe.only("Getting score", function () {
+  describe("Getting score", function () {
     beforeEach(async function () {
       const attestation = {
         multiAttestationRequest: [
