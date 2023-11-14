@@ -12,8 +12,7 @@ import {
   fee1,
   EAS_CONTRACT_ADDRESS,
 } from "./helpers/verifierTests";
-
-const providers = [BigInt("111")];
+import providerBitmap from "../deployments/providerBitMapInfo.json";
 
 const issuanceDates = [1694628559, 1695047108, 1693498086];
 const expirationDates = [1702404559, 1702823108, 1701274086];
@@ -50,7 +49,7 @@ const invalidHashes = [
   ),
 ];
 
-const easEncodePassport = () => {
+const easEncodePassport = (providers: bigint[]) => {
   const schemaEncoder = new SchemaEncoder(
     "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
   );
@@ -84,7 +83,7 @@ const easEncodeInvalidStamp = () => {
   );
 
   const encodedData = schemaEncoder.encodeData([
-    { name: "providers", value: providers, type: "uint256[]" },
+    { name: "providers", value: [BigInt("111")], type: "uint256[]" },
     { name: "hashes", value: invalidHashes, type: "bytes32[]" },
     { name: "issuanceDates", value: invalidIssuanceDates, type: "uint64[]" },
     {
@@ -100,13 +99,14 @@ const easEncodeInvalidStamp = () => {
 describe("GitcoinPassportDecoder", function () {
   this.beforeEach(async function () {
     // this.beforeAll(async function () {
-    const [ownerAccount, iamAcct, recipientAccount, otherAccount] =
+    const [ownerAccount, iamAcct, recipientAccount, otherAccount, gasAccount] =
       await ethers.getSigners();
 
     this.owner = ownerAccount;
     this.iamAccount = iamAcct;
     this.recipient = recipientAccount;
     this.otherAcct = otherAccount;
+    this.gasAccount = gasAccount;
 
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory(
@@ -213,7 +213,7 @@ describe("GitcoinPassportDecoder", function () {
               expirationTime: 1708741995,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodePassport(),
+              data: easEncodePassport([BigInt("111")]),
               value: 0,
             },
           ],
@@ -723,6 +723,115 @@ describe("GitcoinPassportDecoder", function () {
         this.gitcoinPassportDecoder,
         "AttestationNotFound"
       );
+    });
+  });
+  describe.only("Gas costs of getting passport", function () {
+    beforeEach(async function () {
+      const decoderAddress = await this.gitcoinPassportDecoder.getAddress();
+
+      const GitcoinPassportDecoderGasUsage = await ethers.getContractFactory(
+        "GitcoinPassportDecoderGasUsage",
+        this.owner
+      );
+
+      this.gitcoinPassportDecoderGasUsage =
+        await GitcoinPassportDecoderGasUsage.deploy(decoderAddress);
+
+      const allProviders = providerBitmap.map((bit) => bit.name);
+      const hashesOverride: string[] = [];
+      const issuanceDatesOverride: number[] = [];
+      const expirationDatesOverride: number[] = [];
+
+      const filledProviders = "111111111111111111111111111111111111111111111";
+
+      allProviders.forEach((_provider, i) => {
+        if (i < filledProviders.length) {
+          hashesOverride.push(ZERO_BYTES32);
+          issuanceDatesOverride.push(1694628559);
+          expirationDatesOverride.push(1702404559);
+        }
+      });
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner)
+        .addProviders(allProviders);
+
+      const schemaEncoder = new SchemaEncoder(
+        "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
+      );
+
+      const fullBitMap = [BigInt(filledProviders)];
+
+      const encodedPassport = schemaEncoder.encodeData([
+        { name: "providers", value: fullBitMap, type: "uint256[]" },
+        { name: "hashes", value: hashesOverride, type: "bytes32[]" },
+        {
+          name: "issuanceDates",
+          value: issuanceDatesOverride,
+          type: "uint64[]",
+        },
+        {
+          name: "expirationDates",
+          value: expirationDatesOverride,
+          type: "uint64[]",
+        },
+        {
+          name: "providerMapVersion",
+          value: providerMapVersion,
+          type: "uint16",
+        },
+      ]);
+
+      const fullPassport = {
+        multiAttestationRequest: [
+          {
+            schema: this.passportSchemaUID,
+            data: [
+              {
+                recipient: this.gasAccount.address,
+                expirationTime: 1708741995,
+                revocable: true,
+                refUID: ZERO_BYTES32,
+                data: encodedPassport,
+                value: 0,
+              },
+            ],
+          },
+        ],
+        nonce: await this.getNonce(this.gasAccount.address),
+        fee: fee1,
+      };
+
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        fullPassport
+      );
+
+      const { v, r, s } = ethers.Signature.from(signature);
+
+      // Submit attestations
+      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+        fullPassport,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
+
+      await verifiedPassport.wait();
+    });
+    it("should set fullProvider as valid in test contract", async function () {
+      await this.gitcoinPassportDecoderGasUsage.checkPassport(
+        this.gasAccount.address
+      );
+      const providerStatus =
+        await this.gitcoinPassportDecoderGasUsage.hasCredentials(
+          this.gasAccount.address
+        );
+      expect(BigInt(1)).to.equal(providerStatus);
     });
   });
 });
