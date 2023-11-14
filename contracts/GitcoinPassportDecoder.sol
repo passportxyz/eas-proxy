@@ -7,7 +7,7 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgrade
 import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
 import { IGitcoinResolver } from "./IGitcoinResolver.sol";
-import { Credential, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
+import { Credential, Score, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
 
 /**
  * @title GitcoinPassportDecoder
@@ -22,13 +22,13 @@ contract GitcoinPassportDecoder is
   PausableUpgradeable
 {
   // The instance of the EAS contract.
-  IEAS eas;
+  IEAS public eas;
 
   // Mapping of the current version to provider arrays
   mapping(uint32 => string[]) public providerVersions;
 
   // Mapping of previously stored providers
-  mapping(string => uint256) public savedProviders;
+  mapping(uint32 => mapping(string => uint256)) public reversedMappingVersions;
 
   // Current version number
   uint32 public currentVersion;
@@ -37,10 +37,34 @@ contract GitcoinPassportDecoder is
   IGitcoinResolver public gitcoinResolver;
 
   // Passport attestation schema UID
-  bytes32 public schemaUID;
+  bytes32 public passportSchemaUID;
 
-  // Errors
+  // Score attestation schema UID
+  bytes32 public scoreSchemaUID;
+
+  /// A provider with the same name already exists
+  /// @param provider the name of the duplicate provider
   error ProviderAlreadyExists(string provider);
+
+  /// An empty provider string was passed
+  error EmptyProvider();
+
+  /// Zero value was passed
+  error ZeroValue();
+
+  /// An attestation for the specified ETH address does not exist within the GitcoinResolver
+  error AttestationNotFound();
+
+  /// An attestation was found but it is expired
+  /// @param expirationTime the expiration time of the attestation
+  error AttestationExpired(uint64 expirationTime);
+
+  // Events
+  event EASSet(address easAddress);
+  event ResolverSet(address resolverAddress);
+  event SchemaSet(bytes32 schemaUID);
+  event ProvidersAdded(string[] providers);
+  event NewVersionCreated();
 
   function initialize() public initializer {
     __Ownable_init();
@@ -58,57 +82,115 @@ contract GitcoinPassportDecoder is
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
   /**
+   * @dev Gets the EAS contract.
+   */
+  function getEASAddress() public view returns (IEAS) {
+    return eas;
+  }
+
+  /**
+   * @dev Gets providers by version.
+   */
+  function getProviders(uint32 version) public view returns (string[] memory) {
+    return providerVersions[version];
+  }
+
+  /**
    * @dev Sets the address of the EAS contract.
    * @param _easContractAddress The address of the EAS contract.
    */
-  function setEASAddress(address _easContractAddress) public onlyOwner {
+  function setEASAddress(address _easContractAddress) external onlyOwner {
+    if (_easContractAddress == address(0)) {
+      revert ZeroValue();
+    }
     eas = IEAS(_easContractAddress);
+    emit EASSet(_easContractAddress);
   }
 
   /**
    * @dev Sets the GitcoinResolver contract.
    * @param _gitcoinResolver The address of the GitcoinResolver contract.
    */
-  function setGitcoinResolver(address _gitcoinResolver) public onlyOwner {
+  function setGitcoinResolver(address _gitcoinResolver) external onlyOwner {
+    if (_gitcoinResolver == address(0)) {
+      revert ZeroValue();
+    }
     gitcoinResolver = IGitcoinResolver(_gitcoinResolver);
+    emit ResolverSet(_gitcoinResolver);
   }
 
   /**
    * @dev Sets the schemaUID for the Passport Attestation.
-   * @param _schemaUID The UID of the schema used to make the user's attestation
+   * @param _schemaUID The UID of the schema used to make the user's passport attestation
    */
-  function setSchemaUID(bytes32 _schemaUID) public onlyOwner {
-    schemaUID = _schemaUID;
+  function setPassportSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    if (_schemaUID == bytes32(0)) {
+      revert ZeroValue();
+    }
+    passportSchemaUID = _schemaUID;
+    emit SchemaSet(_schemaUID);
+  }
+
+  /**
+   * @dev Sets the schemaUID for the Score Attestation.
+   * @param _schemaUID The UID of the schema used to make the user's score attestation
+   */
+  function setScoreSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    if (_schemaUID == bytes32(0)) {
+      revert ZeroValue();
+    }
+    scoreSchemaUID = _schemaUID;
+    emit SchemaSet(_schemaUID);
   }
 
   /**
    * @dev Adds a new provider to the end of the providerVersions mapping
    * @param providers provider name
    */
-  function addProviders(string[] memory providers) public onlyOwner {
+  function addProviders(string[] memory providers) external onlyOwner {
     for (uint256 i = 0; i < providers.length; ) {
-      if (savedProviders[providers[i]] == 1) {
+      if (bytes(providers[i]).length == 0) {
+        revert EmptyProvider();
+      }
+
+      if (reversedMappingVersions[currentVersion][providers[i]] == 1) {
         revert ProviderAlreadyExists(providers[i]);
       }
 
       providerVersions[currentVersion].push(providers[i]);
-      savedProviders[providers[i]] = 1;
+      reversedMappingVersions[currentVersion][providers[i]] = 1;
 
       unchecked {
         ++i;
       }
     }
+    emit ProvidersAdded(providers);
   }
 
   /**
    * @dev Creates a new provider.
-   * @param providerNames Array of provider names
+   * @param providers Array of provider names
    */
-  function createNewVersion(string[] memory providerNames) external onlyOwner {
+  function createNewVersion(string[] memory providers) external onlyOwner {
+    for (uint256 i = 0; i < providers.length; ) {
+      if (bytes(providers[i]).length == 0) {
+        revert EmptyProvider();
+      }
+
+      unchecked {
+        ++i;
+      }
+    }
     currentVersion++;
-    providerVersions[currentVersion] = providerNames;
+    providerVersions[currentVersion] = providers;
+    emit NewVersionCreated();
   }
 
+  /**
+   * Return an attestation for a given UID
+   * @param attestationUID The UID of the attestation
+   * TODO: do we really need this helper?
+   */
   function getAttestation(
     bytes32 attestationUID
   ) public view returns (Attestation memory) {
@@ -122,16 +204,28 @@ contract GitcoinPassportDecoder is
    */
   function getPassport(
     address userAddress
-  ) public view returns (Credential[] memory) {
+  ) external view returns (Credential[] memory) {
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.getUserAttestation(
       userAddress,
-      schemaUID
+      passportSchemaUID
     );
+
+    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
+    if (attestationUID == 0) {
+      revert AttestationNotFound();
+    }
 
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
 
+    // Check for expiration time
+    if (
+      attestation.expirationTime > 0 &&
+      attestation.expirationTime <= block.timestamp
+    ) {
+      revert AttestationExpired(attestation.expirationTime);
+    }
     // Set up the variables to assign the attestion data output to
     uint256[] memory providers;
     bytes32[] memory hashes;
@@ -158,38 +252,36 @@ contract GitcoinPassportDecoder is
     // Set the list of providers to the provider map version
     string[] memory mappedProviders = providerVersions[providerMapVersion];
 
+    uint256 hashLength = uint256(hashes.length);
+    uint256 providersBucketsLength = uint256(providers.length);
+    uint256 mappedProvidersLength = uint256(mappedProviders.length);
+
     // Check to make sure that the lengths of the hashes, issuanceDates, and expirationDates match, otherwise end the function call
     assert(
-      hashes.length == issuanceDates.length &&
-        hashes.length == expirationDates.length
+      hashLength == issuanceDates.length && hashLength == expirationDates.length
     );
 
     // Set the in-memory passport array to be returned to equal the length of the hashes array
-    Credential[] memory passportMemoryArray = new Credential[](hashes.length);
+    Credential[] memory passportMemoryArray = new Credential[](hashLength);
 
     // Now we iterate over the providers array and check each bit that is set
     // If a bit is set
     // we set the hash, issuanceDate, expirationDate, and provider to a Credential struct
     // then we push that struct to the passport storage array and populate the passportMemoryArray
-    for (uint256 i = 0; i < providers.length; ) {
+    for (uint256 i = 0; i < providersBucketsLength; ) {
       bit = 1;
-
-      // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-      if (hashIndex >= expirationDates.length) {
-        break;
-      }
 
       uint256 provider = uint256(providers[i]);
 
       for (uint256 j = 0; j < 256; ) {
         // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-        if (hashIndex >= expirationDates.length) {
+        if (hashIndex >= hashLength) {
           break;
         }
 
         uint256 mappedProvidersIndex = i * 256 + j;
 
-        if (mappedProvidersIndex > mappedProviders.length) {
+        if (mappedProvidersIndex > mappedProvidersLength) {
           break;
         }
 
@@ -224,5 +316,45 @@ contract GitcoinPassportDecoder is
 
     // Return the memory passport array
     return passportMemoryArray;
+  }
+
+  /**
+   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
+   * @param userAddress User's address
+   */
+  function getScore(address userAddress) public view returns (Score memory) {
+    // Get the attestation UID from the user's attestations
+    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
+      userAddress,
+      scoreSchemaUID
+    );
+
+    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
+    if (attestationUID == 0) {
+      revert AttestationNotFound();
+    }
+
+    // Get the attestation from the user's attestation UID
+    Attestation memory attestation = getAttestation(attestationUID);
+
+    // Check for expiration time
+    if (
+      attestation.expirationTime > 0 &&
+      attestation.expirationTime <= block.timestamp
+    ) {
+      revert AttestationExpired(attestation.expirationTime);
+    }
+
+    // Set up the variables to assign the attestion data output to
+    Score memory score;
+
+    // Decode the attestion output
+    (score.score, score.scorerID, score.decimals) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    // Return the score attestation
+    return score;
   }
 }
