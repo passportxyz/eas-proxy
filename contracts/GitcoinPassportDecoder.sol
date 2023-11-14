@@ -51,12 +51,8 @@ contract GitcoinPassportDecoder is
   /// TODO: check the usage of this
   error ZeroValue();
 
-  /// An attestation for the specified ETH address does not exist
-  error AttestationDoesNotExist();
-
-  /// An attestation was found but it has been revoked
-  /// @param revocationTime the revocation time of the attestation
-  error AttestationRevoked(uint64 revocationTime);
+  /// An attestation for the specified ETH address does not exist within the GitcoinResolver
+  error AttestationNotFound();
 
   /// An attestation was found but it is expired
   /// @param expirationTime the expiration time of the attestation
@@ -140,7 +136,11 @@ contract GitcoinPassportDecoder is
    * @param _schemaUID The UID of the schema used to make the user's score attestation
    */
   function setScoreSchemaUID(bytes32 _schemaUID) public onlyOwner {
+    if (_schemaUID == bytes32(0)) {
+      revert ZeroValue();
+    }
     scoreSchemaUID = _schemaUID;
+    emit SchemaSet(_schemaUID);
   }
 
   /**
@@ -211,13 +211,13 @@ contract GitcoinPassportDecoder is
       passportSchemaUID
     );
 
+    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
+    if (attestationUID == 0) {
+      revert AttestationNotFound();
+    }
+
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
-
-    // Check for revocation time
-    if (attestation.revocationTime > 0) {
-      revert AttestationRevoked(attestation.revocationTime);
-    }
 
     // Check for expiration time
     if (
@@ -333,18 +333,13 @@ contract GitcoinPassportDecoder is
       scoreSchemaUID
     );
 
-    // Check for revocation time
+    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
     if (attestationUID == 0) {
-      revert AttestationDoesNotExist();
+      revert AttestationNotFound();
     }
 
     // Get the attestation from the user's attestation UID
     Attestation memory attestation = getAttestation(attestationUID);
-
-    // Check for revocation time
-    if (attestation.revocationTime > 0) {
-      revert AttestationRevoked(attestation.revocationTime);
-    }
 
     // Check for expiration time
     if (
