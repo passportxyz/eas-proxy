@@ -253,12 +253,12 @@ contract GitcoinPassportDecoder is
     string[] memory mappedProviders = providerVersions[providerMapVersion];
 
     uint256 hashLength = uint256(hashes.length);
-    uint256 expirationLength = uint256(expirationDates.length);
     uint256 providersBucketsLength = uint256(providers.length);
+    uint256 mappedProvidersLength = uint256(mappedProviders.length);
 
     // Check to make sure that the lengths of the hashes, issuanceDates, and expirationDates match, otherwise end the function call
     assert(
-      hashLength == issuanceDates.length && hashLength == expirationLength
+      hashLength == issuanceDates.length && hashLength == expirationDates.length
     );
 
     // Set the in-memory passport array to be returned to equal the length of the hashes array
@@ -271,22 +271,17 @@ contract GitcoinPassportDecoder is
     for (uint256 i = 0; i < providersBucketsLength; ) {
       bit = 1;
 
-      // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-      if (hashIndex >= expirationLength) {
-        break;
-      }
-
       uint256 provider = uint256(providers[i]);
 
       for (uint256 j = 0; j < 256; ) {
         // Check to make sure that the hashIndex is less than the length of the expirationDates array, and if not, exit the loop
-        if (hashIndex >= expirationLength) {
+        if (hashIndex >= hashLength) {
           break;
         }
 
         uint256 mappedProvidersIndex = i * 256 + j;
 
-        if (mappedProvidersIndex > mappedProviders.length) {
+        if (mappedProvidersIndex > mappedProvidersLength) {
           break;
         }
 
