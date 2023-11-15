@@ -4,7 +4,8 @@ import {
   NO_EXPIRATION,
   ZERO_BYTES32,
 } from "@ethereum-attestation-service/eas-sdk";
-import { easEncodeScore, easEncodeStamp } from "./mockAttestations";
+import { easEncodeScore, encodeEasPassport } from "./mockAttestations";
+import { SCHEMA_REGISTRY_ABI } from "../abi/SCHEMA_REGISTRY_ABI";
 
 export const googleStamp = {
   provider: "Google",
@@ -24,10 +25,8 @@ export const twitterStamp = {
 // SEPOLIA SPECIFIC
 export const EAS_CONTRACT_ADDRESS =
   "0xC2679fBD37d54388Ce493F1DB75320D236e1815e";
-export const GITCOIN_STAMP_SCHEMA =
-  "0x853a55f39e2d1bf1e6731ae7148976fbbb0c188a898a233dba61a233d8c0e4a4";
-export const GITCOIN_SCORE_SCHEMA =
-  "0x0f2928937d46e9ec78b350750185d2f495e708f79b383cef23b903fe120d9a2e";
+export const EAS_SCHEMA_REGISTRY_ADDRESS =
+  "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0";
 
 export const fee1 = ethers.parseEther("0.001");
 export const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
@@ -56,12 +55,74 @@ export const passportTypes = {
 export const scorer1Score = {
   score: 100,
   scorer_id: 420,
+  score_decimals: 18,
 };
 
 export const scorer2Score = {
   score: 200,
   scorer_id: 240,
+  score_decimals: 18,
 };
+
+const easEncodedPassport = encodeEasPassport(
+  [12345678],
+  [
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234",
+  ],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
+  0
+);
+
+const easOtherEncodedPassport = encodeEasPassport(
+  [12345678],
+  [
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+  ],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
+  0
+);
 
 export function sumDataLengths(requests: { data: any[] }[]): number {
   return requests.reduce((total, request) => total + request.data.length, 0);
@@ -72,7 +133,9 @@ export const runVerifierTests = (
   initializeVerifier: (
     deployment: any,
     issuer: string,
-    attester: string
+    attester: string,
+    gitcoinPassportSchemaUID: string,
+    gitcoinScoreSchemaUID: string
   ) => Promise<void>
 ) => {
   describe(contractName, function () {
@@ -94,11 +157,6 @@ export const runVerifierTests = (
       // Deploy GitcoinVerifier
       const GitcoinVerifier = await ethers.getContractFactory(contractName);
       this.gitcoinVerifier = await GitcoinVerifier.deploy();
-      await initializeVerifier(
-        this.gitcoinVerifier,
-        await this.iamAccount.getAddress(),
-        await this.gitcoinAttester.getAddress()
-      );
 
       // Add verifier to GitcoinAttester allow-list
       const tx = await this.gitcoinAttester.addVerifier(
@@ -106,6 +164,69 @@ export const runVerifierTests = (
       );
       await tx.wait();
 
+      // Deploy the gitcoin resolver
+      const GitcoinResolver = await ethers.getContractFactory(
+        "GitcoinResolver",
+        owner
+      );
+      this.gitcoinResolver = await GitcoinResolver.deploy();
+      await this.gitcoinResolver
+        .connect(owner)
+        .initialize(EAS_CONTRACT_ADDRESS, this.gitcoinAttester.getAddress());
+
+      // Register the passport schema, also specify the resolver in the schema
+      const schemaRegistry = new ethers.Contract(
+        EAS_SCHEMA_REGISTRY_ADDRESS,
+        SCHEMA_REGISTRY_ABI,
+        owner
+      );
+
+      const passportSchema =
+        "uint256[] providers,bytes32[] hashes,uint64[] issuanceDates,uint64[] expirationDates,uint16 providerMapVersion";
+      const scoreSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
+      const revocable = true;
+
+      const transactionRegisterPassportSchema = await schemaRegistry.register(
+        passportSchema,
+        this.gitcoinResolver.getAddress(),
+        revocable
+      );
+
+      const transactionRegisterPassportSchemaReceipt =
+        await transactionRegisterPassportSchema.wait();
+
+      const registerEvent =
+        transactionRegisterPassportSchemaReceipt.logs.filter((log: any) => {
+          return log.fragment.name == "Registered";
+        });
+
+      this.passportAttestationSchemaUID = registerEvent[0].args[0];
+
+      // Register the score schema, also specify the resolver in the schema
+      const transactionRegisterScoreSchema = await schemaRegistry.register(
+        scoreSchema,
+        this.gitcoinResolver.getAddress(),
+        revocable
+      );
+
+      const transactionRegisterScoreSchemaReceipt =
+        await transactionRegisterScoreSchema.wait();
+      const registerEventScoreSchema =
+        transactionRegisterScoreSchemaReceipt.logs.filter((log: any) => {
+          return log.fragment.name == "Registered";
+        });
+
+      this.scoreAttestationSchemaUID = registerEventScoreSchema[0].args[0];
+
+      await initializeVerifier(
+        this.gitcoinVerifier,
+        await this.iamAccount.getAddress(),
+        await this.gitcoinAttester.getAddress(),
+        this.passportAttestationSchemaUID,
+        this.scoreAttestationSchemaUID
+      );
+
+      // Create some test data
       const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
 
       this.domain = {
@@ -122,51 +243,29 @@ export const runVerifierTests = (
       this.passport = {
         multiAttestationRequest: [
           {
-            schema: GITCOIN_STAMP_SCHEMA,
+            schema: this.passportAttestationSchemaUID,
             data: [
+              // Passport attestation with 21 stamps
               {
                 recipient: await this.recipientAccount.getAddress(),
                 expirationTime: NO_EXPIRATION,
                 revocable: true,
                 refUID: ZERO_BYTES32,
-                data: easEncodeStamp(googleStamp),
-                value: 0,
-              },
-              {
-                recipient: await this.recipientAccount.getAddress(),
-                expirationTime: NO_EXPIRATION,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data: easEncodeStamp(facebookStamp),
+                data: easEncodedPassport,
                 value: 0,
               },
             ],
           },
           {
-            schema: GITCOIN_SCORE_SCHEMA,
+            schema: this.scoreAttestationSchemaUID,
             data: [
+              // Score attestation
               {
                 recipient: await this.recipientAccount.getAddress(),
                 expirationTime: NO_EXPIRATION,
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodeScore(scorer1Score),
-                value: 0,
-              },
-              {
-                recipient: await this.recipientAccount.getAddress(),
-                expirationTime: NO_EXPIRATION,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data: easEncodeScore(scorer2Score),
-                value: 0,
-              },
-              {
-                recipient: await this.recipientAccount.getAddress(),
-                expirationTime: NO_EXPIRATION,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data: easEncodeScore(scorer2Score),
                 value: 0,
               },
             ],
@@ -180,20 +279,20 @@ export const runVerifierTests = (
         return {
           multiAttestationRequest: [
             {
-              schema: GITCOIN_STAMP_SCHEMA,
+              schema: this.passportAttestationSchemaUID,
               data: [
                 {
                   recipient: await this.recipientAccount.getAddress(),
                   expirationTime: NO_EXPIRATION,
                   revocable: true,
                   refUID: ZERO_BYTES32,
-                  data: easEncodeStamp(googleStamp),
+                  data: easOtherEncodedPassport,
                   value: 0,
                 },
               ],
             },
             {
-              schema: GITCOIN_SCORE_SCHEMA,
+              schema: this.scoreAttestationSchemaUID,
               data: [
                 {
                   recipient: await this.recipientAccount.getAddress(),
