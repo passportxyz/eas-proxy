@@ -13,13 +13,17 @@ export type Stamp = {
 export type Score = {
   score: number;
   scorer_id: number;
+  score_decimals: number;
 };
 
 export const easEncodeScore = (score: Score) => {
-  const schemaEncoder = new SchemaEncoder("uint32 score,uint32 scorer_id");
+  const schemaEncoder = new SchemaEncoder(
+    "uint256 score,uint32 scorer_id,uint8 score_decimals"
+  );
   const encodedData = schemaEncoder.encodeData([
-    { name: "score", value: score.score, type: "uint32" },
+    { name: "score", value: score.score, type: "uint256" },
     { name: "scorer_id", value: score.scorer_id, type: "uint32" },
+    { name: "score_decimals", value: score.score_decimals, type: "uint8" },
   ]);
   return encodedData;
 };
@@ -39,6 +43,30 @@ export const encodedData = easEncodeStamp({
   provider: "TestProvider",
   stampHash: "234567890",
 });
+
+export const encodeEasPassport = (
+  providers: number[],
+  hashes: string[],
+  issuanceDates: number[],
+  expirationDates: number[],
+  providerMapVersion: number
+): string => {
+  const attestationSchemaEncoder = new SchemaEncoder(
+    "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
+  );
+
+  const encodedData = attestationSchemaEncoder.encodeData([
+    { name: "providers", value: providers, type: "uint256[]" },
+    { name: "hashes", value: hashes, type: "bytes32[]" },
+    { name: "issuanceDates", value: issuanceDates, type: "uint64[]" },
+    { name: "expirationDates", value: expirationDates, type: "uint64[]" },
+    // This will be used later for decoding provider mapping for scoring and within the resolver contract
+    // Currently set to zero but should be updated whenever providerBitMapInfo.json is updated
+    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
+  ]);
+
+  return encodedData;
+};
 
 export const attestationRequest = {
   recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
