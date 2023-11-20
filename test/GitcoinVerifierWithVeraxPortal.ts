@@ -1,13 +1,15 @@
 import { ethers } from "hardhat";
 import { runVerifierTests } from "./helpers/verifierTests";
-import {
-  GITCOIN_SCORE_SCHEMA,
-  GITCOIN_STAMP_SCHEMA,
-} from "./helpers/verifierTests";
 
 runVerifierTests(
   "GitcoinVerifierWithVeraxPortal",
-  async (contract, issuer, attester) => {
+  async (
+    contract,
+    issuer,
+    attester,
+    gitcoinPassportSchemaUID,
+    gitcoinScoreSchemaUID
+  ) => {
     const GitcoinVeraxPortal = await ethers.getContractFactory(
       "GitcoinVeraxPortal"
     );
@@ -35,12 +37,12 @@ runVerifierTests(
 
     await gitcoinVeraxPortal.addToAllowlist(await contract.getAddress());
     await gitcoinVeraxPortal.addSchemaMapping(
-      GITCOIN_SCORE_SCHEMA,
-      GITCOIN_SCORE_SCHEMA
+      gitcoinScoreSchemaUID,
+      gitcoinScoreSchemaUID
     );
     await gitcoinVeraxPortal.addSchemaMapping(
-      GITCOIN_STAMP_SCHEMA,
-      GITCOIN_STAMP_SCHEMA
+      gitcoinPassportSchemaUID,
+      gitcoinPassportSchemaUID
     );
   }
 );
