@@ -13,6 +13,8 @@ import { GitcoinAttester } from "./GitcoinAttester.sol";
 
 import { IGitcoinResolver } from "./IGitcoinResolver.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title GitcoinResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
@@ -42,6 +44,30 @@ contract GitcoinResolver is
 
   // List of addresses allowed to write to this contract
   mapping(address => bool) public allowlist;
+
+  // Score data for querying
+  struct Score {
+    uint32 score; // compacted uint value 4 decimal places
+    uint64 issuanceDate; // For checking the age of the stamp, without loading the attestation
+    uint64 expirationDate; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
+    uint32 scorerId; // would we need this ???
+  }
+
+  /**
+   * @dev A struct representing the passport score for an ETH address.
+   */
+  //  TODO: use same type from IGitcoinPassportDecoder ?
+  struct ScoreAttestation {
+    uint256 score;
+    uint32 scorerID;
+    uint8 decimals;
+  }
+
+  // Mapping of addresses to scores
+  mapping(address => Score) public scores;
+
+  // Mapping of active passport score schemas - used when storing scores to state
+  mapping(bytes32 => bool) public scoreSchemas;
 
   /**
    * @dev Creates a new resolver.
@@ -88,6 +114,22 @@ contract GitcoinResolver is
     _unpause();
   }
 
+  /**
+   * @dev Set supported score schemas.
+   * @param schema The score schema uid
+   */
+  function setScoreSchema(bytes32 schema) external onlyOwner {
+    scoreSchemas[schema] = true;
+  }
+
+  /**
+   * @dev Unset supported score schemas.
+   * @param schema The score schema uid
+   */
+  function unsetScoreSchema(bytes32 schema) external onlyOwner {
+    scoreSchemas[schema] = false;
+  }
+
   // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -108,6 +150,10 @@ contract GitcoinResolver is
   function attest(
     Attestation calldata attestation
   ) external payable whenNotPaused onlyAllowlisted returns (bool) {
+    if (scoreSchemas[attestation.schema]) {
+      _setScore(attestation);
+    }
+
     return _attest(attestation);
   }
 
@@ -120,6 +166,27 @@ contract GitcoinResolver is
       .uid;
 
     return true;
+  }
+
+  /**
+   * @dev Stores Score data in state.
+   * @param attestation The new attestation.
+   */
+  function _setScore(Attestation calldata attestation) private {
+    // Decode the score attestion output
+    (uint256 score, uint32 scorerId, ) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    // TODO: save based on schema scores[schema][attestation.recipient]
+    scores[attestation.recipient] = Score(
+      // TODO: correct conversion to uint32
+      uint32(score),
+      attestation.time,
+      attestation.expirationTime,
+      scorerId
+    );
   }
 
   /**

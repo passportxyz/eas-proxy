@@ -3,6 +3,7 @@ import {
   SchemaEncoder,
   ZERO_BYTES32,
   NO_EXPIRATION,
+  SchemaValue,
 } from "@ethereum-attestation-service/eas-sdk";
 
 export type Stamp = {
@@ -11,7 +12,7 @@ export type Stamp = {
 };
 
 export type Score = {
-  score: number;
+  score: SchemaValue;
   scorer_id: number;
   score_decimals: number;
 };
