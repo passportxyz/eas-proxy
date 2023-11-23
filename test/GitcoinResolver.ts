@@ -193,7 +193,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.scores(recipient.address);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123456");
@@ -223,7 +223,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.scores(recipient.address);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123400");
@@ -253,7 +253,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.scores(recipient.address);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123456");

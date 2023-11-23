@@ -176,7 +176,10 @@ contract GitcoinResolver is
   }
 
   /**
-   * @dev Returns the cached score for a given address.
+   *
+   * @param user The ETH address of the recipient
+   * @return The `CachedScore` for the given ETH address.
+   * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
    */
   function getCachedScore(
     address user
@@ -242,6 +245,12 @@ contract GitcoinResolver is
     return true;
   }
 
+  /**
+   *
+   * @param user The ETH address of the recipient
+   * @param schema THE UID of the chema
+   * @return The attestation UID or 0x0 if not found
+   */
   function getUserAttestation(
     address user,
     bytes32 schema

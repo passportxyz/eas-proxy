@@ -43,6 +43,7 @@ OpenZeppelin's `Ownable`.
 All of the smart contracts are upgradeable and pauseable.
 
 The flow:
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -67,13 +68,13 @@ sequenceDiagram
     Attester->>EAS : multiAttest
     activate Resolver
     EAS->>Resolver : multiAttest
-    Resolver-->>EAS : 
+    Resolver-->>EAS :
     deactivate Resolver
     EAS-->>Attester : UUIDs: bytes32[]
     deactivate EAS
-    Attester-->>Verifier : 
+    Attester-->>Verifier :
     deactivate Attester
-    Verifier-->>App : 
+    Verifier-->>App :
     deactivate Verifier
     App-->>User : display onchain status
 
@@ -95,7 +96,6 @@ sequenceDiagram
     Decoder-->>External : Credential[]
     deactivate Decoder
 ```
-
 
 ## GitcoinAttester
 
@@ -161,13 +161,19 @@ recipient, in order for the call to `verifyAndAttest` to get through. It will be
 reverted otherwise.
 
 ## GitcoinResolver
+You can find the implementation of the GitcoinResolver _[here](../contracts/GitcoinResolver.sol)_
 
 EAS provides a mechanism to perform additional validations for stamps and
 implement additional smart contract functionality related to attestations using
 [resolver contracts](https://docs.attest.sh/docs/tutorials/resolver-contracts).
-For our use-case we will use resolver contracts to track which attestations a
-given recipient owns (this information is not provided by the EAS smart contract
-by default).
+For our use-case we will use resolver contracts for the following purposes:
+
+- to track which attestations a given recipient owns (this information is not
+  provided by the EAS smart contract by default)
+- caching the latest score that a user has, in order to provide more efficient
+  access to a users score (cheaper in terms of gas costs)
+
+### Tracking attestations
 
 The attestations are stored in a mapping that allows storing attestations
 from any schema:
@@ -176,16 +182,52 @@ from any schema:
 mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 ```
 
+The meaning of this nested mapping is the following:
+
+```txt
+user ETH address => schema UID => attestation UID
+```
+
 In order to ensure the integrity of the data that a resolver stores, resolver
-smart contract shall only validate and store date from trusted sources:
+smart contract shall only validate and store data from trusted sources:
 
 - a trusted EAS contract
 - a trusted Attester
 
+### Caching users scores
+
+In order to provide faster access to a users score, the informatio from score
+attestations is cached in an attribute of the `GitcoinResolver` smart contract:
+
+```sol
+  // Mapping of addresses to scores
+  mapping(address => CachedScore) private scores;
+```
+
+where `CachedScore` is defined as follows:
+
+```sol
+struct CachedScore {
+  uint32 score;
+  uint64 issuanceDate;
+  uint64 expirationDate;
+  uint32 scorerId;
+}
+```
+
+Retreiving the latest score for a user becomes much cheaper in terms of gas costs
+and easier using the helper function:
+
+```sol
+function getCachedScore(
+  address user
+) external view returns (CachedScore memory);
+```
 
 ## GitcoinPassportDecoder
 
-This is a convenience smart contract that can be used by any party to check for the on-chain passport attestation for a given ETH address.
+This is a convenience smart contract that can be used by any party to check for
+the on-chain passport attestation for a given ETH address.
 See the documentation [How to Decode Passport Attestations
 ](./05-querying-passport-attestations-onchain.md) for more details.
 
