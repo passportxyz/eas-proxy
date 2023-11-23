@@ -103,7 +103,7 @@ describe("Upgrading GitcoinAttester", function () {
   });
 });
 
-describe("Upgrading GitcoinResolver", function () {
+describe.only("Upgrading GitcoinResolver", function () {
   this.beforeEach(async function () {
     const [owner, mockEASAccount] = await ethers.getSigners();
     this.owner = owner;

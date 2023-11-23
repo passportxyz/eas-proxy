@@ -4,7 +4,10 @@ import {
   ZERO_BYTES32,
   NO_EXPIRATION,
   SchemaValue,
+  Attestation
 } from "@ethereum-attestation-service/eas-sdk";
+
+import { v4 as uuidv4 } from "uuid";
 
 export type Stamp = {
   provider: string;
@@ -24,9 +27,27 @@ export const easEncodeScore = (score: Score) => {
   const encodedData = schemaEncoder.encodeData([
     { name: "score", value: score.score, type: "uint256" },
     { name: "scorer_id", value: score.scorer_id, type: "uint32" },
-    { name: "score_decimals", value: score.score_decimals, type: "uint8" },
+    { name: "score_decimals", value: score.score_decimals, type: "uint8" }
   ]);
   return encodedData;
+};
+
+export const getScoreAttestation = (
+  attestion: Pick<Attestation, "attester" | "recipient" | "schema">,
+  score: Score
+): Attestation => {
+  const scoreEncodedData = easEncodeScore(score);
+  const uid = ethers.keccak256(ethers.toUtf8Bytes(uuidv4()));
+  return {
+    uid: uid,
+    time: NO_EXPIRATION,
+    expirationTime: NO_EXPIRATION,
+    revocationTime: NO_EXPIRATION,
+    refUID: ZERO_BYTES32,
+    revocable: true,
+    data: scoreEncodedData,
+    ...attestion
+  };
 };
 
 export const easEncodeStamp = (stamp: Stamp) => {
@@ -35,14 +56,14 @@ export const easEncodeStamp = (stamp: Stamp) => {
 
   const encodedData = schemaEncoder.encodeData([
     { name: "provider", value: providerValue, type: "bytes32" },
-    { name: "hash", value: providerValue, type: "bytes32" }, // TODO decode hash here
+    { name: "hash", value: providerValue, type: "bytes32" } // TODO decode hash here
   ]);
   return encodedData;
 };
 
 export const encodedData = easEncodeStamp({
   provider: "TestProvider",
-  stampHash: "234567890",
+  stampHash: "234567890"
 });
 
 export const encodeEasPassport = (
@@ -63,7 +84,7 @@ export const encodeEasPassport = (
     { name: "expirationDates", value: expirationDates, type: "uint64[]" },
     // This will be used later for decoding provider mapping for scoring and within the resolver contract
     // Currently set to zero but should be updated whenever providerBitMapInfo.json is updated
-    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
+    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" }
   ]);
 
   return encodedData;
@@ -75,7 +96,7 @@ export const attestationRequest = {
   revocable: true,
   data: encodedData,
   refUID: ZERO_BYTES32,
-  value: 0,
+  value: 0
 };
 
 export const gitcoinVCSchema =
@@ -83,5 +104,5 @@ export const gitcoinVCSchema =
 
 export const multiAttestationRequest = {
   schema: gitcoinVCSchema,
-  data: [attestationRequest, attestationRequest, attestationRequest],
+  data: [attestationRequest, attestationRequest, attestationRequest]
 };

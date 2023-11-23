@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import { Initializable, OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable, OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
-import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
-import { InvalidEAS } from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
+import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
+import {InvalidEAS} from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
 
-import { GitcoinAttester } from "./GitcoinAttester.sol";
+import {GitcoinAttester} from "./GitcoinAttester.sol";
 
-import { IGitcoinResolver } from "./IGitcoinResolver.sol";
+import {IGitcoinResolver} from "./IGitcoinResolver.sol";
 
 import "hardhat/console.sol";
 
@@ -45,29 +45,11 @@ contract GitcoinResolver is
   // List of addresses allowed to write to this contract
   mapping(address => bool) public allowlist;
 
-  // Score data for querying
-  struct Score {
-    uint32 score; // compacted uint value 4 decimal places
-    uint64 issuanceDate; // For checking the age of the stamp, without loading the attestation
-    uint64 expirationDate; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
-    uint32 scorerId; // would we need this ???
-  }
-
-  /**
-   * @dev A struct representing the passport score for an ETH address.
-   */
-  //  TODO: use same type from IGitcoinPassportDecoder ?
-  struct ScoreAttestation {
-    uint256 score;
-    uint32 scorerID;
-    uint8 decimals;
-  }
-
   // Mapping of addresses to scores
-  mapping(address => Score) public scores;
+  mapping(address => CachedScore) private scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
-  mapping(bytes32 => bool) public scoreSchemas;
+  mapping(bytes32 => bool) private scoreSchemas;
 
   /**
    * @dev Creates a new resolver.
@@ -174,19 +156,32 @@ contract GitcoinResolver is
    */
   function _setScore(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (uint256 score, uint32 scorerId, ) = abi.decode(
+    (uint256 score, uint32 scorerId, uint8 digits) = abi.decode(
       attestation.data,
       (uint256, uint32, uint8)
     );
 
-    // TODO: save based on schema scores[schema][attestation.recipient]
-    scores[attestation.recipient] = Score(
-      // TODO: correct conversion to uint32
+    if (digits > 4) {
+      score /= 10 ** (digits - 4);
+    } else if (digits < 4) {
+      score *= 10 ** (4 - digits);
+    }
+
+    scores[attestation.recipient] = CachedScore(
       uint32(score),
       attestation.time,
       attestation.expirationTime,
       scorerId
     );
+  }
+
+  /**
+   * @dev Returns the cached score for a given address.
+   */
+  function getCachedScore(
+    address user
+  ) external view returns (CachedScore memory) {
+    return scores[user];
   }
 
   /**

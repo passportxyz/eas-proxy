@@ -2,12 +2,12 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
   ZERO_BYTES32,
-  NO_EXPIRATION,
+  NO_EXPIRATION
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
-import { easEncodeScore, encodedData } from "./helpers/mockAttestations";
+import { encodedData, getScoreAttestation } from "./helpers/mockAttestations";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
-import { BigNumber } from "@ethersproject/bignumber";
+import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
 
 export const schemaRegistryContractAddress =
   process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
@@ -41,7 +41,7 @@ async function registerSchema(
   return registerEvent[0].args[0];
 }
 
-describe.only("GitcoinResolver", function () {
+describe("GitcoinResolver", function () {
   let owner: any,
     iamAccount: any,
     recipient: any,
@@ -56,7 +56,7 @@ describe.only("GitcoinResolver", function () {
       otherAccount,
       recipientAccount,
       mockEasContractAccount,
-      nonOwnerOrVerifierAccount,
+      nonOwnerOrVerifierAccount
     ] = await ethers.getSigners();
 
     owner = ownerAccount;
@@ -112,7 +112,7 @@ describe.only("GitcoinResolver", function () {
       recipient: recipient.address,
       attester: this.gitcoinAttesterAddress,
       revocable: true,
-      data: encodedData,
+      data: encodedData
     };
   });
 
@@ -162,7 +162,7 @@ describe.only("GitcoinResolver", function () {
         recipient: recipient.address,
         attester: nonOwnerOrVerifier.address,
         revocable: true,
-        data: encodedData,
+        data: encodedData
       };
 
       await expect(
@@ -171,32 +171,95 @@ describe.only("GitcoinResolver", function () {
     });
   });
 
-  describe.only("Saving Scores", function () {
-    it("should save a score", async function () {
-      const bnScore = BigNumber.from("28287000000000000000");
+  describe("Caching Scores", function () {
+    it("should cache a score and properly reduce the number of decimals when there are more than 4", async function () {
+      const attestation = getScoreAttestation(
+        {
+          schema: this.scoreSchemaId,
+          recipient: recipient.address,
+          attester: this.gitcoinAttesterAddress
+        },
+        {
+          score: "12345678000000000000", // That is 12.345678000000000000 (18 decimals)
+          scorer_id: 1,
+          score_decimals: 18
+        }
+      ) as AttestationStruct;
 
-      const scoreAttestation = easEncodeScore({
-        score: bnScore,
-        scorer_id: 1,
-        score_decimals: 0,
-      });
-      const uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
-      const attestation = {
-        uid,
-        schema: this.scoreSchemaId,
-        time: NO_EXPIRATION,
-        expirationTime: NO_EXPIRATION,
-        revocationTime: NO_EXPIRATION,
-        refUID: ZERO_BYTES32,
-        recipient: recipient.address,
-        attester: this.gitcoinAttesterAddress,
-        revocable: true,
-        data: scoreAttestation,
-      };
-
-      await gitcoinResolver.connect(mockEas).attest(attestation);
+      attestation.time = 200500;
+      attestation.expirationTime = 700500;
+      const attestRequest = await gitcoinResolver
+        .connect(mockEas)
+        .attest(attestation);
+      const attestReceipt = attestRequest.wait();
 
       const score = await gitcoinResolver.scores(recipient.address);
+
+      // Score should have been casted to a 4 digit value
+      expect(score[0]).to.equal("123456");
+      expect(score[1]).to.equal("200500");
+      expect(score[2]).to.equal("700500");
+      expect(score[3]).to.equal("1");
+    });
+
+    it("should cache a score and properly increase the number of decimals when there are less than 4", async function () {
+      const attestation = getScoreAttestation(
+        {
+          schema: this.scoreSchemaId,
+          recipient: recipient.address,
+          attester: this.gitcoinAttesterAddress
+        },
+        {
+          score: "1234", // That is 12.34 (2 decimals)
+          scorer_id: 2,
+          score_decimals: 2
+        }
+      ) as AttestationStruct;
+
+      attestation.time = 200500;
+      attestation.expirationTime = 700500;
+      const attestRequest = await gitcoinResolver
+        .connect(mockEas)
+        .attest(attestation);
+      const attestReceipt = attestRequest.wait();
+
+      const score = await gitcoinResolver.scores(recipient.address);
+
+      // Score should have been casted to a 4 digit value
+      expect(score[0]).to.equal("123400");
+      expect(score[1]).to.equal("200500");
+      expect(score[2]).to.equal("700500");
+      expect(score[3]).to.equal("2");
+    });
+
+    it("should cache a score and keep the score unchanged when there are 4 decimals", async function () {
+      const attestation = getScoreAttestation(
+        {
+          schema: this.scoreSchemaId,
+          recipient: recipient.address,
+          attester: this.gitcoinAttesterAddress
+        },
+        {
+          score: "123456", // That is 12.34 (2 decimals)
+          scorer_id: 3,
+          score_decimals: 4
+        }
+      ) as AttestationStruct;
+
+      attestation.time = 200500;
+      attestation.expirationTime = 700500;
+      const attestRequest = await gitcoinResolver
+        .connect(mockEas)
+        .attest(attestation);
+      const attestReceipt = attestRequest.wait();
+
+      const score = await gitcoinResolver.scores(recipient.address);
+
+      // Score should have been casted to a 4 digit value
+      expect(score[0]).to.equal("123456");
+      expect(score[1]).to.equal("200500");
+      expect(score[2]).to.equal("700500");
+      expect(score[3]).to.equal("3");
     });
   });
 
@@ -240,7 +303,7 @@ describe.only("GitcoinResolver", function () {
         recipient: recipient.address,
         attester: recipient,
         revocable: true,
-        data: encodedData,
+        data: encodedData
       };
       // Make an attestations
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
@@ -265,7 +328,7 @@ describe.only("GitcoinResolver", function () {
         recipient: recipient.address,
         attester: recipient,
         revocable: true,
-        data: encodedData,
+        data: encodedData
       };
       // Make an attestations
       await gitcoinResolver
