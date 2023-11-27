@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import { Initializable, OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Attestation, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {Initializable, OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Attestation, IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import { IGitcoinResolver } from "./IGitcoinResolver.sol";
-import { Credential, Score, IGitcoinPassportDecoder } from "./IGitcoinPassportDecoder.sol";
+import {IGitcoinResolver} from "./IGitcoinResolver.sol";
+import {Credential, Score, IGitcoinPassportDecoder} from "./IGitcoinPassportDecoder.sol";
 
 /**
  * @title GitcoinPassportDecoder
@@ -189,7 +189,6 @@ contract GitcoinPassportDecoder is
   /**
    * Return an attestation for a given UID
    * @param attestationUID The UID of the attestation
-   * TODO: do we really need this helper?
    */
   function getAttestation(
     bytes32 attestationUID
