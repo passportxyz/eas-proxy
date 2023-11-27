@@ -161,6 +161,7 @@ recipient, in order for the call to `verifyAndAttest` to get through. It will be
 reverted otherwise.
 
 ## GitcoinResolver
+
 You can find the implementation of the GitcoinResolver _[here](../contracts/GitcoinResolver.sol)_
 
 EAS provides a mechanism to perform additional validations for stamps and
@@ -196,7 +197,7 @@ smart contract shall only validate and store data from trusted sources:
 
 ### Caching users scores
 
-In order to provide faster access to a users score, the informatio from score
+In order to provide faster access to a users score, the information from score
 attestations is cached in an attribute of the `GitcoinResolver` smart contract:
 
 ```sol
@@ -215,7 +216,7 @@ struct CachedScore {
 }
 ```
 
-Retreiving the latest score for a user becomes much cheaper in terms of gas costs
+Retrieving the latest score for a user becomes much cheaper in terms of gas costs
 and easier using the helper function:
 
 ```sol
@@ -223,6 +224,8 @@ function getCachedScore(
   address user
 ) external view returns (CachedScore memory);
 ```
+
+NOTE: the `getCachedScore` function and `struct CachedScore` will convert the `score` attribute to a value that is offset by 4 decimals regardless of what value is set as `Score_decimals` within the attestation. This is done for more cost efficient storage and retrieval. If integrating with the `GitcoinResolver` be sure to adjust the value accordingly.
 
 ## GitcoinPassportDecoder
 
