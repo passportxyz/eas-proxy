@@ -30,5 +30,5 @@ interface IGitcoinPassportDecoder {
     address userAddress
   ) external returns (Credential[] memory);
 
-  function getScore(address userAddress) external returns (Score memory);
+  function getScore(address user) external view returns (uint256);
 }
