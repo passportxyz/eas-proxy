@@ -432,4 +432,60 @@ contract GitcoinPassportDecoder is
 
     return isAboveThreshold;
   }
+
+  /**
+   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
+   * @param user The ETH address of the recipient
+   */
+  function getScore(address user) public view returns (uint256) {
+    Score memory score;
+
+    IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver.getCachedScore(user);
+    
+    bool hasCachedScore = cachedScore.issuanceDate != 0 && cachedScore.expirationDate != 0;
+
+    if (!hasCachedScore) {
+      // fallback for reading the score from the attestation
+      bytes32 attestationUID = gitcoinResolver.getUserAttestation(
+        user,
+        scoreSchemaUID
+      );
+
+      // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
+      if (attestationUID == 0) {
+        revert AttestationNotFound();
+      }
+
+      // Get the attestation from the user's attestation UID
+      Attestation memory attestation = getAttestation(attestationUID);
+
+      // Decode the attestion output
+      (score.score, score.scorerID, score.decimals) = abi.decode(
+        attestation.data,
+        (uint256, uint32, uint8)
+      );
+
+      // Check for expiration time
+      if (
+        attestation.expirationTime > 0 &&
+        attestation.expirationTime <= maxScoreAge
+      ) {
+        revert AttestationExpired(attestation.expirationTime);
+      }
+
+      // Return the score value
+      return score.score;
+    }
+
+    // Check for expiration time
+    if (
+      cachedScore.expirationDate > 0 &&
+      cachedScore.expirationDate <= maxScoreAge
+    ) {
+      revert AttestationExpired(cachedScore.expirationDate);
+    }
+
+    // Return the score value
+    return cachedScore.score;
+  }
 }
