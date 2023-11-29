@@ -39,12 +39,6 @@ export async function main() {
 
   console.log(`✅ Deployed GitcoinResolver to ${resolverAddress}.`);
 
-  const scoreSchema = getScoreSchema();
-
-  await resolver.setScoreSchema(scoreSchema);
-
-  console.log(`✅ Set score schema to ${scoreSchema}.`);
-
   await updateDeploymentsFile(
     "GitcoinResolver",
     getAbi(deployment),
