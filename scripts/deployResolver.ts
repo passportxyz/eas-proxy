@@ -8,6 +8,7 @@ import {
   getAbi,
   getAttesterAddress,
   getEASAddress,
+  getScoreSchema
 } from "./lib/utils";
 
 assertEnvironment();
@@ -16,7 +17,7 @@ export async function main() {
   await confirmContinue({
     contract: "GitcoinResolver",
     network: hre.network.name,
-    chainId: hre.network.config.chainId,
+    chainId: hre.network.config.chainId
   });
 
   const attesterAddress = getAttesterAddress();
@@ -28,7 +29,7 @@ export async function main() {
     [easAddress, attesterAddress],
     {
       initializer: "initialize",
-      kind: "uups",
+      kind: "uups"
     }
   );
 
@@ -37,6 +38,12 @@ export async function main() {
   const resolverAddress = await deployment.getAddress();
 
   console.log(`✅ Deployed GitcoinResolver to ${resolverAddress}.`);
+
+  const scoreSchema = getScoreSchema();
+
+  await resolver.setScoreSchema(scoreSchema);
+
+  console.log(`✅ Set score schema to ${scoreSchema}.`);
 
   await updateDeploymentsFile(
     "GitcoinResolver",
