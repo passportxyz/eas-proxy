@@ -17,8 +17,8 @@ struct Credential {
  */
 struct Score {
   uint256 score;
-  uint256 scorerID;
-  uint256 decimals;
+  uint32 scorerID;
+  uint8 decimals;
 }
 
 /**

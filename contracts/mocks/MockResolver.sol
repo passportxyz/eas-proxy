@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import { Attestation } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
-import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
+import {Attestation} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
 
-import { IGitcoinResolver } from "../IGitcoinResolver.sol";
+import {IGitcoinResolver} from "../IGitcoinResolver.sol";
 
 /**
  * @title GitcoinResolver
@@ -20,6 +20,12 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
 
   // List of addresses allowed to write to this contract
   mapping(address => bool) public allowlist;
+
+  // Mapping of addresses to scores
+  mapping(address => CachedScore) private scores;
+
+  // Mapping of active passport score schemas - used when storing scores to state
+  mapping(bytes32 => bool) private scoreSchemas;
 
   /**
    * @dev Returns whether the resolver supports ETH transfers. Required function from the interface ISchemaResolver that we won't be using
@@ -46,6 +52,15 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
       .uid;
 
     return true;
+  }
+
+  /**
+   * @dev Returns the cached score for a given address.
+   */
+  function getCachedScore(
+    address user
+  ) external view returns (CachedScore memory) {
+    return scores[user];
   }
 
   /**

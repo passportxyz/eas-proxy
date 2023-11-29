@@ -28,7 +28,7 @@ export const assertEnvironment = () => {
 export async function waitForInput(query: string): Promise<unknown> {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
+    output: process.stdout
   });
   return new Promise((resolve) =>
     rl.question(query, (ans) => {
@@ -58,7 +58,7 @@ export async function preHashTypeHashes() {
     "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
     "AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)",
     "MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)",
-    "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)",
+    "PassportAttestationRequest(MultiAttestationRequest[] multiAttestationRequest,uint256 nonce,uint256 fee)AttestationRequestData(address recipient,uint64 expirationTime,bool revocable,bytes32 refUID,bytes data,uint256 value)MultiAttestationRequest(bytes32 schema,AttestationRequestData[] data)"
   ];
   desiredHashes.forEach((hashType) => {
     const hashedValue = utils.keccak256(utils.toUtf8Bytes(hashType));
@@ -95,8 +95,8 @@ export async function updateDeploymentsFile(
     addChainInfoToFile(INFO_FILE, hexChainId, (thisChainExistingInfo) => ({
       ...thisChainExistingInfo,
       [contractName]: {
-        address: newAddress,
-      },
+        address: newAddress
+      }
     }));
 
     console.log(`✅ Updated ${INFO_FILE} with new ${contractName} info`);
@@ -128,7 +128,7 @@ export function addChainInfoToFile(
 
   const newInfo = {
     ...existingInfo,
-    [hexChainId]: thisChainNewInfo,
+    [hexChainId]: thisChainNewInfo
   };
 
   fs.writeFileSync(file, JSON.stringify(newInfo, null, 2));
@@ -141,7 +141,15 @@ export async function transferOwnershipToMultisig(deployment: any) {
   console.log("✅ Transferred ownership of contract to multisig");
 }
 
+type ScheamUid = {
+  uid: string;
+};
+
 let thisChainInfo: {
+  easSchemas: {
+    score: ScheamUid;
+    passport: ScheamUid;
+  };
   GitcoinAttester?: { address?: string };
   GitcoinVerifier?: { address?: string };
   GitcoinResolver?: { address?: string };
@@ -191,7 +199,8 @@ export function getResolverAddress() {
 }
 
 export function getPassportDecoderAddress() {
-  const passportDecoderAddress = getThisChainInfo().GitcoinPassportDecoder?.address;
+  const passportDecoderAddress =
+    getThisChainInfo().GitcoinPassportDecoder?.address;
   if (!passportDecoderAddress)
     throw new Error("GitcoinPassportDecoder address not found in onchainInfo");
   return passportDecoderAddress;
@@ -224,4 +233,11 @@ export function getHexChainId() {
     hexChainId = "0x7a69";
   }
   return hexChainId;
+}
+
+export function getScoreSchema() {
+  const scoreSchema = getThisChainInfo().easSchemas?.score.uid;
+  if (!scoreSchema)
+    throw new Error("Score schema was not found in onchainInfo");
+  return scoreSchema;
 }

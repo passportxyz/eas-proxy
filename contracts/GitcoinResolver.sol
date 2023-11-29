@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import { Initializable, OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable, OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
-import { ISchemaResolver } from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
-import { InvalidEAS } from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
+import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest, IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {ISchemaResolver} from "@ethereum-attestation-service/eas-contracts/contracts/resolver/ISchemaResolver.sol";
+import {InvalidEAS} from "@ethereum-attestation-service/eas-contracts/contracts/Common.sol";
 
-import { GitcoinAttester } from "./GitcoinAttester.sol";
+import {GitcoinAttester} from "./GitcoinAttester.sol";
 
-import { IGitcoinResolver } from "./IGitcoinResolver.sol";
+import {IGitcoinResolver} from "./IGitcoinResolver.sol";
 
 /**
  * @title GitcoinResolver
@@ -42,6 +42,12 @@ contract GitcoinResolver is
 
   // List of addresses allowed to write to this contract
   mapping(address => bool) public allowlist;
+
+  // Mapping of addresses to scores
+  mapping(address => CachedScore) private scores;
+
+  // Mapping of active passport score schemas - used when storing scores to state
+  bytes32 private scoreSchema;
 
   /**
    * @dev Creates a new resolver.
@@ -88,6 +94,14 @@ contract GitcoinResolver is
     _unpause();
   }
 
+  /**
+   * @dev Set supported score schemas.
+   * @param _schema The score schema uid
+   */
+  function setScoreSchema(bytes32 _schema) external onlyOwner {
+    scoreSchema = _schema;
+  }
+
   // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -108,6 +122,10 @@ contract GitcoinResolver is
   function attest(
     Attestation calldata attestation
   ) external payable whenNotPaused onlyAllowlisted returns (bool) {
+    if (scoreSchema == attestation.schema) {
+      _setScore(attestation);
+    }
+
     return _attest(attestation);
   }
 
@@ -120,6 +138,42 @@ contract GitcoinResolver is
       .uid;
 
     return true;
+  }
+
+  /**
+   * @dev Stores Score data in state.
+   * @param attestation The new attestation.
+   */
+  function _setScore(Attestation calldata attestation) private {
+    // Decode the score attestion output
+    (uint256 score, , uint8 digits) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    if (digits > 4) {
+      score /= 10 ** (digits - 4);
+    } else if (digits < 4) {
+      score *= 10 ** (4 - digits);
+    }
+
+    scores[attestation.recipient] = CachedScore(
+      uint32(score),
+      attestation.time,
+      attestation.expirationTime
+    );
+  }
+
+  /**
+   *
+   * @param user The ETH address of the recipient
+   * @return The `CachedScore` for the given ETH address.
+   * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
+   */
+  function getCachedScore(
+    address user
+  ) external view returns (CachedScore memory) {
+    return scores[user];
   }
 
   /**
@@ -180,6 +234,12 @@ contract GitcoinResolver is
     return true;
   }
 
+  /**
+   *
+   * @param user The ETH address of the recipient
+   * @param schema THE UID of the chema
+   * @return The attestation UID or 0x0 if not found
+   */
   function getUserAttestation(
     address user,
     bytes32 schema
