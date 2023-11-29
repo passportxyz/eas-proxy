@@ -199,7 +199,6 @@ describe("GitcoinResolver", function () {
       expect(score[0]).to.equal("123456");
       expect(score[1]).to.equal("200500");
       expect(score[2]).to.equal("700500");
-      expect(score[3]).to.equal("1");
     });
 
     it("should cache a score and properly increase the number of decimals when there are less than 4", async function () {
@@ -229,7 +228,6 @@ describe("GitcoinResolver", function () {
       expect(score[0]).to.equal("123400");
       expect(score[1]).to.equal("200500");
       expect(score[2]).to.equal("700500");
-      expect(score[3]).to.equal("2");
     });
 
     it("should cache a score and keep the score unchanged when there are 4 decimals", async function () {
@@ -259,7 +257,6 @@ describe("GitcoinResolver", function () {
       expect(score[0]).to.equal("123456");
       expect(score[1]).to.equal("200500");
       expect(score[2]).to.equal("700500");
-      expect(score[3]).to.equal("3");
     });
   });
 

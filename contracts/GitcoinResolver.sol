@@ -156,7 +156,7 @@ contract GitcoinResolver is
    */
   function _setScore(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (uint256 score, uint32 scorerId, uint8 digits) = abi.decode(
+    (uint256 score, , uint8 digits) = abi.decode(
       attestation.data,
       (uint256, uint32, uint8)
     );
@@ -170,8 +170,7 @@ contract GitcoinResolver is
     scores[attestation.recipient] = CachedScore(
       uint32(score),
       attestation.time,
-      attestation.expirationTime,
-      scorerId
+      attestation.expirationTime
     );
   }
 

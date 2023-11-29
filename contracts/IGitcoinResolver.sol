@@ -12,7 +12,6 @@ interface IGitcoinResolver {
     uint32 score; // compacted uint value 4 decimal places
     uint64 issuanceDate; // For checking the age of the stamp, without loading the attestation
     uint64 expirationDate; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
-    uint32 scorerId; // would we need this ???  TODO: to be clarified
   }
 
   /**
@@ -29,7 +28,7 @@ interface IGitcoinResolver {
   /**
    *
    * @param user The ETH address of the recipient
-   * @return The `CachedScore` for the given ETH address.  
+   * @return The `CachedScore` for the given ETH address.
    * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
    */
 

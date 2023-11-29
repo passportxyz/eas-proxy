@@ -212,7 +212,6 @@ struct CachedScore {
   uint32 score;
   uint64 issuanceDate;
   uint64 expirationDate;
-  uint32 scorerId;
 }
 ```
 
