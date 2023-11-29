@@ -47,7 +47,7 @@ contract GitcoinResolverUpdate is
   mapping(address => CachedScore) public scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
-  mapping(bytes32 => bool) public scoreSchemas;
+  bytes32 public scoreSchema;
 
   uint256 public aNewPublicVariable;
 

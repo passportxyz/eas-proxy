@@ -13,8 +13,6 @@ import {GitcoinAttester} from "./GitcoinAttester.sol";
 
 import {IGitcoinResolver} from "./IGitcoinResolver.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title GitcoinResolver
  * @notice This contract is used to as a resolver contract for EAS schemas, and it will track the last attestation issued for a given recipient.
@@ -49,7 +47,7 @@ contract GitcoinResolver is
   mapping(address => CachedScore) private scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
-  mapping(bytes32 => bool) private scoreSchemas;
+  bytes32 private scoreSchema;
 
   /**
    * @dev Creates a new resolver.
@@ -98,18 +96,10 @@ contract GitcoinResolver is
 
   /**
    * @dev Set supported score schemas.
-   * @param schema The score schema uid
+   * @param _schema The score schema uid
    */
-  function setScoreSchema(bytes32 schema) external onlyOwner {
-    scoreSchemas[schema] = true;
-  }
-
-  /**
-   * @dev Unset supported score schemas.
-   * @param schema The score schema uid
-   */
-  function unsetScoreSchema(bytes32 schema) external onlyOwner {
-    scoreSchemas[schema] = false;
+  function setScoreSchema(bytes32 _schema) external onlyOwner {
+    scoreSchema = _schema;
   }
 
   // solhint-disable-next-line no-empty-blocks
@@ -132,7 +122,7 @@ contract GitcoinResolver is
   function attest(
     Attestation calldata attestation
   ) external payable whenNotPaused onlyAllowlisted returns (bool) {
-    if (scoreSchemas[attestation.schema]) {
+    if (scoreSchema == attestation.schema) {
       _setScore(attestation);
     }
 
