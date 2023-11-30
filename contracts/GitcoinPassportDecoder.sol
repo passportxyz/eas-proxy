@@ -45,6 +45,9 @@ contract GitcoinPassportDecoder is
   // Maximum score age
   uint256 public maxScoreAge;
 
+  // Minimum score
+  uint256 public threshold;
+
   /// A provider with the same name already exists
   /// @param provider the name of the duplicate provider
   error ProviderAlreadyExists(string provider);
@@ -62,12 +65,23 @@ contract GitcoinPassportDecoder is
   /// @param expirationTime the expiration time of the attestation
   error AttestationExpired(uint64 expirationTime);
 
+  /// A threshold of zero was passed
+  error ZeroThreshold(uint256 threshold);
+
+  /// A max score age of zero was passed
+  error ZeroMaxScoreAge(uint256 maxScoreAge);
+
+  /// Score does not meet the threshold
+  error ScoreDoesNotMeetThreshold(uint256 score);
+
   // Events
   event EASSet(address easAddress);
   event ResolverSet(address resolverAddress);
   event SchemaSet(bytes32 schemaUID);
   event ProvidersAdded(string[] providers);
   event NewVersionCreated();
+  event MaxScoreAgeSet(uint256 maxScoreAge);
+  event ThresholdSet(uint256 threshold);
 
   function initialize() public initializer {
     __Ownable_init();
@@ -150,8 +164,28 @@ contract GitcoinPassportDecoder is
    * @dev Sets the maximum allowed age of the score
    * @param _maxScoreAge Max number of days for max score age
    */
-  function setMaxScoreAge(uint256 _maxScoreAge) public {
-    maxScoreAge = block.timestamp + (_maxScoreAge * 86400);
+  function setMaxScoreAge(uint256 _maxScoreAge) public onlyOwner {
+    if (_maxScoreAge == 0) {
+      revert ZeroMaxScoreAge(_maxScoreAge);
+    }
+
+    maxScoreAge = block.timestamp - (_maxScoreAge * 1 days);
+
+    emit MaxScoreAgeSet(maxScoreAge);
+  }
+
+  /**
+   * @dev Sets the threshold for the minimum score
+   * @param _threshold Minimum score allowed
+   */
+  function setThreshold(uint256 _threshold) public onlyOwner {
+    if (_threshold == 0) {
+      revert ZeroThreshold(_threshold);
+    }
+
+    threshold = _threshold;
+
+    emit ThresholdSet(threshold);
   }
 
   /**
@@ -330,46 +364,6 @@ contract GitcoinPassportDecoder is
 
   /**
    * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
-   * @param userAddress User's address
-   */
-  function getScore_(address userAddress) public view returns (Score memory) {
-    // Get the attestation UID from the user's attestations
-    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
-      userAddress,
-      scoreSchemaUID
-    );
-
-    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
-    if (attestationUID == 0) {
-      revert AttestationNotFound();
-    }
-
-    // Get the attestation from the user's attestation UID
-    Attestation memory attestation = getAttestation(attestationUID);
-
-    // Check for expiration time
-    if (
-      attestation.expirationTime > 0 &&
-      attestation.expirationTime <= block.timestamp
-    ) {
-      revert AttestationExpired(attestation.expirationTime);
-    }
-
-    // Set up the variables to assign the attestion data output to
-    Score memory score;
-
-    // Decode the attestion output
-    (score.score, score.scorerID, score.decimals) = abi.decode(
-      attestation.data,
-      (uint256, uint32, uint8)
-    );
-
-    // Return the score attestation
-    return score;
-  }
-
-  /**
-   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
    * @param user The ETH address of the recipient
    */
   function getScore(address user) public view returns (uint256) {
@@ -400,10 +394,10 @@ contract GitcoinPassportDecoder is
         (uint256, uint32, uint8)
       );
 
-      // Check for expiration time
+      // Check if score is older than max age
       if (
         attestation.expirationTime > 0 &&
-        attestation.expirationTime <= maxScoreAge
+        (block.timestamp > attestation.expirationTime)
       ) {
         revert AttestationExpired(attestation.expirationTime);
       }
@@ -414,13 +408,28 @@ contract GitcoinPassportDecoder is
 
     // Check for expiration time
     if (
-      cachedScore.expirationDate > 0 &&
-      cachedScore.expirationDate <= maxScoreAge
+      cachedScore.issuanceDate > 0 &&
+      block.timestamp > (cachedScore.issuanceDate + maxScoreAge)
     ) {
-      revert AttestationExpired(cachedScore.expirationDate);
+      revert AttestationExpired(cachedScore.issuanceDate);
     }
 
     // Return the score value
     return cachedScore.score;
+  }
+
+  /**
+   * @dev Determines if a user is a human based on their score being above a certain threshold and valid within the max score age
+   * @param user The ETH address of the recipient
+   */
+  function isHuman(address user) public view returns (bool) {
+    uint256 score = getScore(user);
+    bool isAboveThreshold = score >= threshold;
+
+    if (!isAboveThreshold) {
+      revert ScoreDoesNotMeetThreshold(score);
+    }
+
+    return isAboveThreshold;
   }
 }

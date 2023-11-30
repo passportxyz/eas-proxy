@@ -78,6 +78,17 @@ const easEncodeScore = () => {
   return encodedData;
 };
 
+const easInvalidEncodeScore = () => {
+  const schemaEncoder = new SchemaEncoder(scoreEasSchema);
+
+  const encodedData = schemaEncoder.encodeData([
+    { name: "score", value: 13, type: "uint256" },
+    { name: "scorer_id", value: 1, type: "uint32" },
+    { name: "score_decimals", value: 18, type: "uint8" },
+  ]);
+  return encodedData;
+};
+
 const easEncodeInvalidStamp = () => {
   const schemaEncoder = new SchemaEncoder(
     "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
@@ -688,9 +699,8 @@ describe("GitcoinPassportDecoder", function () {
       const score = await this.gitcoinPassportDecoder.getScore(
         this.recipient.address
       );
-      expect(score[0]).to.equal(100n);
-      expect(score[1]).to.equal(1n);
-      expect(score[2]).to.equal(18n);
+
+      expect(score).to.equal(100n);
     });
     it("should revert if address has no attested score", async function () {
       await expect(
@@ -722,6 +732,61 @@ describe("GitcoinPassportDecoder", function () {
       ).to.be.revertedWithCustomError(
         this.gitcoinPassportDecoder,
         "AttestationNotFound"
+      );
+    });
+    it("should return true if the score is above the threshold", async function () {
+      await this.gitcoinPassportDecoder
+        .connect(this.owner).setThreshold(20);
+      const isHuman = await this.gitcoinPassportDecoder.isHuman(this.recipient.address);
+      expect(isHuman).to.equal(true);
+    });
+    it("should return false if the score is below the threshold", async function () {
+      const attestation = {
+        multiAttestationRequest: [
+          {
+            schema: this.passportSchemaUID,
+            data: [
+              {
+                recipient: this.recipient.address,
+                expirationTime: 1708741995,
+                revocable: true,
+                refUID: ZERO_BYTES32,
+                data: easInvalidEncodeScore(),
+                value: 0,
+              },
+            ],
+          },
+        ],
+        nonce: await this.getNonce(this.recipient.address),
+        fee: fee1,
+      };
+
+      const signature = await this.iamAccount.signTypedData(
+        this.domain,
+        passportTypes,
+        attestation
+      );
+
+      const { v, r, s } = ethers.Signature.from(signature);
+
+      // Submit attestations
+      await this.gitcoinVerifier.verifyAndAttest(
+        attestation,
+        v,
+        r,
+        s,
+        {
+          value: fee1,
+        }
+      );
+
+      await this.gitcoinPassportDecoder
+        .connect(this.owner).setThreshold(20);
+      await expect(
+        this.gitcoinPassportDecoder.isHuman(this.recipient.address)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinPassportDecoder,
+        "ScoreDoesNotMeetThreshold"
       );
     });
   });
