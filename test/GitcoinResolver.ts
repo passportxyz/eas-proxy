@@ -244,7 +244,7 @@ describe("GitcoinResolver", function () {
       const attestation = getScoreAttestation(
         {
           schema: this.scoreSchemaId,
-          recipient: recipient.address,
+          recipient: recipient,
           attester: this.gitcoinAttesterAddress
         },
         {
