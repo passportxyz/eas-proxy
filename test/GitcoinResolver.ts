@@ -8,6 +8,7 @@ import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
 import { encodedData, getScoreAttestation } from "./helpers/mockAttestations";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 export const schemaRegistryContractAddress =
   process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
@@ -41,7 +42,7 @@ async function registerSchema(
   return registerEvent[0].args[0];
 }
 
-describe("GitcoinResolver", function () {
+describe.only("GitcoinResolver", function () {
   let owner: any,
     iamAccount: any,
     recipient: any,
@@ -49,25 +50,29 @@ describe("GitcoinResolver", function () {
     mockEas: any,
     gitcoinResolver: GitcoinResolver,
     gitcoinAttester: GitcoinAttester,
-    recipients: string[],
+    recipients: HardhatEthersSigner[],
     nextRecipientIndex: number = 0;
+
+  this.beforeEach(async function () {
+    // Make sure to use a different recipient for each test
+    recipient = recipients[nextRecipientIndex++];
+  });
 
   before(async function () {
     const [
-      ownerAccount,
-      otherAccount,
-      recipientAccount,
-      mockEasContractAccount,
-      nonOwnerOrVerifierAccount,
+      _ownerAccount,
+      _iamAccount,
+      _recipientAccount,
+      _mockEasContractAccount,
+      _nonOwnerOrVerifierAccount,
       ...moreSigners
     ] = await ethers.getSigners();
 
-    owner = ownerAccount;
-    iamAccount = otherAccount;
-    recipient = recipientAccount;
-    mockEas = mockEasContractAccount;
-    nonOwnerOrVerifier = nonOwnerOrVerifierAccount;
-    recipients = moreSigners.map((signer) => signer.address);
+    owner = _ownerAccount;
+    iamAccount = _iamAccount;
+    mockEas = _mockEasContractAccount;
+    nonOwnerOrVerifier = _nonOwnerOrVerifierAccount;
+    recipients = moreSigners;
 
     const GitcoinAttester = await ethers.getContractFactory(
       "GitcoinAttester",
@@ -113,7 +118,7 @@ describe("GitcoinResolver", function () {
       expirationTime: NO_EXPIRATION,
       revocationTime: NO_EXPIRATION,
       refUID: ZERO_BYTES32,
-      recipient: recipient.address,
+      recipient: _recipientAccount.address,
       attester: this.gitcoinAttesterAddress,
       revocable: true,
       data: encodedData
@@ -121,18 +126,18 @@ describe("GitcoinResolver", function () {
   });
 
   describe("Attestations", function () {
-    it("should make 1 attestation", async function () {
+    it.only("should make 1 attestation", async function () {
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
 
       const attestationUID = await gitcoinResolver.userAttestations(
-        recipient.address,
+        this.validAttestation.recipient,
         this.testSchemaUID
       );
 
       expect(attestationUID).to.equal(this.uid);
     });
 
-    it("should make multiple attestations", async function () {
+    it.only("should make multiple attestations", async function () {
       await gitcoinResolver
         .connect(mockEas)
         .multiAttest(
@@ -141,7 +146,7 @@ describe("GitcoinResolver", function () {
         );
 
       const attestationUID = await gitcoinResolver.userAttestations(
-        recipient.address,
+        this.validAttestation.recipient,
         this.testSchemaUID
       );
 
@@ -175,18 +180,12 @@ describe("GitcoinResolver", function () {
     });
   });
 
-  describe.only("Caching Scores", function () {
-    let recipient: string;
-
-    this.beforeEach(async function () {
-      recipient = recipients[nextRecipientIndex++];
-    });
-
+  describe("Caching Scores", function () {
     it("should cache a score and properly reduce the number of decimals when there are more than 4", async function () {
       const attestation = getScoreAttestation(
         {
           schema: this.scoreSchemaId,
-          recipient: recipient,
+          recipient: recipient.address,
           attester: this.gitcoinAttesterAddress
         },
         {
@@ -203,7 +202,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.getCachedScore(recipient);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123456");
@@ -215,7 +214,7 @@ describe("GitcoinResolver", function () {
       const attestation = getScoreAttestation(
         {
           schema: this.scoreSchemaId,
-          recipient: recipient,
+          recipient: recipient.address,
           attester: this.gitcoinAttesterAddress
         },
         {
@@ -232,7 +231,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.getCachedScore(recipient);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123400");
@@ -244,7 +243,7 @@ describe("GitcoinResolver", function () {
       const attestation = getScoreAttestation(
         {
           schema: this.scoreSchemaId,
-          recipient: recipient,
+          recipient: recipient.address,
           attester: this.gitcoinAttesterAddress
         },
         {
@@ -261,7 +260,7 @@ describe("GitcoinResolver", function () {
         .attest(attestation);
       const attestReceipt = attestRequest.wait();
 
-      const score = await gitcoinResolver.getCachedScore(recipient);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("123456");
@@ -273,7 +272,7 @@ describe("GitcoinResolver", function () {
       const attestation = getScoreAttestation(
         {
           schema: this.scoreSchemaId,
-          recipient: recipient,
+          recipient: recipient.address,
           attester: this.gitcoinAttesterAddress
         },
         {
@@ -287,10 +286,92 @@ describe("GitcoinResolver", function () {
         .connect(mockEas)
         .multiAttest([this.validAttestation, attestation], []);
 
-      const score = await gitcoinResolver.getCachedScore(recipient);
+      const score = await gitcoinResolver.getCachedScore(recipient.address);
 
       // Score should have been casted to a 4 digit value
       expect(score[0]).to.equal("98765");
+    });
+
+    it("should remove a cached score if the attestation is revoked (attest and revoke calls)", async function () {
+      const attestation = getScoreAttestation(
+        {
+          schema: this.scoreSchemaId,
+          recipient: recipient.address,
+          attester: this.gitcoinAttesterAddress,
+          time: 1234,
+          expirationTime: 5678
+        },
+        {
+          score: "98765", // That is 98.7650
+          scorer_id: 3,
+          score_decimals: 4
+        }
+      ) as AttestationStruct;
+
+      await gitcoinResolver.connect(mockEas).attest(attestation);
+
+      const scoreBeforeRevocation = await gitcoinResolver.getCachedScore(
+        recipient.address
+      );
+
+      // Score should have been casted to a 4 digit value
+      expect(scoreBeforeRevocation[0]).to.equal("98765");
+      expect(scoreBeforeRevocation[1]).to.equal("1234");
+      expect(scoreBeforeRevocation[2]).to.equal("5678");
+
+      await gitcoinResolver.connect(mockEas).revoke(attestation);
+
+      const scoreAfterRevocation = await gitcoinResolver.getCachedScore(
+        recipient.address
+      );
+
+      // Score should have been casted to a 4 digit value
+      expect(scoreAfterRevocation[0]).to.equal("0");
+      expect(scoreAfterRevocation[1]).to.equal("0");
+      expect(scoreAfterRevocation[2]).to.equal("0");
+    });
+
+    it("should remove a cached score if the attestation is revoked (multiAttest and multiRevoke calls)", async function () {
+      const attestation = getScoreAttestation(
+        {
+          schema: this.scoreSchemaId,
+          recipient: recipient.address,
+          attester: this.gitcoinAttesterAddress,
+          time: 1234,
+          expirationTime: 5678
+        },
+        {
+          score: "983855", // That is 98.3855
+          scorer_id: 3,
+          score_decimals: 4
+        }
+      ) as AttestationStruct;
+
+      await gitcoinResolver
+        .connect(mockEas)
+        .multiAttest([attestation, this.validAttestation], []);
+
+      const scoreBeforeRevocation = await gitcoinResolver.getCachedScore(
+        recipient.address
+      );
+
+      // Score should have been casted to a 4 digit value
+      expect(scoreBeforeRevocation[0]).to.equal("983855");
+      expect(scoreBeforeRevocation[1]).to.equal("1234");
+      expect(scoreBeforeRevocation[2]).to.equal("5678");
+
+      await gitcoinResolver
+        .connect(mockEas)
+        .multiRevoke([attestation, this.validAttestation], []);
+
+      const scoreAfterRevocation = await gitcoinResolver.getCachedScore(
+        recipient.address
+      );
+
+      // Score should have been casted to a 4 digit value
+      expect(scoreAfterRevocation[0]).to.equal("0");
+      expect(scoreAfterRevocation[1]).to.equal("0");
+      expect(scoreAfterRevocation[2]).to.equal("0");
     });
   });
 
