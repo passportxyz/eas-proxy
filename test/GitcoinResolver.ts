@@ -42,7 +42,7 @@ async function registerSchema(
   return registerEvent[0].args[0];
 }
 
-describe.only("GitcoinResolver", function () {
+describe("GitcoinResolver", function () {
   let owner: any,
     iamAccount: any,
     recipient: any,
@@ -126,7 +126,7 @@ describe.only("GitcoinResolver", function () {
   });
 
   describe("Attestations", function () {
-    it.only("should make 1 attestation", async function () {
+    it("should make 1 attestation", async function () {
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
 
       const attestationUID = await gitcoinResolver.userAttestations(
@@ -137,7 +137,7 @@ describe.only("GitcoinResolver", function () {
       expect(attestationUID).to.equal(this.uid);
     });
 
-    it.only("should make multiple attestations", async function () {
+    it("should make multiple attestations", async function () {
       await gitcoinResolver
         .connect(mockEas)
         .multiAttest(
