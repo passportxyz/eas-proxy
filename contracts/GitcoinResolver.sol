@@ -235,6 +235,11 @@ contract GitcoinResolver is
     return true;
   }
 
+  /**
+   * @dev Processes an revocation request
+   * @param attestation The new attestation request.
+   * @return true indicating if the pre-revocation have been performed and the revocation process should continue
+   */
   function _revoke(Attestation calldata attestation) internal returns (bool) {
     userAttestations[attestation.recipient][attestation.schema] = 0;
     _removeScore(attestation.recipient);
