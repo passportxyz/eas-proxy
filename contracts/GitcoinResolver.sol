@@ -122,10 +122,6 @@ contract GitcoinResolver is
   function attest(
     Attestation calldata attestation
   ) external payable whenNotPaused onlyAllowlisted returns (bool) {
-    if (scoreSchema == attestation.schema) {
-      _setScore(attestation);
-    }
-
     return _attest(attestation);
   }
 
@@ -137,6 +133,9 @@ contract GitcoinResolver is
     userAttestations[attestation.recipient][attestation.schema] = attestation
       .uid;
 
+    if (scoreSchema == attestation.schema) {
+      _setScore(attestation);
+    }
     return true;
   }
 
@@ -162,6 +161,14 @@ contract GitcoinResolver is
       attestation.time,
       attestation.expirationTime
     );
+  }
+
+  /**
+   * @dev Removes the score data from the state for the specified recipient.
+   * @param recipient The recipient of the score which needs to be removed.
+   */
+  function _removeScore(address recipient) private {
+    delete scores[recipient];
   }
 
   /**
@@ -230,6 +237,7 @@ contract GitcoinResolver is
 
   function _revoke(Attestation calldata attestation) internal returns (bool) {
     userAttestations[attestation.recipient][attestation.schema] = 0;
+    _removeScore(attestation.recipient);
 
     return true;
   }

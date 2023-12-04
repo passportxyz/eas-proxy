@@ -33,7 +33,7 @@ export const easEncodeScore = (score: Score) => {
 };
 
 export const getScoreAttestation = (
-  attestion: Pick<Attestation, "attester" | "recipient" | "schema">,
+  attestion: Pick<Attestation, "attester" | "recipient" | "schema"> & Partial<Attestation>,
   score: Score
 ): Attestation => {
   const scoreEncodedData = easEncodeScore(score);
