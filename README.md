@@ -9,6 +9,8 @@ info&mdash;organized by chain ID&mdash;[here](deployments/onchainInfo.json).
 
 - Optimism (0xa)
 - Base Goerli (0x14a33)
+- Linea Goerli (0xe704)
+- Linea (0xe708)
 
 The file has the following schema:
 
@@ -77,3 +79,10 @@ _Note: the issuer address is **not the attester address**_
 [Section 4: Deployment with Verax](docs/04-verax.md)
 
 [Section 5: Querying Passport Attestations Onchain](docs/05-querying-passport-attestations-onchain.md)
+
+[Section 6: Scoring Attestations Onchain](docs/06-scoring-attestations-onchain.md)
+
+[Section 7: Identity Slashing](docs/07-identity-slashing.md)
+
+[Section 8: Identity Staking](docs/08-gitcoin-identity-staking-management.md)
+
