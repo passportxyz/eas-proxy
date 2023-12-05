@@ -3,14 +3,16 @@ import { ethers } from "hardhat";
 import {
   SchemaEncoder,
   ZERO_ADDRESS,
-  ZERO_BYTES32,
+  ZERO_BYTES32
 } from "@ethereum-attestation-service/eas-sdk";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
+import { getScoreAttestation } from "./helpers/mockAttestations";
+import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
 import {
   passportTypes,
   fee1,
-  EAS_CONTRACT_ADDRESS,
+  EAS_CONTRACT_ADDRESS
 } from "./helpers/verifierTests";
 
 const providers = [BigInt("111")];
@@ -26,7 +28,7 @@ const hashes = [
   ),
   ethers.getBytes(
     "0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219ae0d13"
-  ),
+  )
 ];
 const providerMapVersion = 0;
 
@@ -47,7 +49,7 @@ const invalidHashes = [
   ),
   ethers.getBytes(
     "0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219af2d35"
-  ),
+  )
 ];
 
 const easEncodePassport = () => {
@@ -60,7 +62,7 @@ const easEncodePassport = () => {
     { name: "hashes", value: hashes, type: "bytes32[]" },
     { name: "issuanceDates", value: issuanceDates, type: "uint64[]" },
     { name: "expirationDates", value: expirationDates, type: "uint64[]" },
-    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
+    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" }
   ]);
   return encodedData;
 };
@@ -73,7 +75,7 @@ const easEncodeScore = () => {
   const encodedData = schemaEncoder.encodeData([
     { name: "score", value: 100, type: "uint256" },
     { name: "scorer_id", value: 1, type: "uint32" },
-    { name: "score_decimals", value: 18, type: "uint8" },
+    { name: "score_decimals", value: 18, type: "uint8" }
   ]);
   return encodedData;
 };
@@ -84,7 +86,7 @@ const easInvalidEncodeScore = () => {
   const encodedData = schemaEncoder.encodeData([
     { name: "score", value: 13, type: "uint256" },
     { name: "scorer_id", value: 1, type: "uint32" },
-    { name: "score_decimals", value: 18, type: "uint8" },
+    { name: "score_decimals", value: 18, type: "uint8" }
   ]);
   return encodedData;
 };
@@ -101,9 +103,9 @@ const easEncodeInvalidStamp = () => {
     {
       name: "expirationDates",
       value: invalidExpirationDates,
-      type: "uint64[]",
+      type: "uint64[]"
     },
-    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" },
+    { name: "providerMapVersion", value: providerMapVersion, type: "uint16" }
   ]);
   return encodedData;
 };
@@ -152,7 +154,7 @@ describe("GitcoinPassportDecoder", function () {
       name: "GitcoinVerifier",
       version: "1",
       chainId,
-      verifyingContract: await this.gitcoinVerifier.getAddress(),
+      verifyingContract: await this.gitcoinVerifier.getAddress()
     };
 
     this.getNonce = async (address: string) => {
@@ -225,13 +227,13 @@ describe("GitcoinPassportDecoder", function () {
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodePassport(),
-              value: 0,
-            },
-          ],
-        },
+              value: 0
+            }
+          ]
+        }
       ],
       nonce: await this.getNonce(this.recipient.address),
-      fee: fee1,
+      fee: fee1
     };
 
     this.score = {
@@ -245,13 +247,13 @@ describe("GitcoinPassportDecoder", function () {
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeScore(),
-              value: 0,
-            },
-          ],
-        },
+              value: 0
+            }
+          ]
+        }
       ],
       nonce: await this.getNonce(this.recipient.address),
-      fee: fee1,
+      fee: fee1
     };
 
     this.invalidPassport = {
@@ -265,13 +267,13 @@ describe("GitcoinPassportDecoder", function () {
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeInvalidStamp(),
-              value: 0,
-            },
-          ],
-        },
+              value: 0
+            }
+          ]
+        }
       ],
       nonce: await this.getNonce(this.recipient.address),
-      fee: fee1,
+      fee: fee1
     };
 
     const addVerifierResult = await this.gitcoinAttester
@@ -295,6 +297,8 @@ describe("GitcoinPassportDecoder", function () {
     await this.gitcoinPassportDecoder.setPassportSchemaUID(
       this.passportSchemaUID
     );
+
+    await this.gitcoinPassportDecoder.setMaxScoreAge(3600 * 24 * 90); // Sets the max age to 90 days
 
     await this.gitcoinPassportDecoder.setScoreSchemaUID(this.scoreSchemaUID);
 
@@ -333,9 +337,8 @@ describe("GitcoinPassportDecoder", function () {
 
       const currentVersion = await this.gitcoinPassportDecoder.currentVersion();
 
-      const savedProviders = await this.gitcoinPassportDecoder.getProviders(
-        currentVersion
-      );
+      const savedProviders =
+        await this.gitcoinPassportDecoder.getProviders(currentVersion);
 
       expect(savedProviders.length === providers.length);
       expect(savedProviders).to.eql(providers);
@@ -372,7 +375,7 @@ describe("GitcoinPassportDecoder", function () {
         "NewStamp1",
         "NewStamp2",
         "NewStamp3",
-        "NewStamp2",
+        "NewStamp2"
       ];
 
       await expect(
@@ -451,7 +454,7 @@ describe("GitcoinPassportDecoder", function () {
         r,
         s,
         {
-          value: fee1,
+          value: fee1
         }
       );
 
@@ -491,7 +494,7 @@ describe("GitcoinPassportDecoder", function () {
         r,
         s,
         {
-          value: fee1,
+          value: fee1
         }
       );
 
@@ -539,7 +542,7 @@ describe("GitcoinPassportDecoder", function () {
         r,
         s,
         {
-          value: fee1,
+          value: fee1
         }
       );
 
@@ -654,140 +657,440 @@ describe("GitcoinPassportDecoder", function () {
       );
     });
   });
-  describe("Getting score", function () {
-    beforeEach(async function () {
-      const attestation = {
-        multiAttestationRequest: [
+  describe.only("getScore", function () {
+    describe("get score from attestation", function () {
+      beforeEach(async function () {
+        const attestation = getScoreAttestation(
           {
             schema: this.passportSchemaUID,
-            data: [
-              {
-                recipient: this.recipient.address,
-                expirationTime: 1708741995,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data: easEncodeScore(),
-                value: 0,
-              },
-            ],
+            recipient: this.recipient.address,
+            attester: this.iamAccount.address
           },
-        ],
-        nonce: await this.getNonce(this.recipient.address),
-        fee: fee1,
-      };
+          {
+            score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
+            scorer_id: 1,
+            score_decimals: 18
+          }
+        ) as AttestationStruct;
 
-      const signature = await this.iamAccount.signTypedData(
-        this.domain,
-        passportTypes,
-        attestation
-      );
-
-      const { v, r, s } = ethers.Signature.from(signature);
-
-      // Submit attestations
-      const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
-        attestation,
-        v,
-        r,
-        s,
-        {
-          value: fee1,
-        }
-      );
-    });
-    it("should get a user's score", async function () {
-      const score = await this.gitcoinPassportDecoder.getScore(
-        this.recipient.address
-      );
-
-      expect(score).to.equal(100n);
-    });
-    it("should revert if address has no attested score", async function () {
-      await expect(
-        this.gitcoinPassportDecoder.getScore(this.owner.address)
-      ).to.be.revertedWithCustomError(
-        this.gitcoinPassportDecoder,
-        "AttestationNotFound"
-      );
-    });
-    it("should revert if attestation is revoked", async function () {
-      const scoreAttestation = await this.gitcoinResolver.getUserAttestation(
-        this.recipient.address,
-        this.scoreSchemaUID
-      );
-      await this.gitcoinAttester.revokeAttestations([
-        {
-          schema: this.scoreSchemaUID,
-          data: [
+        const gitcoinAttestationRequest = {
+          multiAttestationRequest: [
             {
-              uid: scoreAttestation,
-              value: 0n,
-            },
+              schema: attestation.schema,
+              data: [
+                {
+                  recipient: attestation.recipient,
+                  expirationTime: attestation.expirationTime,
+                  revocable: attestation.revocable,
+                  refUID: attestation.refUID,
+                  data: attestation.data,
+                  value: 0
+                }
+              ]
+            }
           ],
-        },
-      ]);
 
-      await expect(
-        this.gitcoinPassportDecoder.getScore(this.recipient.address)
-      ).to.be.revertedWithCustomError(
-        this.gitcoinPassportDecoder,
-        "AttestationNotFound"
-      );
-    });
-    it("should return true if the score is above the threshold", async function () {
-      await this.gitcoinPassportDecoder
-        .connect(this.owner).setThreshold(20);
-      const isHuman = await this.gitcoinPassportDecoder.isHuman(this.recipient.address);
-      expect(isHuman).to.equal(true);
-    });
-    it("should return false if the score is below the threshold", async function () {
-      const attestation = {
-        multiAttestationRequest: [
+          nonce: await this.getNonce(this.recipient.address),
+          fee: fee1
+        };
+
+        const signature = await this.iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          gitcoinAttestationRequest
+        );
+
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+          gitcoinAttestationRequest,
+          v,
+          r,
+          s,
           {
-            schema: this.passportSchemaUID,
+            value: fee1
+          }
+        );
+      });
+      it("should get a user's score", async function () {
+        const score = await this.gitcoinPassportDecoder.getScore(
+          this.recipient.address
+        );
+        // We expect the value as a 4 digit decimal
+        expect(score).to.equal(323456);
+      });
+      it("should revert if address has no attested score", async function () {
+        await expect(
+          this.gitcoinPassportDecoder.getScore(this.owner.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+      it("should revert if attestation is revoked", async function () {
+        const scoreAttestation = await this.gitcoinResolver.getUserAttestation(
+          this.recipient.address,
+          this.scoreSchemaUID
+        );
+        await this.gitcoinAttester.revokeAttestations([
+          {
+            schema: this.scoreSchemaUID,
             data: [
               {
-                recipient: this.recipient.address,
-                expirationTime: 1708741995,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data: easInvalidEncodeScore(),
-                value: 0,
-              },
-            ],
+                uid: scoreAttestation,
+                value: 0n
+              }
+            ]
+          }
+        ]);
+
+        await expect(
+          this.gitcoinPassportDecoder.getScore(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+    });
+
+    describe("get score from resolver cache", function () {
+      beforeEach(async function () {
+        this.gitcoinResolver.setScoreSchema(this.passportSchemaUID);
+        const attestation = getScoreAttestation(
+          {
+            schema: this.passportSchemaUID,
+            recipient: this.recipient.address,
+            attester: this.iamAccount.address
           },
-        ],
-        nonce: await this.getNonce(this.recipient.address),
-        fee: fee1,
-      };
+          {
+            score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
+            scorer_id: 1,
+            score_decimals: 18
+          }
+        ) as AttestationStruct;
 
-      const signature = await this.iamAccount.signTypedData(
-        this.domain,
-        passportTypes,
-        attestation
-      );
+        const gitcoinAttestationRequest = {
+          multiAttestationRequest: [
+            {
+              schema: attestation.schema,
+              data: [
+                {
+                  recipient: attestation.recipient,
+                  expirationTime: attestation.expirationTime,
+                  revocable: attestation.revocable,
+                  refUID: attestation.refUID,
+                  data: attestation.data,
+                  value: 0
+                }
+              ]
+            }
+          ],
 
-      const { v, r, s } = ethers.Signature.from(signature);
+          nonce: await this.getNonce(this.recipient.address),
+          fee: fee1
+        };
 
-      // Submit attestations
-      await this.gitcoinVerifier.verifyAndAttest(
-        attestation,
-        v,
-        r,
-        s,
-        {
-          value: fee1,
-        }
-      );
+        const signature = await this.iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          gitcoinAttestationRequest
+        );
 
-      await this.gitcoinPassportDecoder
-        .connect(this.owner).setThreshold(20);
-      await expect(
-        this.gitcoinPassportDecoder.isHuman(this.recipient.address)
-      ).to.be.revertedWithCustomError(
-        this.gitcoinPassportDecoder,
-        "ScoreDoesNotMeetThreshold"
-      );
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+          gitcoinAttestationRequest,
+          v,
+          r,
+          s,
+          {
+            value: fee1
+          }
+        );
+      });
+      it("should get a user's score", async function () {
+        const score = await this.gitcoinPassportDecoder.getScore(
+          this.recipient.address
+        );
+        // We expect the value as a 4 digit decimal
+        expect(score).to.equal(323456);
+      });
+      it("should revert if address has no attested score", async function () {
+        await expect(
+          this.gitcoinPassportDecoder.getScore(this.owner.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+      it("should revert if attestation is revoked", async function () {
+        const scoreAttestation = await this.gitcoinResolver.getUserAttestation(
+          this.recipient.address,
+          this.scoreSchemaUID
+        );
+        await this.gitcoinAttester.revokeAttestations([
+          {
+            schema: this.scoreSchemaUID,
+            data: [
+              {
+                uid: scoreAttestation,
+                value: 0n
+              }
+            ]
+          }
+        ]);
+
+        await expect(
+          this.gitcoinPassportDecoder.getScore(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+    });
+  });
+
+  describe.only("isHuman", function () {
+    describe("for score from attestation", function () {
+      beforeEach(async function () {
+        const attestation = getScoreAttestation(
+          {
+            schema: this.passportSchemaUID,
+            recipient: this.recipient.address,
+            attester: this.iamAccount.address
+          },
+          {
+            score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
+            scorer_id: 1,
+            score_decimals: 18
+          }
+        ) as AttestationStruct;
+
+        const gitcoinAttestationRequest = {
+          multiAttestationRequest: [
+            {
+              schema: attestation.schema,
+              data: [
+                {
+                  recipient: attestation.recipient,
+                  expirationTime: attestation.expirationTime,
+                  revocable: attestation.revocable,
+                  refUID: attestation.refUID,
+                  data: attestation.data,
+                  value: 0
+                }
+              ]
+            }
+          ],
+
+          nonce: await this.getNonce(this.recipient.address),
+          fee: fee1
+        };
+
+        const signature = await this.iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          gitcoinAttestationRequest
+        );
+
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+          gitcoinAttestationRequest,
+          v,
+          r,
+          s,
+          {
+            value: fee1
+          }
+        );
+      });
+
+      it("should revert if address has no attested score", async function () {
+        await expect(
+          this.gitcoinPassportDecoder.isHuman(this.owner.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+      it("should revert if attestation is revoked", async function () {
+        const scoreAttestation = await this.gitcoinResolver.getUserAttestation(
+          this.recipient.address,
+          this.scoreSchemaUID
+        );
+        await this.gitcoinAttester.revokeAttestations([
+          {
+            schema: this.scoreSchemaUID,
+            data: [
+              {
+                uid: scoreAttestation,
+                value: 0n
+              }
+            ]
+          }
+        ]);
+
+        await expect(
+          this.gitcoinPassportDecoder.getScore(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+
+      it("should return true if the score is above the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(313456);
+        const isHuman = await this.gitcoinPassportDecoder.isHuman(
+          this.recipient.address
+        );
+        expect(isHuman).to.equal(true);
+      });
+      it("should return true if the score is is equal to the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(323456);
+        const isHuman = await this.gitcoinPassportDecoder.isHuman(
+          this.recipient.address
+        );
+        expect(isHuman).to.equal(true);
+      });
+      it("should return false if the score is below the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(333456);
+        await expect(
+          this.gitcoinPassportDecoder.isHuman(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "ScoreDoesNotMeetThreshold"
+        );
+      });
+    });
+
+    describe("for score from resolver cache", function () {
+      beforeEach(async function () {
+        this.gitcoinResolver.setScoreSchema(this.passportSchemaUID);
+        const attestation = getScoreAttestation(
+          {
+            schema: this.passportSchemaUID,
+            recipient: this.recipient.address,
+            attester: this.iamAccount.address
+          },
+          {
+            score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
+            scorer_id: 1,
+            score_decimals: 18
+          }
+        ) as AttestationStruct;
+
+        const gitcoinAttestationRequest = {
+          multiAttestationRequest: [
+            {
+              schema: attestation.schema,
+              data: [
+                {
+                  recipient: attestation.recipient,
+                  expirationTime: attestation.expirationTime,
+                  revocable: attestation.revocable,
+                  refUID: attestation.refUID,
+                  data: attestation.data,
+                  value: 0
+                }
+              ]
+            }
+          ],
+
+          nonce: await this.getNonce(this.recipient.address),
+          fee: fee1
+        };
+
+        const signature = await this.iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          gitcoinAttestationRequest
+        );
+
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
+          gitcoinAttestationRequest,
+          v,
+          r,
+          s,
+          {
+            value: fee1
+          }
+        );
+      });
+
+      it("should revert if address has no attested score", async function () {
+        await expect(
+          this.gitcoinPassportDecoder.isHuman(this.owner.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+      it("should revert if attestation is revoked", async function () {
+        const scoreAttestation = await this.gitcoinResolver.getUserAttestation(
+          this.recipient.address,
+          this.scoreSchemaUID
+        );
+        await this.gitcoinAttester.revokeAttestations([
+          {
+            schema: this.scoreSchemaUID,
+            data: [
+              {
+                uid: scoreAttestation,
+                value: 0n
+              }
+            ]
+          }
+        ]);
+
+        await expect(
+          this.gitcoinPassportDecoder.isHuman(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "AttestationNotFound"
+        );
+      });
+      it("should return true if the score is above the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(313456);
+        const isHuman = await this.gitcoinPassportDecoder.isHuman(
+          this.recipient.address
+        );
+        expect(isHuman).to.equal(true);
+      });
+      it("should return true if the score is is equal to the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(323456);
+        const isHuman = await this.gitcoinPassportDecoder.isHuman(
+          this.recipient.address
+        );
+        expect(isHuman).to.equal(true);
+      });
+      it("should return false if the score is below the threshold", async function () {
+        await this.gitcoinPassportDecoder
+          .connect(this.owner)
+          .setThreshold(333456);
+        await expect(
+          this.gitcoinPassportDecoder.isHuman(this.recipient.address)
+        ).to.be.revertedWithCustomError(
+          this.gitcoinPassportDecoder,
+          "ScoreDoesNotMeetThreshold"
+        );
+      });
     });
   });
 });

@@ -4,10 +4,10 @@ pragma solidity ^0.8.9;
 import {Initializable, OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Attestation, IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {Attestation, IEAS} from "@ethereum-attestation-service/eas-contracts/contracts/IEAS.sol";
 
 import {IGitcoinResolver} from "./IGitcoinResolver.sol";
-import {Credential, Score, IGitcoinPassportDecoder} from "./IGitcoinPassportDecoder.sol";
+import {Credential, IGitcoinPassportDecoder} from "./IGitcoinPassportDecoder.sol";
 
 /**
  * @title GitcoinPassportDecoder
@@ -42,8 +42,8 @@ contract GitcoinPassportDecoder is
   // Score attestation schema UID
   bytes32 public scoreSchemaUID;
 
-  // Maximum score age
-  uint256 public maxScoreAge;
+  // Maximum score age in seconds
+  uint64 public maxScoreAge;
 
   // Minimum score
   uint256 public threshold;
@@ -162,21 +162,21 @@ contract GitcoinPassportDecoder is
 
   /**
    * @dev Sets the maximum allowed age of the score
-   * @param _maxScoreAge Max number of days for max score age
+   * @param _maxScoreAge Max age of the score in seconds
    */
-  function setMaxScoreAge(uint256 _maxScoreAge) public onlyOwner {
+  function setMaxScoreAge(uint64 _maxScoreAge) public onlyOwner {
     if (_maxScoreAge == 0) {
       revert ZeroMaxScoreAge(_maxScoreAge);
     }
 
-    maxScoreAge = block.timestamp - (_maxScoreAge * 1 days);
+    maxScoreAge = _maxScoreAge;
 
     emit MaxScoreAgeSet(maxScoreAge);
   }
 
   /**
    * @dev Sets the threshold for the minimum score
-   * @param _threshold Minimum score allowed
+   * @param _threshold Minimum score allowed, as a 4 digit number
    */
   function setThreshold(uint256 _threshold) public onlyOwner {
     if (_threshold == 0) {
@@ -362,62 +362,79 @@ contract GitcoinPassportDecoder is
     return passportMemoryArray;
   }
 
+  // TODO: test this function
+  function _isScoreAttestationExpired(
+    Attestation memory attestation
+  ) internal view returns (bool) {
+    return
+      attestation.time > 0 &&
+      (block.timestamp > attestation.time + maxScoreAge);
+  }
+
+  // TODO: test this function
+  function _isCachedScoreExpired(
+    IGitcoinResolver.CachedScore memory score
+  ) internal view returns (bool) {
+    return (block.timestamp > score.issuanceDate + maxScoreAge);
+  }
+
   /**
-   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it
+   * @dev Retrieves the user's Score attestation via the GitcoinResolver and returns it as a 4 digit number
    * @param user The ETH address of the recipient
    */
   function getScore(address user) public view returns (uint256) {
-    Score memory score;
-
     IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver
       .getCachedScore(user);
 
-    bool hasCachedScore = cachedScore.issuanceDate != 0 &&
-      cachedScore.expirationDate != 0;
-
-    if (!hasCachedScore) {
-      // fallback for reading the score from the attestation
-      bytes32 attestationUID = gitcoinResolver.getUserAttestation(
-        user,
-        scoreSchemaUID
-      );
-
-      // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
-      if (attestationUID == 0) {
-        revert AttestationNotFound();
-      }
-
-      // Get the attestation from the user's attestation UID
-      Attestation memory attestation = getAttestation(attestationUID);
-
-      // Decode the attestion output
-      (score.score, score.scorerID, score.decimals) = abi.decode(
-        attestation.data,
-        (uint256, uint32, uint8)
-      );
-
-      // Check if score is older than max age
-      if (
-        attestation.expirationTime > 0 &&
-        (block.timestamp > attestation.expirationTime)
-      ) {
-        revert AttestationExpired(attestation.expirationTime);
+    if (cachedScore.issuanceDate != 0) {
+      // TODO: rename issuanceDate with time, to be consistent with Attestation ???
+      // Check for expiration time
+      if (_isCachedScoreExpired(cachedScore)) {
+        revert AttestationExpired(cachedScore.issuanceDate);
       }
 
       // Return the score value
-      return score.score;
+      return cachedScore.score;
     }
 
-    // Check for expiration time
-    if (
-      cachedScore.issuanceDate > 0 &&
-      block.timestamp > (cachedScore.issuanceDate + maxScoreAge)
-    ) {
-      revert AttestationExpired(cachedScore.issuanceDate);
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // Fallback: read the score from the attestation if retreiving it from the cache eas not possible
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
+      user,
+      scoreSchemaUID
+    );
+
+    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
+    if (attestationUID == 0) {
+      revert AttestationNotFound();
+    }
+
+    // Get the attestation from the user's attestation UID
+    Attestation memory attestation = getAttestation(attestationUID);
+
+    // Decode the attestion output
+    uint256 score;
+    uint256 decimals;
+    (score, , decimals) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    // Convert the number to a 4 digit number
+    if (decimals > 4) {
+      score /= 10 ** (decimals - 4);
+    } else if (decimals < 4) {
+      score *= 10 ** (4 - decimals);
+    }
+
+    // Check if score is older than max age
+    if (_isScoreAttestationExpired(attestation)) {
+      revert AttestationExpired(attestation.time + maxScoreAge);
     }
 
     // Return the score value
-    return cachedScore.score;
+    return score;
   }
 
   /**

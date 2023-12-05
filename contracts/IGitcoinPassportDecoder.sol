@@ -13,15 +13,6 @@ struct Credential {
 }
 
 /**
- * @dev A struct representing the passport score for an ETH address.
- */
-struct Score {
-  uint256 score;
-  uint32 scorerID;
-  uint8 decimals;
-}
-
-/**
  * @title IGitcoinPassportDecoder
  * @notice Minimal interface for consuming GitcoinPassportDecoder data
  */
