@@ -14,6 +14,9 @@ contract IdentityStakeGuardian {
   // mapping(selfStakerAddress => uint[]) stakeIds;
   mapping(address => uint256[]) selfStakeIds;
 
+  // mapping(selfStakerAddress => uint[]) stakeIds;
+  mapping(address => EnumerableSet.UintSet) selfStakeIdsMap;
+
   // mapping(stakerAddress => mapping(stakeeAddress => uint[])) stakeIds;
   mapping(address => mapping(address => uint256[])) communityStakeIds;
 
@@ -29,6 +32,8 @@ contract IdentityStakeGuardian {
   mapping(address => address[]) addressesStakingOnUser;
 
   bool public canStake;
+
+  uint public activeStake;
 
   struct Stake {
     uint256 amount;
@@ -46,15 +51,25 @@ contract IdentityStakeGuardian {
     }
   }
 
+  // Function to add values to communityStakeIds
+  function addValuesToCommunityStakeIds(
+    address staker,
+    uint[] memory values
+  ) public {
+    for (uint i = 0; i < values.length; i++) {
+      selfStakeIds[staker].push(values[i]);
+    }
+  }
+
   // Function to check existence in communityStakeIds
   function existsInCommunityStakeIds(
     address staker,
     address stakee,
     uint value
   ) public view returns (bool) {
-    uint[] memory stakes = communityStakeIds[staker][stakee];
-    for (uint i = 0; i < stakes.length; i++) {
-      if (stakes[i] == value) {
+    uint[] memory currentStakes = communityStakeIds[staker][stakee];
+    for (uint i = 0; i < currentStakes.length; i++) {
+      if (currentStakes[i] == value) {
         return true;
       }
     }
@@ -72,21 +87,51 @@ contract IdentityStakeGuardian {
     }
   }
 
+  // Function to add values to communityStakeIdsMap
+  function addValuesToSelfStakeIdsMap(
+    address staker,
+    uint[] memory stakeIds
+  ) public {
+    for (uint i = 0; i < stakeIds.length; i++) {
+      selfStakeIdsMap[staker].add(stakeIds[i]);
+    }
+  }
+
+  function addSelfStakeMap(address user, Stake memory stake) public {
+    // Validate inputs
+
+    uint256 stakeId = stakeCount + 1;
+
+    stakes[stakeId] = stake;
+
+    selfStakeIdsMap[user].add(stakeId);
+  }
+
+  function addSelfStake(address user, Stake memory stake) public {
+    // Validate inputs
+
+    uint256 stakeId = stakeCount + 1;
+
+    stakes[stakeId] = stake;
+
+    selfStakeIds[user].push(stakeId);
+  }
+
   // Function to check existence in communityStakeIdsMap
   function existsInCommunityStakeIdsMap(
     address staker,
     address stakee,
-    uint value
+    uint stakeId
   ) public view returns (bool) {
-    return communityStakeIdsMap[staker][stakee].contains(value);
+    return communityStakeIdsMap[staker][stakee].contains(stakeId);
   }
 
   function canUnstakeMap(
     address staker,
     address stakee,
-    uint value
+    uint stakeId
   ) public returns (bool) {
-    if (existsInCommunityStakeIdsMap(staker, stakee, value)) {
+    if (existsInCommunityStakeIdsMap(staker, stakee, stakeId)) {
       canStake = true;
     } else {
       canStake = false;
@@ -97,13 +142,59 @@ contract IdentityStakeGuardian {
   function canUnstake(
     address staker,
     address stakee,
-    uint value
+    uint stakeId
   ) public returns (bool) {
-    if (existsInCommunityStakeIds(staker, stakee, value)) {
+    if (existsInCommunityStakeIds(staker, stakee, stakeId)) {
       canStake = true;
     } else {
       canStake = false;
     }
     return true;
+  }
+
+  function sumActiveSelfStake(address user) public returns (uint) {
+    // Get user's Stake Ids (Set or Array)
+    uint256 userStake = 0;
+    uint256 selfStakeIdsLength = selfStakeIds[user].length;
+    for (uint256 i = 0; i < selfStakeIdsLength; ++i) {
+      userStake += stakes[selfStakeIds[user][i]].amount;
+    }
+
+    // Aggregate total active stake
+
+    // Return total active stake
+    activeStake = userStake;
+  }
+
+  function sumActiveSelfStakeMap(address user) public {
+    // Get user's Stake Ids (Set or Array)
+    uint256 userStake = 0;
+    uint256 selfStakeIdsLength = selfStakeIdsMap[user].length();
+    for (uint256 i = 0; i < selfStakeIdsLength; ++i) {
+      userStake += stakes[selfStakeIdsMap[user].at(i)].amount;
+    }
+
+    // Aggregate total active stake
+
+    // Return total active stake
+    activeStake = userStake;
+  }
+
+  function getActiveSelfStake(address user) public view returns (uint) {
+    // Get user's Stake Ids (Set or Array)
+
+    // Aggregate total active stake
+
+    // Return total active stake
+    return activeStake;
+  }
+
+  function getRestakableSelfStake(address user) public view returns (uint) {
+    // Get user's Stake Ids (Set or Array)
+
+    // Aggregate total active stake that is not locked
+
+    // Return total restakable stake
+    return activeStake;
   }
 }

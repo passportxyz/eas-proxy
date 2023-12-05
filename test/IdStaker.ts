@@ -100,4 +100,37 @@ describe.only("StakeTest Contract", function () {
       });
     });
   });
+
+  async function addStakes(user, method, count) {
+    for (let i = 0; i < count; i++) {
+      const stake = { amount: ethers.parseEther("1"), unlockTime: 0 };
+      await stakeTest[method](user.address, stake);
+    }
+  }
+
+  describe.only("Adding stakes and summing active stakes", function () {
+    it("Should add and sum 5 stakes using selfStakeIds", async function () {
+      await addStakes(owner, "addSelfStake", 5);
+      await stakeTest.sumActiveSelfStake(owner.address);
+      expect(await stakeTest.activeStake()).to.equal(ethers.parseEther("5"));
+    });
+
+    it("Should add and sum 20 stakes using selfStakeIds", async function () {
+      await addStakes(owner, "addSelfStake", 20);
+      await stakeTest.sumActiveSelfStake(owner.address);
+      expect(await stakeTest.activeStake()).to.equal(ethers.parseEther("20"));
+    });
+
+    it("Should add and sum 5 stakes using selfStakeIdsMap", async function () {
+      await addStakes(owner, "addSelfStakeMap", 5);
+      await stakeTest.sumActiveSelfStakeMap(owner.address);
+      expect(await stakeTest.activeStake()).to.equal(ethers.parseEther("5"));
+    });
+
+    it("Should add and sum 20 stakes using selfStakeIdsMap", async function () {
+      await addStakes(owner, "addSelfStakeMap", 20);
+      await stakeTest.sumActiveSelfStakeMap(owner.address);
+      expect(await stakeTest.activeStake()).to.equal(ethers.parseEther("20"));
+    });
+  });
 });
