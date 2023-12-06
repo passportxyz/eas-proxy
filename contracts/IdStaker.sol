@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import "hardhat/console.sol";
+
 contract IdentityStakeGuardian {
   uint256 stakeCount;
 
@@ -51,16 +53,6 @@ contract IdentityStakeGuardian {
     }
   }
 
-  // Function to add values to communityStakeIds
-  function addValuesToCommunityStakeIds(
-    address staker,
-    uint[] memory values
-  ) public {
-    for (uint i = 0; i < values.length; i++) {
-      selfStakeIds[staker].push(values[i]);
-    }
-  }
-
   // Function to check existence in communityStakeIds
   function existsInCommunityStakeIds(
     address staker,
@@ -100,7 +92,8 @@ contract IdentityStakeGuardian {
   function addSelfStakeMap(address user, Stake memory stake) public {
     // Validate inputs
 
-    uint256 stakeId = stakeCount + 1;
+    stakeCount += 1;
+    uint256 stakeId = stakeCount;
 
     stakes[stakeId] = stake;
 
@@ -110,7 +103,8 @@ contract IdentityStakeGuardian {
   function addSelfStake(address user, Stake memory stake) public {
     // Validate inputs
 
-    uint256 stakeId = stakeCount + 1;
+    stakeCount += 1;
+    uint256 stakeId = stakeCount;
 
     stakes[stakeId] = stake;
 
@@ -126,7 +120,7 @@ contract IdentityStakeGuardian {
     return communityStakeIdsMap[staker][stakee].contains(stakeId);
   }
 
-  function canUnstakeMap(
+  function listLookupMap(
     address staker,
     address stakee,
     uint stakeId
@@ -139,7 +133,7 @@ contract IdentityStakeGuardian {
     return true;
   }
 
-  function canUnstake(
+  function listLookup(
     address staker,
     address stakee,
     uint stakeId
@@ -152,6 +146,7 @@ contract IdentityStakeGuardian {
     return true;
   }
 
+  // A variation of this will need to occur for the following functions
   function sumActiveSelfStake(address user) public returns (uint) {
     // Get user's Stake Ids (Set or Array)
     uint256 userStake = 0;
@@ -164,6 +159,41 @@ contract IdentityStakeGuardian {
 
     // Return total active stake
     activeStake = userStake;
+  }
+
+  function removeItemFromSelfStakeIdsMap(
+    address user,
+    uint stakeId
+  ) public returns (bool) {
+    selfStakeIdsMap[user].remove(stakeId);
+    canStake = true;
+    return true;
+  }
+
+  function removeItemFromSelfIds(
+    address user,
+    uint stakeId
+  ) public returns (bool) {
+    uint256 selfStakeIdsLength = selfStakeIds[user].length;
+    for (uint256 i = 0; i < selfStakeIdsLength; ++i) {
+      if (selfStakeIds[user][i] == stakeId) {
+        uint256 lastValue = selfStakeIds[user][selfStakeIdsLength - 1];
+
+        uint256 toDeleteValue = selfStakeIds[user][i];
+
+        selfStakeIds[user][selfStakeIdsLength - 1] = toDeleteValue;
+
+        selfStakeIds[user][i] = lastValue;
+
+        selfStakeIds[user].pop();
+
+        console.log("finished");
+        break;
+      }
+    }
+
+    canStake = true;
+    return true;
   }
 
   function sumActiveSelfStakeMap(address user) public {

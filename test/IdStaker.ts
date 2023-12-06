@@ -26,9 +26,9 @@ describe.only("StakeTest Contract", function () {
       );
 
       // Verify one of the values
-      expect(await stakeTest.canUnstake(owner.address, addr1.address, 3)).to.be
+      expect(await stakeTest.listLookup(owner.address, addr1.address, 3)).to.be
         .true;
-      expect(await stakeTest.canUnstake(owner.address, addr1.address, 6)).to.be
+      expect(await stakeTest.listLookup(owner.address, addr1.address, 6)).to.be
         .false;
     });
   });
@@ -43,9 +43,9 @@ describe.only("StakeTest Contract", function () {
       );
 
       // Verify one of the values
-      expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 3)).to
+      expect(await stakeTest.listLookupMap(owner.address, addr1.address, 3)).to
         .be.true;
-      expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 6)).to
+      expect(await stakeTest.listLookupMap(owner.address, addr1.address, 6)).to
         .be.false;
     });
   });
@@ -59,9 +59,9 @@ describe.only("StakeTest Contract", function () {
       );
 
       // Verify one of the values
-      expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 3)).to
+      expect(await stakeTest.listLookupMap(owner.address, addr1.address, 3)).to
         .be.true;
-      expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 6)).to
+      expect(await stakeTest.listLookupMap(owner.address, addr1.address, 6)).to
         .be.false;
     });
   });
@@ -76,9 +76,9 @@ describe.only("StakeTest Contract", function () {
         );
 
         // Verify one of the values
-        expect(await stakeTest.canUnstake(owner.address, addr1.address, 10)).to
+        expect(await stakeTest.listLookup(owner.address, addr1.address, 10)).to
           .be.true;
-        expect(await stakeTest.canUnstake(owner.address, addr1.address, 21)).to
+        expect(await stakeTest.listLookup(owner.address, addr1.address, 21)).to
           .be.false;
       });
     });
@@ -93,9 +93,9 @@ describe.only("StakeTest Contract", function () {
         );
 
         // Verify one of the values
-        expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 10))
+        expect(await stakeTest.listLookupMap(owner.address, addr1.address, 10))
           .to.be.true;
-        expect(await stakeTest.canUnstakeMap(owner.address, addr1.address, 21))
+        expect(await stakeTest.listLookupMap(owner.address, addr1.address, 21))
           .to.be.false;
       });
     });
@@ -108,11 +108,35 @@ describe.only("StakeTest Contract", function () {
     }
   }
 
-  describe.only("Adding stakes and summing active stakes", function () {
+  describe("Adding stakes and summing active stakes", function () {
     it("Should add and sum 5 stakes using selfStakeIds", async function () {
       await addStakes(owner, "addSelfStake", 5);
       await stakeTest.sumActiveSelfStake(owner.address);
       expect(await stakeTest.activeStake()).to.equal(ethers.parseEther("5"));
+    });
+
+    it("should remove the last item from the array", async function () {
+      await addStakes(owner, "addSelfStake", 5);
+      await stakeTest.removeItemFromSelfIds(owner.address, 5);
+      expect(0).to.equal(ethers.parseEther("0"));
+    });
+
+    it("should remove the last item from the array", async function () {
+      await addStakes(owner, "addSelfStake", 5);
+      await stakeTest.removeItemFromSelfStakeIdsMap(owner.address, 5);
+      expect(0).to.equal(ethers.parseEther("0"));
+    });
+
+    it("should remove the last item from the array", async function () {
+      await addStakes(owner, "addSelfStake", 20);
+      await stakeTest.removeItemFromSelfIds(owner.address, 20);
+      expect(0).to.equal(ethers.parseEther("0"));
+    });
+
+    it("should remove the last item from the array", async function () {
+      await addStakes(owner, "addSelfStake", 20);
+      await stakeTest.removeItemFromSelfStakeIdsMap(owner.address, 20);
+      expect(0).to.equal(ethers.parseEther("0"));
     });
 
     it("Should add and sum 20 stakes using selfStakeIds", async function () {
