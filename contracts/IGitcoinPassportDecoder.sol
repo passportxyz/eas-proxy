@@ -18,7 +18,7 @@ struct Credential {
  */
 interface IGitcoinPassportDecoder {
   function getPassport(
-    address userAddress
+    address user
   ) external returns (Credential[] memory);
 
   function getScore(address user) external view returns (uint256);

@@ -3,11 +3,15 @@ import { ethers } from "hardhat";
 import {
   SchemaEncoder,
   ZERO_ADDRESS,
-  ZERO_BYTES32
+  ZERO_BYTES32,
+  Attestation
 } from "@ethereum-attestation-service/eas-sdk";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
-import { getScoreAttestation } from "./helpers/mockAttestations";
+import {
+  getScoreAttestation,
+  easEncodeScore
+} from "./helpers/mockAttestations";
 import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
 import {
   passportTypes,
@@ -69,28 +73,6 @@ const easEncodePassport = () => {
 
 const scoreEasSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
 
-const easEncodeScore = () => {
-  const schemaEncoder = new SchemaEncoder(scoreEasSchema);
-
-  const encodedData = schemaEncoder.encodeData([
-    { name: "score", value: 100, type: "uint256" },
-    { name: "scorer_id", value: 1, type: "uint32" },
-    { name: "score_decimals", value: 18, type: "uint8" }
-  ]);
-  return encodedData;
-};
-
-const easInvalidEncodeScore = () => {
-  const schemaEncoder = new SchemaEncoder(scoreEasSchema);
-
-  const encodedData = schemaEncoder.encodeData([
-    { name: "score", value: 13, type: "uint256" },
-    { name: "scorer_id", value: 1, type: "uint32" },
-    { name: "score_decimals", value: 18, type: "uint8" }
-  ]);
-  return encodedData;
-};
-
 const easEncodeInvalidStamp = () => {
   const schemaEncoder = new SchemaEncoder(
     "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion"
@@ -110,8 +92,10 @@ const easEncodeInvalidStamp = () => {
   return encodedData;
 };
 
-describe("GitcoinPassportDecoder", function () {
-  this.beforeEach(async function () {
+describe.only("GitcoinPassportDecoder", function () {
+  const maxScoreAge = 3600 * 24 * 90; // 90 days
+
+  this.beforeAll(async function () {
     // this.beforeAll(async function () {
     const [ownerAccount, iamAcct, recipientAccount, otherAccount] =
       await ethers.getSigners();
@@ -120,7 +104,9 @@ describe("GitcoinPassportDecoder", function () {
     this.iamAccount = iamAcct;
     this.recipient = recipientAccount;
     this.otherAcct = otherAccount;
+  });
 
+  this.beforeEach(async function () {
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory(
       "GitcoinAttester",
@@ -160,8 +146,6 @@ describe("GitcoinPassportDecoder", function () {
     this.getNonce = async (address: string) => {
       return await this.gitcoinVerifier.recipientNonces(address);
     };
-
-    this.uid = ethers.keccak256(ethers.toUtf8Bytes("test"));
 
     // Deploy GitcoinResolver
     const GitcoinResolver = await ethers.getContractFactory(
@@ -246,7 +230,11 @@ describe("GitcoinPassportDecoder", function () {
               expirationTime: 1708741995,
               revocable: true,
               refUID: ZERO_BYTES32,
-              data: easEncodeScore(),
+              data: easEncodeScore({
+                score: 100,
+                scorer_id: 1,
+                score_decimals: 18
+              }),
               value: 0
             }
           ]
@@ -282,6 +270,9 @@ describe("GitcoinPassportDecoder", function () {
 
     await addVerifierResult.wait();
 
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // Deploy GitcoinPassportDecoder
+    //////////////////////////////////////////////////////////////////////////////////////////
     const GitcoinPassportDecoder = await ethers.getContractFactory(
       "GitcoinPassportDecoder",
       this.owner
@@ -298,7 +289,7 @@ describe("GitcoinPassportDecoder", function () {
       this.passportSchemaUID
     );
 
-    await this.gitcoinPassportDecoder.setMaxScoreAge(3600 * 24 * 90); // Sets the max age to 90 days
+    await this.gitcoinPassportDecoder.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
 
     await this.gitcoinPassportDecoder.setScoreSchemaUID(this.scoreSchemaUID);
 
@@ -657,7 +648,7 @@ describe("GitcoinPassportDecoder", function () {
       );
     });
   });
-  describe.only("getScore", function () {
+  describe("getScore", function () {
     describe("get score from attestation", function () {
       beforeEach(async function () {
         const attestation = getScoreAttestation(
@@ -852,7 +843,7 @@ describe("GitcoinPassportDecoder", function () {
     });
   });
 
-  describe.only("isHuman", function () {
+  describe("isHuman", function () {
     describe("for score from attestation", function () {
       beforeEach(async function () {
         const attestation = getScoreAttestation(
@@ -1090,6 +1081,148 @@ describe("GitcoinPassportDecoder", function () {
           this.gitcoinPassportDecoder,
           "ScoreDoesNotMeetThreshold"
         );
+      });
+    });
+  });
+
+  describe("Internal functions", function () {
+    let gitcoinPassportDecoderInternal: any;
+
+    this.beforeAll(async function () {
+      //////////////////////////////////////////////////////////////////////////////////////////
+      // Deploy GitcoinPassportDecoderInternal
+      // We will use GitcoinPassportDecoderInternal to test internal / private functions
+      //////////////////////////////////////////////////////////////////////////////////////////
+      const GitcoinPassportDecoderInternal = await ethers.getContractFactory(
+        "GitcoinPassportDecoderInternal",
+        this.owner
+      );
+      gitcoinPassportDecoderInternal =
+        await GitcoinPassportDecoderInternal.deploy();
+      await gitcoinPassportDecoderInternal.connect(this.owner).initialize();
+      await gitcoinPassportDecoderInternal.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
+    });
+
+    describe("_isScoreAttestationExpired", function () {
+      let now = 0;
+      let attestation: Attestation;
+
+      this.beforeEach(async function () {
+        now = Math.floor(new Date().getTime() / 1000);
+
+        // Convert now to integer
+        attestation = {
+          uid: ZERO_BYTES32,
+          schema: ZERO_BYTES32,
+          data: easEncodeScore({
+            score: 100,
+            scorer_id: 1,
+            score_decimals: 18
+          }),
+          expirationTime: now - 3600 * 24, // Current time as seconds. We set this to be 1 day in the past.
+          time: now,
+          refUID: ZERO_BYTES32,
+          revocationTime: 0,
+          recipient: ZERO_ADDRESS,
+          revocable: false,
+          attester: ZERO_ADDRESS
+        };
+      });
+
+      it("should return true if an attestation has an expiration date and is expired", async function () {
+        attestation.expirationTime = now - 3600 * 24; // Current time as seconds. We set this to be 1 day in the past.
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isScoreAttestationExpired(
+            attestation
+          );
+        expect(isExpired).to.equal(true);
+      });
+
+      it("should return false if an attestation has an expiration date and is expired", async function () {
+        attestation.expirationTime = now + 3600 * 24; // Current time as seconds. We set this to be 1 day in the future.
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isScoreAttestationExpired(
+            attestation
+          );
+        expect(isExpired).to.equal(false);
+      });
+
+      it("should return true if an attestation has NO expiration date and expiration is determined based on issuance date", async function () {
+        attestation.expirationTime = 0; // Current time as seconds. We set this to be 1 day in the past.
+        attestation.time = now - maxScoreAge - 3600; // Make the attestation older than max age
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isScoreAttestationExpired(
+            attestation
+          );
+        expect(isExpired).to.equal(true);
+      });
+
+      it("should return false if an attestation has NO expiration date and it is not expired based based on issuance date and max age", async function () {
+        attestation.expirationTime = 0; // Current time as seconds. We set this to be 1 day in the future.
+        attestation.time = now - maxScoreAge + 3600; // Make the attestation younger than max age
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isScoreAttestationExpired(
+            attestation
+          );
+        expect(isExpired).to.equal(false);
+      });
+    });
+
+    describe("_isCachedScoreExpired", function () {
+      let now = 0;
+      let cachedScore: {
+        score: number;
+        time: number;
+        expirationTime: number;
+      };
+
+      this.beforeEach(async function () {
+        now = Math.floor(new Date().getTime() / 1000);
+
+        // Convert now to integer
+        cachedScore = {
+          score: 123,
+          expirationTime: now - 3600 * 24, // Current time as seconds. We set this to be 1 day in the past.
+          time: now
+        };
+      });
+
+      it("should return true if an cachedScore has an expiration date and is expired", async function () {
+        cachedScore.expirationTime = now - 3600 * 24; // Unset expiration time
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isCachedScoreExpired(
+            cachedScore
+          );
+        expect(isExpired).to.equal(true);
+      });
+
+      it("should return false if an cachedScore has an expiration date and is expired", async function () {
+        cachedScore.expirationTime = now + 3600 * 24; // Unset expiration time
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isCachedScoreExpired(
+            cachedScore
+          );
+        expect(isExpired).to.equal(false);
+      });
+
+      it("should return true if a score has NO expiration date and expiration is determined based on issuance date", async function () {
+        cachedScore.expirationTime = 0; // Unset expiration time
+        cachedScore.time = now - maxScoreAge - 3600; // Make the attestation older than max age
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isCachedScoreExpired(
+            cachedScore
+          );
+        expect(isExpired).to.equal(true);
+      });
+
+      it("should return false if a score has NO expiration date and it is not expired based based on issuance date and max age", async function () {
+        cachedScore.expirationTime = 0; // Unset expiration time
+        cachedScore.time = now - maxScoreAge + 3600; // Make the attestation younger than max age
+        const isExpired =
+          await gitcoinPassportDecoderInternal.isCachedScoreExpired(
+            cachedScore
+          );
+        expect(isExpired).to.equal(false);
       });
     });
   });

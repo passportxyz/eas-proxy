@@ -175,7 +175,7 @@ contract GitcoinResolver is
    *
    * @param user The ETH address of the recipient
    * @return The `CachedScore` for the given ETH address.
-   * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
+   * A non-zero value in the `time` (issuance time) indicates that a valid score has been retreived.
    */
   function getCachedScore(
     address user

@@ -8,6 +8,7 @@ import {Attestation, IEAS} from "@ethereum-attestation-service/eas-contracts/con
 
 import {IGitcoinResolver} from "./IGitcoinResolver.sol";
 import {Credential, IGitcoinPassportDecoder} from "./IGitcoinPassportDecoder.sol";
+import "hardhat/console.sol";
 
 /**
  * @title GitcoinPassportDecoder
@@ -66,10 +67,10 @@ contract GitcoinPassportDecoder is
   error AttestationExpired(uint64 expirationTime);
 
   /// A threshold of zero was passed
-  error ZeroThreshold(uint256 threshold);
+  error ZeroThreshold();
 
   /// A max score age of zero was passed
-  error ZeroMaxScoreAge(uint256 maxScoreAge);
+  error ZeroMaxScoreAge();
 
   /// Score does not meet the threshold
   error ScoreDoesNotMeetThreshold(uint256 score);
@@ -166,7 +167,7 @@ contract GitcoinPassportDecoder is
    */
   function setMaxScoreAge(uint64 _maxScoreAge) public onlyOwner {
     if (_maxScoreAge == 0) {
-      revert ZeroMaxScoreAge(_maxScoreAge);
+      revert ZeroMaxScoreAge();
     }
 
     maxScoreAge = _maxScoreAge;
@@ -180,7 +181,7 @@ contract GitcoinPassportDecoder is
    */
   function setThreshold(uint256 _threshold) public onlyOwner {
     if (_threshold == 0) {
-      revert ZeroThreshold(_threshold);
+      revert ZeroThreshold();
     }
 
     threshold = _threshold;
@@ -244,14 +245,14 @@ contract GitcoinPassportDecoder is
 
   /**
    * @dev Retrieves the user's Passport attestation via the GitcoinResolver and IEAS and decodes the bits in the provider map to output a readable Passport
-   * @param userAddress User's address
+   * @param user User's address
    */
   function getPassport(
-    address userAddress
+    address user
   ) external view returns (Credential[] memory) {
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.getUserAttestation(
-      userAddress,
+      user,
       passportSchemaUID
     );
 
@@ -362,20 +363,37 @@ contract GitcoinPassportDecoder is
     return passportMemoryArray;
   }
 
-  // TODO: test this function
+  /**
+   * This function will check a score attestation for expiration.
+   * Even though the score attestation does not have an expiry date, ths function will check
+   * that it is not older than `maxScoreAge` seconds since issuance.
+   *
+   * @param attestation The attestation to check for expiration
+   */
   function _isScoreAttestationExpired(
     Attestation memory attestation
   ) internal view returns (bool) {
-    return
-      attestation.time > 0 &&
-      (block.timestamp > attestation.time + maxScoreAge);
+    if (attestation.expirationTime > 0) {
+      return block.timestamp > attestation.expirationTime;
+    }
+
+    return block.timestamp > attestation.time + maxScoreAge;
   }
 
-  // TODO: test this function
+  /**
+   * This function will check a cached score for expiration (this is the equivalent
+   * of the `_isScoreAttestationExpired` function for cached scores)
+   *
+   * @param score The attestation to check for expiration
+   */
   function _isCachedScoreExpired(
     IGitcoinResolver.CachedScore memory score
   ) internal view returns (bool) {
-    return (block.timestamp > score.issuanceDate + maxScoreAge);
+    if (score.expirationTime > 0) {
+      // If the score has an expiration time, check that it is not expired
+      return block.timestamp > score.expirationTime;
+    }
+    return (block.timestamp > score.time + maxScoreAge);
   }
 
   /**
@@ -386,11 +404,10 @@ contract GitcoinPassportDecoder is
     IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver
       .getCachedScore(user);
 
-    if (cachedScore.issuanceDate != 0) {
-      // TODO: rename issuanceDate with time, to be consistent with Attestation ???
+    if (cachedScore.time != 0) {
       // Check for expiration time
       if (_isCachedScoreExpired(cachedScore)) {
-        revert AttestationExpired(cachedScore.issuanceDate);
+        revert AttestationExpired(cachedScore.time);
       }
 
       // Return the score value
