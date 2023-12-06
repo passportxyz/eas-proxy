@@ -8,7 +8,6 @@ import {Attestation, IEAS} from "@ethereum-attestation-service/eas-contracts/con
 
 import {IGitcoinResolver} from "./IGitcoinResolver.sol";
 import {Credential, IGitcoinPassportDecoder} from "./IGitcoinPassportDecoder.sol";
-import "hardhat/console.sol";
 
 /**
  * @title GitcoinPassportDecoder
@@ -339,9 +338,9 @@ contract GitcoinPassportDecoder is
           // Set the hash to the credential struct from the hashes array
           credential.hash = hashes[hashIndex];
           // Set the issuanceDate of the credential struct to the item at the current index of the issuanceDates array
-          credential.issuanceDate = issuanceDates[hashIndex];
+          credential.time = issuanceDates[hashIndex];
           // Set the expirationDate of the credential struct to the item at the current index of the expirationDates array
-          credential.expirationDate = expirationDates[hashIndex];
+          credential.expirationTime = expirationDates[hashIndex];
 
           // Set the hashIndex with the finished credential struct
           passportMemoryArray[hashIndex] = credential;

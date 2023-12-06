@@ -26,6 +26,7 @@ import {
   GitcoinPassportDecoder,
   GitcoinVerifier
 } from "../typechain-types";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const providers = [BigInt("111")];
 
@@ -130,16 +131,14 @@ describe.only("GitcoinPassportDecoder", function () {
   let gitcoinPassportDecoder: GitcoinPassportDecoder;
   let passportSchemaUID: string;
   let scoreSchemaUID: string;
+  let ownerAccount: HardhatEthersSigner;
+  let iamAccount: HardhatEthersSigner;
+  let recipientAccount: HardhatEthersSigner;
+  let otherAccount: HardhatEthersSigner;
 
   this.beforeAll(async function () {
-    // this.beforeAll(async function () {
-    const [ownerAccount, iamAcct, recipientAccount, otherAccount] =
+    [ownerAccount, iamAccount, recipientAccount, otherAccount] =
       await ethers.getSigners();
-
-    this.owner = ownerAccount;
-    this.iamAccount = iamAcct;
-    this.recipient = recipientAccount;
-    this.otherAcct = otherAccount;
   });
 
   this.beforeEach(async function () {
@@ -148,10 +147,10 @@ describe.only("GitcoinPassportDecoder", function () {
     //////////////////////////////////////////////////////////////////////////////////////////
     const GitcoinAttester = await ethers.getContractFactory(
       "GitcoinAttester",
-      this.owner
+      ownerAccount
     );
     gitcoinAttester = await GitcoinAttester.deploy();
-    await gitcoinAttester.connect(this.owner).initialize();
+    await gitcoinAttester.connect(ownerAccount).initialize();
 
     await gitcoinAttester.setEASAddress(EAS_CONTRACT_ADDRESS);
 
@@ -160,14 +159,14 @@ describe.only("GitcoinPassportDecoder", function () {
     //////////////////////////////////////////////////////////////////////////////////////////
     const GitcoinVerifier = await ethers.getContractFactory(
       "GitcoinVerifier",
-      this.owner
+      ownerAccount
     );
     gitcoinVerifier = await GitcoinVerifier.deploy();
 
     await gitcoinVerifier
-      .connect(this.owner)
+      .connect(ownerAccount)
       .initialize(
-        await this.iamAccount.getAddress(),
+        await iamAccount.getAddress(),
         await gitcoinAttester.getAddress()
       );
 
@@ -196,12 +195,12 @@ describe.only("GitcoinPassportDecoder", function () {
     //////////////////////////////////////////////////////////////////////////////////////////
     const GitcoinResolver = await ethers.getContractFactory(
       "GitcoinResolver",
-      this.owner
+      ownerAccount
     );
     gitcoinResolver = await GitcoinResolver.deploy();
 
     await gitcoinResolver
-      .connect(this.owner)
+      .connect(ownerAccount)
       .initialize(EAS_CONTRACT_ADDRESS, await gitcoinAttester.getAddress());
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -210,7 +209,7 @@ describe.only("GitcoinPassportDecoder", function () {
     const schemaRegistry = new ethers.Contract(
       ethers.getAddress(schemaRegistryContractAddress),
       SCHEMA_REGISTRY_ABI,
-      this.owner
+      ownerAccount
     );
 
     passportSchemaUID = await registerSchema(
@@ -230,22 +229,18 @@ describe.only("GitcoinPassportDecoder", function () {
     //////////////////////////////////////////////////////////////////////////////////////////
     const GitcoinPassportDecoder = await ethers.getContractFactory(
       "GitcoinPassportDecoder",
-      this.owner
+      ownerAccount
     );
 
     gitcoinPassportDecoder = await GitcoinPassportDecoder.deploy();
-
-    await gitcoinPassportDecoder.connect(this.owner).initialize();
-
+    await gitcoinPassportDecoder.connect(ownerAccount).initialize();
     // Initialize the sdk with the address of the EAS Schema contract address
     await gitcoinPassportDecoder.setEASAddress(EAS_CONTRACT_ADDRESS);
     await gitcoinPassportDecoder.setGitcoinResolver(
       gitcoinResolver.getAddress()
     );
     await gitcoinPassportDecoder.setPassportSchemaUID(passportSchemaUID);
-
     await gitcoinPassportDecoder.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
-
     await gitcoinPassportDecoder.setScoreSchemaUID(scoreSchemaUID);
   });
 
@@ -253,10 +248,12 @@ describe.only("GitcoinPassportDecoder", function () {
     it("should append a provider to the end of an existing provider mapping", async function () {
       const providers = ["NewStamp1", "NewStamp2"];
 
-      await gitcoinPassportDecoder.connect(this.owner).addProviders(providers);
+      await gitcoinPassportDecoder
+        .connect(ownerAccount)
+        .addProviders(providers);
 
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .addProviders(["NewStamp3"]);
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
@@ -271,13 +268,14 @@ describe.only("GitcoinPassportDecoder", function () {
 
     it("should return provider given a version", async function () {
       const providers = ["NewStamp1", "NewStamp2"];
-      await gitcoinPassportDecoder.connect(this.owner).addProviders(providers);
+      await gitcoinPassportDecoder
+        .connect(ownerAccount)
+        .addProviders(providers);
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
 
-      const savedProviders = await gitcoinPassportDecoder.getProviders(
-        currentVersion
-      );
+      const savedProviders =
+        await gitcoinPassportDecoder.getProviders(currentVersion);
 
       expect(savedProviders.length === providers.length);
       expect(savedProviders).to.eql(providers);
@@ -286,7 +284,7 @@ describe.only("GitcoinPassportDecoder", function () {
     it("should not allow anyone other than owner to append new providers array in the provider mapping", async function () {
       await expect(
         gitcoinPassportDecoder
-          .connect(this.recipient)
+          .connect(recipientAccount)
           .addProviders(["NewStamp3"])
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -296,12 +294,12 @@ describe.only("GitcoinPassportDecoder", function () {
       const providersForCall2 = ["NewStamp3", "NewStamp2"];
 
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .addProviders(providersForCall1);
 
       await expect(
         gitcoinPassportDecoder
-          .connect(this.owner)
+          .connect(ownerAccount)
           .addProviders(providersForCall2)
       ).to.be.revertedWithCustomError(
         gitcoinPassportDecoder,
@@ -319,7 +317,7 @@ describe.only("GitcoinPassportDecoder", function () {
 
       await expect(
         gitcoinPassportDecoder
-          .connect(this.owner)
+          .connect(ownerAccount)
           .addProviders(providersForCall1)
       ).to.be.revertedWithCustomError(
         gitcoinPassportDecoder,
@@ -331,14 +329,14 @@ describe.only("GitcoinPassportDecoder", function () {
       const providersForCall1 = [""];
       await expect(
         gitcoinPassportDecoder
-          .connect(this.owner)
+          .connect(ownerAccount)
           .addProviders(providersForCall1)
       ).to.be.revertedWithCustomError(gitcoinPassportDecoder, "EmptyProvider");
     });
 
     it("should allow adding providers with the same name but different version", async function () {
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .addProviders(["NewStamp1", "NewStamp2"]);
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
@@ -351,11 +349,11 @@ describe.only("GitcoinPassportDecoder", function () {
       expect(lastProvider === "NewStamp2");
 
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .createNewVersion(["NewStamp1"]);
 
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .addProviders(["NewStamp2"]);
 
       const updatedVersion = await gitcoinPassportDecoder.currentVersion();
@@ -381,7 +379,7 @@ describe.only("GitcoinPassportDecoder", function () {
             schema: passportSchemaUID,
             data: [
               {
-                recipient: this.recipient.address,
+                recipient: recipientAccount.address,
                 expirationTime: 1708741995,
                 revocable: true,
                 refUID: ZERO_BYTES32,
@@ -391,7 +389,7 @@ describe.only("GitcoinPassportDecoder", function () {
             ]
           }
         ],
-        nonce: await this.getNonce(this.recipient.address),
+        nonce: await this.getNonce(recipientAccount.address),
         fee: fee1
       };
 
@@ -401,7 +399,7 @@ describe.only("GitcoinPassportDecoder", function () {
             schema: passportSchemaUID,
             data: [
               {
-                recipient: this.recipient.address,
+                recipient: recipientAccount.address,
                 expirationTime: 1708741995,
                 revocable: true,
                 refUID: ZERO_BYTES32,
@@ -411,7 +409,7 @@ describe.only("GitcoinPassportDecoder", function () {
             ]
           }
         ],
-        nonce: await this.getNonce(this.recipient.address),
+        nonce: await this.getNonce(recipientAccount.address),
         fee: fee1
       };
 
@@ -421,7 +419,7 @@ describe.only("GitcoinPassportDecoder", function () {
     });
 
     it("should decode a user's passport", async function () {
-      const signature = await this.iamAccount.signTypedData(
+      const signature = await iamAccount.signTypedData(
         this.domain,
         passportTypes,
         passport
@@ -429,7 +427,9 @@ describe.only("GitcoinPassportDecoder", function () {
 
       const { v, r, s } = ethers.Signature.from(signature);
 
-      await gitcoinPassportDecoder.connect(this.owner).addProviders(providers);
+      await gitcoinPassportDecoder
+        .connect(ownerAccount)
+        .addProviders(providers);
 
       // Submit attestations
       const verifiedPassport = await gitcoinVerifier.verifyAndAttest(
@@ -445,8 +445,8 @@ describe.only("GitcoinPassportDecoder", function () {
       await verifiedPassport.wait();
 
       const passportTx = await gitcoinPassportDecoder
-        .connect(this.owner)
-        .getPassport(this.recipient.address);
+        .connect(ownerAccount)
+        .getPassport(recipientAccount.address);
 
       expect(passportTx.length === providers.length);
 
@@ -459,7 +459,7 @@ describe.only("GitcoinPassportDecoder", function () {
     });
 
     it("should allow non-owners to decode a user's passport", async function () {
-      const signature = await this.iamAccount.signTypedData(
+      const signature = await iamAccount.signTypedData(
         this.domain,
         passportTypes,
         passport
@@ -467,7 +467,9 @@ describe.only("GitcoinPassportDecoder", function () {
 
       const { v, r, s } = ethers.Signature.from(signature);
 
-      await gitcoinPassportDecoder.connect(this.owner).addProviders(providers);
+      await gitcoinPassportDecoder
+        .connect(ownerAccount)
+        .addProviders(providers);
 
       // Submit attestations
       const verifiedPassport = await gitcoinVerifier.verifyAndAttest(
@@ -483,8 +485,8 @@ describe.only("GitcoinPassportDecoder", function () {
       await verifiedPassport.wait();
 
       const passportTx = await gitcoinPassportDecoder
-        .connect(this.otherAcct)
-        .getPassport(this.recipient.address);
+        .connect(otherAccount)
+        .getPassport(recipientAccount.address);
 
       expect(passportTx.length === providers.length);
 
@@ -509,7 +511,7 @@ describe.only("GitcoinPassportDecoder", function () {
         invalidPassport.multiAttestationRequest[0].data[0].recipient
       );
 
-      const signature = await this.iamAccount.signTypedData(
+      const signature = await iamAccount.signTypedData(
         this.domain,
         passportTypes,
         invalidPassport
@@ -532,8 +534,8 @@ describe.only("GitcoinPassportDecoder", function () {
 
       expect(
         gitcoinPassportDecoder
-          .connect(this.owner)
-          .getPassport(this.recipient.address)
+          .connect(ownerAccount)
+          .getPassport(recipientAccount.address)
       ).to.be.revertedWithPanic();
     });
   });
@@ -543,16 +545,16 @@ describe.only("GitcoinPassportDecoder", function () {
       // Get the 0th version
       const versionZero = await gitcoinPassportDecoder.currentVersion();
 
-      expect(versionZero).to.be("0");
+      expect(versionZero).to.equal("0");
 
       await gitcoinPassportDecoder
-        .connect(this.owner)
+        .connect(ownerAccount)
         .createNewVersion(providers);
 
       // Get the current version
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
 
-      expect(currentVersion).to.be("1");
+      expect(currentVersion).to.equal("1");
 
       const firstProvider = await gitcoinPassportDecoder.providerVersions(
         currentVersion,
@@ -567,10 +569,10 @@ describe.only("GitcoinPassportDecoder", function () {
       // Get the 0th version
       const versionZero = await gitcoinPassportDecoder.currentVersion();
 
-      expect(versionZero).to.be("0");
+      expect(versionZero).to.equal("0");
 
       await expect(
-        gitcoinPassportDecoder.connect(this.recipient).addProviders(providers)
+        gitcoinPassportDecoder.connect(recipientAccount).addProviders(providers)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
@@ -590,14 +592,14 @@ describe.only("GitcoinPassportDecoder", function () {
       }
       it(`should set the ${addressConstant}`, async function () {
         await gitcoinPassportDecoder
-          .connect(this.owner)
+          .connect(ownerAccount)
           [functionName](mockValue);
       });
 
       it(`should not allow anyone other than owner to set the ${addressConstant}`, async function () {
         await expect(
           gitcoinPassportDecoder
-            .connect(this.recipient)
+            .connect(recipientAccount)
             [functionName](mockValue)
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
@@ -605,7 +607,7 @@ describe.only("GitcoinPassportDecoder", function () {
       it(`should not allow ${addressConstant} to be set to zero address`, async function () {
         await expect(
           gitcoinPassportDecoder
-            .connect(this.owner)
+            .connect(ownerAccount)
             [functionName](addressParam ? ZERO_ADDRESS : ZERO_BYTES32)
         ).to.be.revertedWithCustomError(gitcoinPassportDecoder, error);
       });
@@ -643,8 +645,8 @@ describe.only("GitcoinPassportDecoder", function () {
         const attestation = getScoreAttestation(
           {
             schema: scoreSchemaUID,
-            recipient: this.recipient.address,
-            attester: this.iamAccount.address
+            recipient: recipientAccount.address,
+            attester: iamAccount.address
           },
           {
             score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
@@ -670,11 +672,11 @@ describe.only("GitcoinPassportDecoder", function () {
             }
           ],
 
-          nonce: await this.getNonce(this.recipient.address),
+          nonce: await this.getNonce(recipientAccount.address),
           fee: fee1
         };
 
-        const signature = await this.iamAccount.signTypedData(
+        const signature = await iamAccount.signTypedData(
           this.domain,
           passportTypes,
           gitcoinAttestationRequest
@@ -695,14 +697,14 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should get a user's score", async function () {
         const score = await gitcoinPassportDecoder.getScore(
-          this.recipient.address
+          recipientAccount.address
         );
         // We expect the value as a 4 digit decimal
         expect(score).to.equal(323456);
       });
       it("should revert if address has no attested score", async function () {
         await expect(
-          gitcoinPassportDecoder.getScore(this.owner.address)
+          gitcoinPassportDecoder.getScore(ownerAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -710,7 +712,7 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should revert if attestation is revoked", async function () {
         const scoreAttestation = await gitcoinResolver.getUserAttestation(
-          this.recipient.address,
+          recipientAccount.address,
           scoreSchemaUID
         );
         await gitcoinAttester.revokeAttestations([
@@ -726,7 +728,7 @@ describe.only("GitcoinPassportDecoder", function () {
         ]);
 
         await expect(
-          gitcoinPassportDecoder.getScore(this.recipient.address)
+          gitcoinPassportDecoder.getScore(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -740,8 +742,8 @@ describe.only("GitcoinPassportDecoder", function () {
         const attestation = getScoreAttestation(
           {
             schema: scoreSchemaUID,
-            recipient: this.recipient.address,
-            attester: this.iamAccount.address
+            recipient: recipientAccount.address,
+            attester: iamAccount.address
           },
           {
             score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
@@ -767,11 +769,11 @@ describe.only("GitcoinPassportDecoder", function () {
             }
           ],
 
-          nonce: await this.getNonce(this.recipient.address),
+          nonce: await this.getNonce(recipientAccount.address),
           fee: fee1
         };
 
-        const signature = await this.iamAccount.signTypedData(
+        const signature = await iamAccount.signTypedData(
           this.domain,
           passportTypes,
           gitcoinAttestationRequest
@@ -792,14 +794,14 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should get a user's score", async function () {
         const score = await gitcoinPassportDecoder.getScore(
-          this.recipient.address
+          recipientAccount.address
         );
         // We expect the value as a 4 digit decimal
         expect(score).to.equal(323456);
       });
       it("should revert if address has no attested score", async function () {
         await expect(
-          gitcoinPassportDecoder.getScore(this.owner.address)
+          gitcoinPassportDecoder.getScore(ownerAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -807,7 +809,7 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should revert if attestation is revoked", async function () {
         const scoreAttestation = await gitcoinResolver.getUserAttestation(
-          this.recipient.address,
+          recipientAccount.address,
           scoreSchemaUID
         );
         await gitcoinAttester.revokeAttestations([
@@ -823,7 +825,7 @@ describe.only("GitcoinPassportDecoder", function () {
         ]);
 
         await expect(
-          gitcoinPassportDecoder.getScore(this.recipient.address)
+          gitcoinPassportDecoder.getScore(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -838,8 +840,8 @@ describe.only("GitcoinPassportDecoder", function () {
         const attestation = getScoreAttestation(
           {
             schema: scoreSchemaUID,
-            recipient: this.recipient.address,
-            attester: this.iamAccount.address
+            recipient: recipientAccount.address,
+            attester: iamAccount.address
           },
           {
             score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
@@ -865,11 +867,11 @@ describe.only("GitcoinPassportDecoder", function () {
             }
           ],
 
-          nonce: await this.getNonce(this.recipient.address),
+          nonce: await this.getNonce(recipientAccount.address),
           fee: fee1
         };
 
-        const signature = await this.iamAccount.signTypedData(
+        const signature = await iamAccount.signTypedData(
           this.domain,
           passportTypes,
           gitcoinAttestationRequest
@@ -891,7 +893,7 @@ describe.only("GitcoinPassportDecoder", function () {
 
       it("should revert if address has no attested score", async function () {
         await expect(
-          gitcoinPassportDecoder.isHuman(this.owner.address)
+          gitcoinPassportDecoder.isHuman(ownerAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -899,7 +901,7 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should revert if attestation is revoked", async function () {
         const scoreAttestation = await gitcoinResolver.getUserAttestation(
-          this.recipient.address,
+          recipientAccount.address,
           scoreSchemaUID
         );
         await gitcoinAttester.revokeAttestations([
@@ -915,7 +917,7 @@ describe.only("GitcoinPassportDecoder", function () {
         ]);
 
         await expect(
-          gitcoinPassportDecoder.getScore(this.recipient.address)
+          gitcoinPassportDecoder.getScore(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -923,23 +925,23 @@ describe.only("GitcoinPassportDecoder", function () {
       });
 
       it("should return true if the score is above the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(313456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(313456);
         const isHuman = await gitcoinPassportDecoder.isHuman(
-          this.recipient.address
+          recipientAccount.address
         );
         expect(isHuman).to.equal(true);
       });
       it("should return true if the score is is equal to the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(323456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(323456);
         const isHuman = await gitcoinPassportDecoder.isHuman(
-          this.recipient.address
+          recipientAccount.address
         );
         expect(isHuman).to.equal(true);
       });
       it("should return false if the score is below the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(333456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(333456);
         await expect(
-          gitcoinPassportDecoder.isHuman(this.recipient.address)
+          gitcoinPassportDecoder.isHuman(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "ScoreDoesNotMeetThreshold"
@@ -953,8 +955,8 @@ describe.only("GitcoinPassportDecoder", function () {
         const attestation = getScoreAttestation(
           {
             schema: scoreSchemaUID,
-            recipient: this.recipient.address,
-            attester: this.iamAccount.address
+            recipient: recipientAccount.address,
+            attester: iamAccount.address
           },
           {
             score: "32345678000000000000", // That is 32.345678000000000000 (18 decimals)
@@ -980,11 +982,11 @@ describe.only("GitcoinPassportDecoder", function () {
             }
           ],
 
-          nonce: await this.getNonce(this.recipient.address),
+          nonce: await this.getNonce(recipientAccount.address),
           fee: fee1
         };
 
-        const signature = await this.iamAccount.signTypedData(
+        const signature = await iamAccount.signTypedData(
           this.domain,
           passportTypes,
           gitcoinAttestationRequest
@@ -1006,7 +1008,7 @@ describe.only("GitcoinPassportDecoder", function () {
 
       it("should revert if address has no attested score", async function () {
         await expect(
-          gitcoinPassportDecoder.isHuman(this.owner.address)
+          gitcoinPassportDecoder.isHuman(ownerAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
@@ -1014,7 +1016,7 @@ describe.only("GitcoinPassportDecoder", function () {
       });
       it("should revert if attestation is revoked", async function () {
         const scoreAttestation = await gitcoinResolver.getUserAttestation(
-          this.recipient.address,
+          recipientAccount.address,
           scoreSchemaUID
         );
         await gitcoinAttester.revokeAttestations([
@@ -1030,30 +1032,30 @@ describe.only("GitcoinPassportDecoder", function () {
         ]);
 
         await expect(
-          gitcoinPassportDecoder.isHuman(this.recipient.address)
+          gitcoinPassportDecoder.isHuman(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "AttestationNotFound"
         );
       });
       it("should return true if the score is above the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(313456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(313456);
         const isHuman = await gitcoinPassportDecoder.isHuman(
-          this.recipient.address
+          recipientAccount.address
         );
         expect(isHuman).to.equal(true);
       });
       it("should return true if the score is is equal to the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(323456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(323456);
         const isHuman = await gitcoinPassportDecoder.isHuman(
-          this.recipient.address
+          recipientAccount.address
         );
         expect(isHuman).to.equal(true);
       });
       it("should return false if the score is below the threshold", async function () {
-        await gitcoinPassportDecoder.connect(this.owner).setThreshold(333456);
+        await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(333456);
         await expect(
-          gitcoinPassportDecoder.isHuman(this.recipient.address)
+          gitcoinPassportDecoder.isHuman(recipientAccount.address)
         ).to.be.revertedWithCustomError(
           gitcoinPassportDecoder,
           "ScoreDoesNotMeetThreshold"
@@ -1072,11 +1074,11 @@ describe.only("GitcoinPassportDecoder", function () {
       //////////////////////////////////////////////////////////////////////////////////////////
       const GitcoinPassportDecoderInternal = await ethers.getContractFactory(
         "GitcoinPassportDecoderInternal",
-        this.owner
+        ownerAccount
       );
       gitcoinPassportDecoderInternal =
         await GitcoinPassportDecoderInternal.deploy();
-      await gitcoinPassportDecoderInternal.connect(this.owner).initialize();
+      await gitcoinPassportDecoderInternal.connect(ownerAccount).initialize();
       await gitcoinPassportDecoderInternal.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
     });
 

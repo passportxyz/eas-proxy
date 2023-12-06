@@ -8,8 +8,8 @@ pragma solidity ^0.8.9;
 struct Credential {
   string provider;
   bytes32 hash;
-  uint64 issuanceDate;
-  uint64 expirationDate;
+  uint64 time;
+  uint64 expirationTime;
 }
 
 /**
