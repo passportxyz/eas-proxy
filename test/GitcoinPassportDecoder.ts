@@ -123,7 +123,7 @@ const easEncodeInvalidStamp = () => {
   return encodedData;
 };
 
-describe.only("GitcoinPassportDecoder", function () {
+describe("GitcoinPassportDecoder", function () {
   const maxScoreAge = 3600 * 24 * 90; // 90 days
   let gitcoinResolver: GitcoinResolver;
   let gitcoinAttester: GitcoinAttester;
