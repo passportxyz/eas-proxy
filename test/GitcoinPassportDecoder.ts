@@ -12,7 +12,10 @@ import {
   getScoreAttestation,
   easEncodeScore
 } from "./helpers/mockAttestations";
-import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
+import {
+  AttestationStruct,
+  GitcoinResolver
+} from "../typechain-types/contracts/GitcoinResolver";
 import {
   passportTypes,
   fee1,
@@ -72,6 +75,28 @@ const easEncodePassport = () => {
 };
 
 const scoreEasSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
+const passportEasSchema =
+  "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion";
+
+const registerSchema = async (
+  schemaRegistry: ethers.Contract,
+  stampSchemaInput: string,
+  resolverAddress: string | undefined
+): Promise<string> => {
+  const stampSchemaTx = await schemaRegistry.register(
+    stampSchemaInput,
+    resolverAddress,
+    true
+  );
+
+  const passportSchemaTxReceipt = await stampSchemaTx.wait();
+  const passportSchemaEvent = passportSchemaTxReceipt.logs.filter(
+    (log: any) => {
+      return log.fragment.name == "Registered";
+    }
+  );
+  return passportSchemaEvent[0].args[0];
+};
 
 const easEncodeInvalidStamp = () => {
   const schemaEncoder = new SchemaEncoder(
@@ -94,6 +119,8 @@ const easEncodeInvalidStamp = () => {
 
 describe.only("GitcoinPassportDecoder", function () {
   const maxScoreAge = 3600 * 24 * 90; // 90 days
+  let gitcoinResolver: GitcoinResolver;
+  let passportSchemaUID: string;
 
   this.beforeAll(async function () {
     // this.beforeAll(async function () {
@@ -152,8 +179,9 @@ describe.only("GitcoinPassportDecoder", function () {
       "GitcoinResolver",
       this.owner
     );
-    this.gitcoinResolver = await GitcoinResolver.deploy();
-    await this.gitcoinResolver
+    gitcoinResolver = await GitcoinResolver.deploy();
+
+    await gitcoinResolver
       .connect(this.owner)
       .initialize(
         EAS_CONTRACT_ADDRESS,
@@ -167,43 +195,24 @@ describe.only("GitcoinPassportDecoder", function () {
       this.owner
     );
 
-    this.stampSchemaInput =
-      "uint256[] providers, bytes32[] hashes, uint64[] issuanceDates, uint64[] expirationDates, uint16 providerMapVersion";
-    this.resolverAddress = await this.gitcoinResolver.getAddress();
-    this.revocable = true;
-
-    this.stampTx = await schemaRegistry.register(
-      this.stampSchemaInput,
-      this.resolverAddress,
-      this.revocable
+    passportSchemaUID = await registerSchema(
+      schemaRegistry,
+      passportEasSchema,
+      gitcoinResolver.getAddress()
     );
 
-    this.passportSchemaTxReceipt = await this.stampTx.wait();
-    const passportSchemaEvent = this.passportSchemaTxReceipt.logs.filter(
-      (log: any) => {
-        return log.fragment.name == "Registered";
-      }
-    );
-    this.passportSchemaUID = passportSchemaEvent[0].args[0];
-
-    this.scoreSchemaInput = scoreEasSchema;
-    this.scoreSchemaTx = await schemaRegistry.register(
-      this.scoreSchemaInput,
-      this.resolverAddress,
-      this.revocable
+    this.scoreSchemaUID = await registerSchema(
+      schemaRegistry,
+      scoreEasSchema,
+      gitcoinResolver.getAddress()
     );
 
-    const scoreSchemaEvent = this.passportSchemaTxReceipt.logs.filter(
-      (log: any) => {
-        return log.fragment.name == "Registered";
-      }
-    );
-    this.scoreSchemaUID = scoreSchemaEvent[0].args[0];
+    console.log("====> 3");
 
     this.passport = {
       multiAttestationRequest: [
         {
-          schema: this.passportSchemaUID,
+          schema: passportSchemaUID,
           data: [
             {
               recipient: this.recipient.address,
@@ -247,7 +256,7 @@ describe.only("GitcoinPassportDecoder", function () {
     this.invalidPassport = {
       multiAttestationRequest: [
         {
-          schema: this.passportSchemaUID,
+          schema: passportSchemaUID,
           data: [
             {
               recipient: this.recipient.address,
@@ -284,10 +293,10 @@ describe.only("GitcoinPassportDecoder", function () {
 
     // Initialize the sdk with the address of the EAS Schema contract address
     await this.gitcoinPassportDecoder.setEASAddress(EAS_CONTRACT_ADDRESS);
-    await this.gitcoinPassportDecoder.setGitcoinResolver(this.resolverAddress);
-    await this.gitcoinPassportDecoder.setPassportSchemaUID(
-      this.passportSchemaUID
+    await this.gitcoinPassportDecoder.setGitcoinResolver(
+      gitcoinResolver.getAddress()
     );
+    await this.gitcoinPassportDecoder.setPassportSchemaUID(passportSchemaUID);
 
     await this.gitcoinPassportDecoder.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
 
@@ -653,7 +662,7 @@ describe.only("GitcoinPassportDecoder", function () {
       beforeEach(async function () {
         const attestation = getScoreAttestation(
           {
-            schema: this.passportSchemaUID,
+            schema: passportSchemaUID,
             recipient: this.recipient.address,
             attester: this.iamAccount.address
           },
@@ -747,10 +756,10 @@ describe.only("GitcoinPassportDecoder", function () {
 
     describe("get score from resolver cache", function () {
       beforeEach(async function () {
-        this.gitcoinResolver.setScoreSchema(this.passportSchemaUID);
+        this.gitcoinResolver.setScoreSchema(passportSchemaUID);
         const attestation = getScoreAttestation(
           {
-            schema: this.passportSchemaUID,
+            schema: passportSchemaUID,
             recipient: this.recipient.address,
             attester: this.iamAccount.address
           },
@@ -848,7 +857,7 @@ describe.only("GitcoinPassportDecoder", function () {
       beforeEach(async function () {
         const attestation = getScoreAttestation(
           {
-            schema: this.passportSchemaUID,
+            schema: passportSchemaUID,
             recipient: this.recipient.address,
             attester: this.iamAccount.address
           },
@@ -966,10 +975,10 @@ describe.only("GitcoinPassportDecoder", function () {
 
     describe("for score from resolver cache", function () {
       beforeEach(async function () {
-        this.gitcoinResolver.setScoreSchema(this.passportSchemaUID);
+        this.gitcoinResolver.setScoreSchema(passportSchemaUID);
         const attestation = getScoreAttestation(
           {
-            schema: this.passportSchemaUID,
+            schema: passportSchemaUID,
             recipient: this.recipient.address,
             attester: this.iamAccount.address
           },
