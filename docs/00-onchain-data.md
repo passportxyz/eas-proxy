@@ -68,13 +68,13 @@ sequenceDiagram
     Attester->>EAS : multiAttest
     activate Resolver
     EAS->>Resolver : multiAttest
-    Resolver-->>EAS :
+    Resolver-->>EAS : true / false
     deactivate Resolver
     EAS-->>Attester : UUIDs: bytes32[]
     deactivate EAS
-    Attester-->>Verifier :
+    Attester-->>Verifier : UUIDs: bytes32[]
     deactivate Attester
-    Verifier-->>App :
+    Verifier-->>App : UUIDs: bytes32[]
     deactivate Verifier
     App-->>User : display onchain status
 
