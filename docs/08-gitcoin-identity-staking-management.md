@@ -38,18 +38,18 @@ Relevant methods and their responsibilities
 function selfStake(uint256 amount, uint64 duration) external
 ```
 
-- validates that duration is within duration bounds(3-24months)
+- validates that duration is within duration bounds(3-24months) from current block timestamp
 - Transfers tokens from the staker to the contract.
-- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime` which will be block..
+- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime`
 - Adds the `Stake` ID to the `selfStakes` mapping for the user.
 
 ```solidity
 function communityStake(uint256 amount, uint64 unlockTime, address stakee) external
 ```
 
-- validates that duration is within duration bounds(3-24months)
+- validates that duration is within duration bounds(3-24months) from current block timestamp
 - Transfers tokens from the staker to the contract.
-- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime` which will be block..
+- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime`.
 - Maps the stakee and newly created Stake to the staker
 - Maps stakee and staker accordingly for `addressesStakedOnByUser` and `addressesStakingOnUser` these will be used for slashing
   **Note**: Since this function involves updating 3 arrays, it might be worth while testing enumerable sets for this function.
@@ -107,3 +107,20 @@ When a user wants to re-stake, the unlock time is updated to the current time pl
 ### Unstaking
 
 Whenever possible we should remove state when unstaking user's tokens, receiving as many state refunds as possible.
+
+### Events
+
+```solidity
+event SelfStake(address staker, uint256 stakeId);
+event CommunityStake(address staker, address stakee, uint256 stakeId);
+event UnStake(address staker, uint256 stakeId);
+event CommunityUnStake(address staker, address stakee, uint256 stakeId);
+event ReStake(address staker, uint256 stakeId);
+event CommunityReStake(address staker, address stakee, uint256 stakeId);
+```
+
+These events will be emitted from their corresponding methods. It would be possible to reuse the initial stake event and then subsequent restaking events, but the clarification between the two seems useful.
+
+Indexed vs. non-indexed events. Currently none of the events are indexed. We could index the staker and stakee addresses, but it seems like this would be a lot of overhead for little benefit. Most likely an indexer will be built for analytics and UI purposes that will index all events, so we might as well save the gas.
+
+Amount and unlock time. These were left out of the events because they are already stored in the `Stake` struct and can be retrieved from the `stakes` mapping. This was done to save gas.
