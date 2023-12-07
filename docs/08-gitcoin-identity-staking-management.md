@@ -24,7 +24,7 @@ mapping(address => address[]) addressesStakingOnUser;
 
 struct Stake {
   uint256 amount;
-  uint256 unlockTime;
+  uint64 unlockTime;
 }
 ```
 
@@ -35,19 +35,21 @@ We considered using an enumerable set instead of lists to track Stake IDs. Altho
 Relevant methods and their responsibilities
 
 ```solidity
-function selfStake(address staker, Stake stake) external
+function selfStake(uint256 amount, uint64 duration) external
 ```
 
+- validates that duration is within duration bounds(3-24months)
 - Transfers tokens from the staker to the contract.
-- Creates a new `Stake` and adds it to the `stakes` mapping.
+- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime` which will be block..
 - Adds the `Stake` ID to the `selfStakes` mapping for the user.
 
 ```solidity
-function communityStake(address staker, address stakee, Stake stake) external
+function communityStake(uint256 amount, uint64 unlockTime, address stakee) external
 ```
 
+- validates that duration is within duration bounds(3-24months)
 - Transfers tokens from the staker to the contract.
-- Creates a new `Stake` and adds it to the `stakes` mapping.
+- Creates a new `Stake` and adds it to the `stakes` mapping. `Stake` will be populated with the provided `amount` and `unlockTime` which will be block..
 - Maps the stakee and newly created Stake to the staker
 - Maps stakee and staker accordingly for `addressesStakedOnByUser` and `addressesStakingOnUser` these will be used for slashing
   **Note**: Since this function involves updating 3 arrays, it might be worth while testing enumerable sets for this function.
@@ -75,18 +77,20 @@ function communityUnStake(uint256 stakeId) external
   **Note**: Since this function involves updating 3 arrays, it might be worth while testing enumerable sets for this function.
 
 ```solidity
-function reStake(uint256 stakeId) external
+function reStake(uint256 stakeId, uint64 unlockTime) external
 ```
 
 - Checks that the stake is unlocked.
+- validates that unlockTime is within unlockTime bounds(3-24months) from current block timestamp
 - Checks that address controls the stake.
 - Updates the stake's unlock time.
 
 ```solidity
-function communityReStake(uint256 stakeId) external
+function communityReStake(uint256 stakeId, uint64 unlockTime) external
 ```
 
 - Checks that the stake is unlocked.
+- validates that unlockTime is within unlockTime bounds(3-24months) from current block timestamp
 - Checks that address controls the stake.
 - Updates the stake's unlock time.
 
