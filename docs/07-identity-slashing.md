@@ -76,8 +76,8 @@ When slashed, stake is sent to the **Stake Icebox** contract.
 
 The latest-to-unlock stake will be slashed first.
 
-See [section #8](./08-gitcoin-identity-staking-management.md) for more info about this contract, not
-related to slashing.
+See [section #8](./08-gitcoin-identity-staking-management.md) for more info about
+this contract, not related to slashing.
 
 ### Slashing Roles
 
@@ -102,6 +102,14 @@ related to slashing.
 - `mapping(uint16 => string) public slashReasons`
 - `uint16 slashReasonCount`
 - `IGitcoinStakingIcebox public icebox`
+
+### Slashing Events
+
+- `Slashed(address user, uint256 amount, uint16 reason)`
+- `SlashedMultiple(address[] users, uint256 amount, uint16 reason)`
+- `SetIcebox(address iceboxAddress)`
+- `AddSlasher(address slasher)`
+- `RemoveSlasher(address slasher)`
 
 ## Slasher(s)
 
@@ -139,23 +147,24 @@ that is older than a set threshold.
 - `setBurnAgeThreshold(uint64 ageThreshold) onlyAdmin`
 - `setStakingContract(address stakingContract) onlyAdmin`
 
-> TODO: we should probably consider that a user has multiple slash events, abd the release will happen for each slash event individually
 - `release(address user, uint256 amount) onlyManager`
-> TODO: Shall we consider that this could potentially be to big to be handled in 1 transaction, hence we might want to do this in patches (paginate)?
-- `burnAgedStake() onlyManager`
+- `burnAgedStake(uint256 maxBurn) onlyManager` - optional maxBurn limits the
+  stake to be burned, in case there is too much stake to burn it all
+  in one transaction (gas limits)
 - `supportsInterface(...)` - implement ERC165 interface for IGitcoinStakingIcebox
 - `slash(address user, uint256 amount) onlyStakingContract` - call transferFrom
   and record the slash
 
 ### State
 
-> TODO: the following mapping will not be able to hold multiple slashing events for the same user. A user might get slashed multiple times before we ever get to burn ...
-- `mapping(user => Slash) public slashes`
-- > TODO: would it make sense to record also the stake IDs?
-- `struct Slash { uint256 amount, uint64 slashedDate }`
+- `mapping(user => Slash[]) public slashes`
+- `struct Slash { uint256 amount, uint64 slashedTime }`
 - `uint64 public burnAgeThreshold`
 - `IGitcoinIdentityStaking public stakingContract`
 
-> TODO: It would be great if we could also define what events we want to emit. That will be also important to record the history and evtl. replay everything.
+### Events
+
+- `Released(address user, uint256 amount)`
+- `Burned(uint256 amount)`
 
 _[← Back to README](..#other-topics)_
