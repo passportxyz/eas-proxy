@@ -138,7 +138,10 @@ that is older than a set threshold.
 - `removeManager(address manager) onlyAdmin`
 - `setBurnAgeThreshold(uint64 ageThreshold) onlyAdmin`
 - `setStakingContract(address stakingContract) onlyAdmin`
+
+> TODO: we should probably consider that a user has multiple slash events, abd the release will happen for each slash event individually
 - `release(address user, uint256 amount) onlyManager`
+> TODO: Shall we consider that this could potentially be to big to be handled in 1 transaction, hence we might want to do this in patches (paginate)?
 - `burnAgedStake() onlyManager`
 - `supportsInterface(...)` - implement ERC165 interface for IGitcoinStakingIcebox
 - `slash(address user, uint256 amount) onlyStakingContract` - call transferFrom
@@ -146,9 +149,13 @@ that is older than a set threshold.
 
 ### State
 
+> TODO: the following mapping will not be able to hold multiple slashing events for the same user. A user might get slashed multiple times before we ever get to burn ...
 - `mapping(user => Slash) public slashes`
+- > TODO: would it make sense to record also the stake IDs?
 - `struct Slash { uint256 amount, uint64 slashedDate }`
 - `uint64 public burnAgeThreshold`
 - `IGitcoinIdentityStaking public stakingContract`
+
+> TODO: It would be great if we could also define what events we want to emit. That will be also important to record the history and evtl. replay everything.
 
 _[← Back to README](..#other-topics)_
