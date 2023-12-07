@@ -14,9 +14,9 @@ let config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.PROVIDER_URL as string,
-      },
-    },
+        url: process.env.PROVIDER_URL as string
+      }
+    }
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
@@ -26,55 +26,58 @@ let config: HardhatUserConfig = {
         chainId: 59144,
         urls: {
           apiURL: "https://api.lineascan.build/api",
-          browserURL: "https://lineascan.build/",
-        },
+          browserURL: "https://lineascan.build/"
+        }
       },
       {
         network: "baseGoerli",
         chainId: 84531,
         urls: {
           apiURL: "https://api-goerli.basescan.org/api",
-          browserURL: "https://goerli.basescan.org/",
-        },
+          browserURL: "https://goerli.basescan.org/"
+        }
       },
       {
         network: "linea-goerli",
         chainId: 59140,
         urls: {
           apiURL: "https://api.lineascan.build/api",
-          browserURL: "https://goerli.lineascan.build/",
-        },
-      },
-    ],
+          browserURL: "https://goerli.lineascan.build/"
+        }
+      }
+    ]
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS ? true : false,
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY
   },
   solidity: {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 200
       },
-      viaIR: true,
+      viaIR: true
     },
 
     compilers: [
       {
-        version: "0.8.0",
+        version: "0.8.0"
       },
       {
-        version: "0.8.9",
+        version: "0.8.9"
       },
       {
-        version: "0.8.18",
+        version: "0.8.18"
       },
       {
-        version: "0.8.19",
+        version: "0.8.19"
       },
-    ],
-  },
+      {
+        version: "0.8.23"
+      }
+    ]
+  }
 };
 
 if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
@@ -84,7 +87,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 11155111,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
       };
     }
     if (process.env.OP_PROVIDER_URL) {
@@ -92,7 +95,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.OP_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 10,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
       };
     }
     if (process.env.OP_GOERLI_PROVIDER_URL) {
@@ -100,7 +103,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.OP_GOERLI_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 420,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
       };
     }
   }
@@ -115,12 +118,12 @@ if (
     chainId: 59140,
     gasPrice: 582000007,
     url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
   };
   config.networks["linea"] = {
     chainId: 59144,
     url: `https://linea-mainnet.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
   };
 }
 
@@ -135,7 +138,7 @@ if (
       url: process.env.CB_PROVIDER_URL as string,
       accounts: [process.env.CB_PRIVATE_KEY as string],
       chainId: 84531,
-      from: process.env.CB_ADDRESS as string,
+      from: process.env.CB_ADDRESS as string
     };
   }
 }
