@@ -431,7 +431,7 @@ contract GitcoinPassportDecoder is
 
     // Decode the attestion output
     uint256 score;
-    uint256 decimals;
+    uint8 decimals;
     (score, , decimals) = abi.decode(
       attestation.data,
       (uint256, uint32, uint8)
