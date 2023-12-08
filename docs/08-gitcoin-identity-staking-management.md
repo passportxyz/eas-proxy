@@ -25,6 +25,7 @@ mapping(address => address[]) addressesStakingOnUser;
 struct Stake {
   uint256 amount;
   uint64 unlockTime;
+  // uint64 lockTime; // if a use case arises for knowing the time a token was locked, we can add this back in
 }
 ```
 
