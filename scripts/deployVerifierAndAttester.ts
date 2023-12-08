@@ -12,13 +12,14 @@ import { deployVerifier } from "./lib/verifier";
 assertEnvironment();
 
 export async function main() {
+  const issuerAddress = getIssuerAddress();
   await confirmContinue({
     contract: "GitcoinAttester and GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
+    issuerAddress: issuerAddress
   });
 
-  const issuerAddress = getIssuerAddress();
 
   const attester = await deployAttester();
   const verifier = await deployVerifier(

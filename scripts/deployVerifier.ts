@@ -5,21 +5,23 @@ import {
   confirmContinue,
   assertEnvironment,
   getAttesterAddress,
-  getIssuerAddress,
+  getIssuerAddress
 } from "./lib/utils";
 import { deployVerifier } from "./lib/verifier";
 
 assertEnvironment();
 
 export async function main() {
+  const attesterAddress = getAttesterAddress();
+  const issuerAddress = getIssuerAddress();
+
   await confirmContinue({
     contract: "GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
+    issuerAddress: issuerAddress,
+    attesterAddress: attesterAddress
   });
-
-  const attesterAddress = getAttesterAddress();
-  const issuerAddress = getIssuerAddress();
 
   await deployVerifier(attesterAddress, issuerAddress);
 }
