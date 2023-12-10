@@ -47,6 +47,7 @@ contract GitcoinResolver is
   mapping(address => CachedScore) private scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
+  // TODO: make this public
   bytes32 private scoreSchema;
 
   /**
@@ -99,6 +100,7 @@ contract GitcoinResolver is
    * @param _schema The score schema uid
    */
   function setScoreSchema(bytes32 _schema) external onlyOwner {
+    // TODO: emit event
     scoreSchema = _schema;
   }
 

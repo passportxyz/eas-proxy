@@ -101,6 +101,7 @@ contract GitcoinPassportDecoder is
   /**
    * @dev Gets the EAS contract.
    */
+  // TODO this is getter for EAS. Remove this, eas is public ...
   function getEASAddress() public view returns (IEAS) {
     return eas;
   }
@@ -128,6 +129,7 @@ contract GitcoinPassportDecoder is
    * @dev Sets the GitcoinResolver contract.
    * @param _gitcoinResolver The address of the GitcoinResolver contract.
    */
+  // TODO: rename to setGitcoinResolverAddress ???
   function setGitcoinResolver(address _gitcoinResolver) external onlyOwner {
     if (_gitcoinResolver == address(0)) {
       revert ZeroValue();
