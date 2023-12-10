@@ -6,6 +6,9 @@
     "EAS": {
       "address": "0x4200000000000000000000000000000000000021"
     },
+    "EASSchemaRegistry": {
+      "address": "0x4200000000000000000000000000000000000020"
+    },
     "GitcoinResolver": {
       "address": "0xA07c1A85B51dA271128A0D8D518d3c8cce8fa040"
     },
@@ -17,10 +20,10 @@
     },
     "easSchemas": {
       "passport": {
-        "uid": "0x86fc069106a8031d60123f4e63c21208a89d6d5a413a9b78e498b6a6ee3e82d6"
+        "uid": "0x4c753bbc4c61802c2fb59a729938e7b3a25f61fbd1ce38495d8bc4399cf30759"
       },
       "score": {
-        "uid": "0xb5a5d1170e68d17cf2057561efd69ffc25148821481557af9933b9fb694759ea"
+        "uid": "0xa88619d54906d6b78e7b237e17c0f14505ca25f2ca3a2dbcfb97887c18bcf3a4"
       }
     },
     "GitcoinPassportDecoder": {
@@ -33,6 +36,9 @@
     },
     "EAS": {
       "address": "0x4200000000000000000000000000000000000021"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x4200000000000000000000000000000000000020"
     },
     "GitcoinAttester": {
       "address": "0x843829986e895facd330486a61Ebee9E1f1adB1a"
@@ -58,6 +64,9 @@
     },
     "EAS": {
       "address": "0xaEF4103A04090071165F78D45D83A0C0782c2B2a"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x55D26f9ae0203EF95494AE4C170eD35f4Cf77797"
     },
     "GitcoinAttester": {
       "address": "0x336b1ffcAD1eA410a305bec99C55bA297c8C98a2"
@@ -99,6 +108,9 @@
     },
     "EAS": {
       "address": "0xaEF4103A04090071165F78D45D83A0C0782c2B2a"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x55D26f9ae0203EF95494AE4C170eD35f4Cf77797"
     },
     "GitcoinAttester": {
       "address": "0xBC778313E52b1184A15D163b5d3a72AEF8d510A2"
