@@ -28,7 +28,7 @@ struct Score {
 interface IGitcoinPassportDecoder {
   function getPassport(
     address userAddress
-  ) external returns (Credential[] memory);
+  ) external view returns (Credential[] memory);
 
-  function getScore(address userAddress) external returns (Score memory);
+  function getScore(address userAddress) external view returns (Score memory);
 }
