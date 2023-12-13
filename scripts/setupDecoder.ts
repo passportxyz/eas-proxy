@@ -39,13 +39,18 @@ export async function main() {
     `✅ Set GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
   );
 
-  await passportDecoder.setSchemaUID(chainInfo.easSchemas.passport.uid);
+  await passportDecoder.setPassportSchemaUID(chainInfo.easSchemas.passport.uid);
   console.log(
     `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.passport.uid} on GitcoinPassportDecoder.`
   );
 
-  const providers = newBitMap.map((bit) => bit.name);
-  await passportDecoder.addProviders(providers);
+  await passportDecoder.setScoreSchemaUID(chainInfo.easSchemas.score.uid);
+  console.log(
+    `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
+  );
+
+  // const providers = newBitMap.map((bit) => bit.name);
+  // await passportDecoder.addProviders(providers);
 
   console.log(`✅ Added providers to GitcoinPassportDecoder.`);
 }

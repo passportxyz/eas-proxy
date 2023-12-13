@@ -17,6 +17,7 @@ contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
   mapping(address => bool) public verifiers;
 
   // The instance of the EAS contract.
+  // TODO: make this public
   IEAS eas;
 
   // Emitted when a verifier is added to the allow-list.
@@ -65,6 +66,7 @@ contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
    * @param _easContractAddress The address of the EAS contract.
    */
   function setEASAddress(address _easContractAddress) public onlyOwner {
+    // TODO: emit event
     eas = IEAS(_easContractAddress);
   }
 

@@ -32,11 +32,12 @@ export async function main() {
     contract: "GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
+    registryAddress: schemaRegistryContractAddress,
     resolverAddress: resolverAddress,
     scoreSchema: scoreSchema,
     passportSchema: passportSchema,
     revocable: revocable,
-    address: await (await hre.ethers.provider.getSigner()).getAddress()
+    deplyerAddress: await (await hre.ethers.provider.getSigner()).getAddress()
   });
 
   const txScoreSchema = await schemaRegistry.register(

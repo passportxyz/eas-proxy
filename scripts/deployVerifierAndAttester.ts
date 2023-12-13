@@ -4,6 +4,7 @@ import hre from "hardhat";
 import {
   assertEnvironment,
   confirmContinue,
+  getEASAddress,
   getIssuerAddress,
 } from "./lib/utils";
 import { deployAttester } from "./lib/attester";
@@ -13,11 +14,13 @@ assertEnvironment();
 
 export async function main() {
   const issuerAddress = getIssuerAddress();
+  const easAddress = getEASAddress();
   await confirmContinue({
     contract: "GitcoinAttester and GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
-    issuerAddress: issuerAddress
+    issuerAddress: issuerAddress,
+    easAddress: easAddress
   });
 
 
