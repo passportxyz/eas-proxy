@@ -5,7 +5,7 @@ import {
   getResolverAddress,
   getPassportDecoderAddress,
   getEASAddress,
-  getThisChainInfo,
+  getThisChainInfo
 } from "./lib/utils";
 import { getSchemaUID } from "@ethereum-attestation-service/eas-sdk";
 
@@ -14,13 +14,17 @@ import newBitMap from "../deployments/providerBitMapInfo.json";
 assertEnvironment();
 
 export async function main() {
+  const chainInfo = getThisChainInfo();
+  const maxScoreAge = 90 * 24 * 3600; // 90 days
+  const threshold = 200000; // that means 20.0000
+
   await confirmContinue({
     contract: "Add schema and bitmap information to GitcoinPassportDecoder",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
+    maxScoreAge: maxScoreAge,
+    threshold: threshold
   });
-
-  const chainInfo = getThisChainInfo();
 
   const GitcoinPassportDecoder = await ethers.getContractFactory(
     "GitcoinPassportDecoder"
@@ -48,6 +52,14 @@ export async function main() {
   console.log(
     `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
   );
+
+  await passportDecoder.setMaxScoreAge(maxScoreAge);
+  console.log(
+    `✅ Set maxScoreAge to ${maxScoreAge} on GitcoinPassportDecoder.`
+  );
+
+  await passportDecoder.setThreshold(threshold);
+  console.log(`✅ Set threshold to ${threshold} on GitcoinPassportDecoder.`);
 
   // const providers = newBitMap.map((bit) => bit.name);
   // await passportDecoder.addProviders(providers);
