@@ -15,6 +15,9 @@ let config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: process.env.PROVIDER_URL as string
+      },
+      accounts: {
+        count: 210
       }
     }
   },
@@ -62,19 +65,22 @@ let config: HardhatUserConfig = {
 
     compilers: [
       {
-        version: "0.8.0"
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       },
       {
-        version: "0.8.9"
-      },
-      {
-        version: "0.8.18"
-      },
-      {
-        version: "0.8.19"
-      },
-      {
-        version: "0.8.23"
+        version: "0.8.23",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
     ]
   }
