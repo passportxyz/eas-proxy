@@ -86,7 +86,7 @@ Score attestations are much simpler than Passport attestations. A Score attestat
 You can follow Steps 1 and Step 2 above to retrieve the attestation UID and score attestation.
 In order to retreive a passport attestation, there are 2 options:
 
-1. **Option A**: read from EAS and decode the attestation similar like for PAssport (see above)
+1. **Option A**: read from EAS and decode the attestation similar like for Passport (see above)
 2. **Option B**: read from the 'cache' that has been implemented in the `GitcoinResolver` smart contract
 
 Given that the caching was introduced at a later point and not all scores written to EAS have been cached, we recommend the reading a users score:
