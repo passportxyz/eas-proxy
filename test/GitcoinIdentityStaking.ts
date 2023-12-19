@@ -69,24 +69,46 @@ describe("GitcoinIdentityStaking", function () {
     await this.gitcoinIdentityStaking6
       .connect(this.owner)
       .initialize(gtcAddress);
+
+    const GitcoinIdentityStaking7 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking7",
+      this.owner
+    );
+    this.gitcoinIdentityStaking7 = await GitcoinIdentityStaking7.deploy();
+    await this.gitcoinIdentityStaking7
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
+    const GitcoinIdentityStaking8 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking8",
+      this.owner
+    );
+    this.gitcoinIdentityStaking8 = await GitcoinIdentityStaking8.deploy();
+    await this.gitcoinIdentityStaking8
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
+    for (let i = 0; i < this.userAccounts.length; i++) {
+      await this.gtc
+        .connect(this.owner)
+        .mint(userAccounts[i].address, 100000000000);
+    }
   });
 
   it.only("self stake gas tests", async function () {
     const userAccounts = this.userAccounts.slice(0, 200);
 
-    for (let i = 0; i < userAccounts.length; i++) {
-      await this.gtc
-        .connect(this.owner)
-        .mint(userAccounts[i].address, 100000000000);
-    }
-
     await Promise.all(
       [
         this.gitcoinIdentityStaking,
-        this.gitcoinIdentityStaking4,
-        this.gitcoinIdentityStaking5,
-        this.gitcoinIdentityStaking6
-      ].map(async (gitcoinIdentityStaking: any, idx: number) => {
+        // this.gitcoinIdentityStaking2,
+        // this.gitcoinIdentityStaking3,
+        // this.gitcoinIdentityStaking4
+        // this.gitcoinIdentityStaking5,
+        this.gitcoinIdentityStaking6,
+        this.gitcoinIdentityStaking7
+        // this.gitcoinIdentityStaking8
+      ].map(async (gitcoinIdentityStaking: any) => {
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
             let hasTimelock = true;
