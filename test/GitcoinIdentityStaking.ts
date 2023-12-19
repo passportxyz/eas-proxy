@@ -88,6 +88,24 @@ describe("GitcoinIdentityStaking", function () {
       .connect(this.owner)
       .initialize(gtcAddress);
 
+    const GitcoinIdentityStaking10 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking10",
+      this.owner
+    );
+    this.gitcoinIdentityStaking10 = await GitcoinIdentityStaking10.deploy();
+    await this.gitcoinIdentityStaking10
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
+    const GitcoinIdentityStaking11 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking11",
+      this.owner
+    );
+    this.gitcoinIdentityStaking11 = await GitcoinIdentityStaking11.deploy();
+    await this.gitcoinIdentityStaking11
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
     for (let i = 0; i < this.userAccounts.length; i++) {
       await this.gtc
         .connect(this.owner)
@@ -106,9 +124,13 @@ describe("GitcoinIdentityStaking", function () {
         // this.gitcoinIdentityStaking4
         // this.gitcoinIdentityStaking5,
         this.gitcoinIdentityStaking6,
-        this.gitcoinIdentityStaking7
+        this.gitcoinIdentityStaking7,
         // this.gitcoinIdentityStaking8
+        this.gitcoinIdentityStaking10,
+        this.gitcoinIdentityStaking11
       ].map(async (gitcoinIdentityStaking: any) => {
+        const slashAddresses: { staker: string; stakee: string }[] = [];
+
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
             let hasTimelock = true;
@@ -157,6 +179,23 @@ describe("GitcoinIdentityStaking", function () {
                   100000
                 );
             }
+            slashAddresses.push(
+              {
+                staker: userAccount.address,
+                stakee: userAccount.address
+              },
+              {
+                staker: userAccount.address,
+                stakee: this.userAccounts[accountIdx + 1].address
+              },
+              {
+                staker: userAccount.address,
+                stakee:
+                  this.userAccounts[
+                    accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
+                  ].address
+              }
+            );
           })
         );
 
@@ -168,28 +207,46 @@ describe("GitcoinIdentityStaking", function () {
           .slice(0, 20)
           .map(({ address }: { address: string }) => address);
 
-        let hasSlashHash = true;
+        const stakeIds = Array.from({ length: 60 }, (_, i) => i);
+
+        for (const slashMethod in [
+          ["slash(uint256[],uint64)", [stakeIds, 50]],
+          ["slash(uint256[],uint64, uint256)", [stakeIds, 50, 123]],
+          ["slash(address[],uint64)", [addresses, 50]],
+          ["slash(address[],uint64, uint256)", [addresses, 50, 123]]
+        ]) {
+          const [func, args] = slashMethod;
+          try {
+            gitcoinIdentityStaking[func];
+          } catch {
+            continue;
+          }
+          await gitcoinIdentityStaking.connect(this.owner)[func](...args);
+        }
+
+        let hasBurnArgs = false;
         try {
-          gitcoinIdentityStaking["slash(address[],uint64)"];
-          hasSlashHash = false;
+          gitcoinIdentityStaking["burn(uint256[])"];
+          hasBurnArgs = true;
         } catch {}
 
-        if (hasSlashHash) {
-          await gitcoinIdentityStaking
-            .connect(this.owner)
-            .slash(addresses, 50, 123);
-
-          await gitcoinIdentityStaking
-            .connect(this.owner)
-            .slash(addresses, 50, 456);
-
-          await gitcoinIdentityStaking.connect(this.owner).burn();
-        } else {
-          await gitcoinIdentityStaking.connect(this.owner).slash(addresses, 50);
-
-          await gitcoinIdentityStaking.connect(this.owner).slash(addresses, 50);
-
+        if (hasBurnArgs) {
           await gitcoinIdentityStaking.connect(this.owner).burn([0, 1]);
+        } else {
+          await gitcoinIdentityStaking.connect(this.owner).burn();
+        }
+
+        let hasSlashAddresses = false;
+        try {
+          gitcoinIdentityStaking.slashAddresses;
+          hasSlashAddresses = true;
+        } catch {}
+        if (hasSlashAddresses) {
+          await gitcoinIdentityStaking.connect(this.owner).slashAddresses(
+            slashAddresses.slice(0, 60).map(({ staker }) => staker),
+            slashAddresses.slice(0, 60).map(({ stakee }) => stakee),
+            50
+          );
         }
       })
     );
