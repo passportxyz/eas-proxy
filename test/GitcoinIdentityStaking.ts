@@ -1,5 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { keccak256 } from "ethers";
 
 function shuffleArray(array: any[]) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -7,6 +9,35 @@ function shuffleArray(array: any[]) {
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
+}
+
+function makeSlashProof(slashMembers: any[][], slashNonce: string) {
+  const slashProof = ethers.keccak256(
+    ethers.AbiCoder.defaultAbiCoder().encode(
+      [
+        {
+          type: "tuple[]",
+          name: "SlashMember",
+          components: [
+            {
+              name: "account",
+              type: "address",
+              baseType: "address"
+            },
+            {
+              name: "amount",
+              type: "uint192",
+              baseType: "uint192"
+            }
+          ]
+        },
+        "bytes32"
+      ],
+      [slashMembers, slashNonce]
+    )
+  );
+
+  return slashProof;
 }
 
 describe("GitcoinIdentityStaking", function () {
@@ -20,7 +51,7 @@ describe("GitcoinIdentityStaking", function () {
     this.gtc = await GTC.deploy(
       this.owner.address,
       this.owner.address,
-      Math.floor(new Date().getTime() / 1000) + 2
+      Math.floor(new Date().getTime() / 1000) + 4
     );
     const gtcAddress = await this.gtc.getAddress();
 
@@ -31,106 +62,7 @@ describe("GitcoinIdentityStaking", function () {
     this.gitcoinIdentityStaking = await GitcoinIdentityStaking.deploy();
     await this.gitcoinIdentityStaking
       .connect(this.owner)
-      .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking2 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking2",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking2 = await GitcoinIdentityStaking2.deploy();
-    // await this.gitcoinIdentityStaking2
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking3 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking3",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking3 = await GitcoinIdentityStaking3.deploy();
-    // await this.gitcoinIdentityStaking3
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking4 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking4",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking4 = await GitcoinIdentityStaking4.deploy();
-    // await this.gitcoinIdentityStaking4
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking5 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking5",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking5 = await GitcoinIdentityStaking5.deploy();
-    // await this.gitcoinIdentityStaking5
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking6 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking6",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking6 = await GitcoinIdentityStaking6.deploy();
-    // await this.gitcoinIdentityStaking6
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking7 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking7",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking7 = await GitcoinIdentityStaking7.deploy();
-    // await this.gitcoinIdentityStaking7
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking8 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking8",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking8 = await GitcoinIdentityStaking8.deploy();
-    // await this.gitcoinIdentityStaking8
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking10 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking10",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking10 = await GitcoinIdentityStaking10.deploy();
-    // await this.gitcoinIdentityStaking10
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking11 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking11",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking11 = await GitcoinIdentityStaking11.deploy();
-    // await this.gitcoinIdentityStaking11
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking12 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking12",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking12 = await GitcoinIdentityStaking12.deploy();
-    // await this.gitcoinIdentityStaking12
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
-
-    // const GitcoinIdentityStaking13 = await ethers.getContractFactory(
-    //   "GitcoinIdentityStaking13",
-    //   this.owner
-    // );
-    // this.gitcoinIdentityStaking13 = await GitcoinIdentityStaking13.deploy();
-    // await this.gitcoinIdentityStaking13
-    //   .connect(this.owner)
-    //   .initialize(gtcAddress);
+      .initialize(gtcAddress, "0x0000000000000000000000000000000000000001");
 
     for (let i = 0; i < this.userAccounts.length; i++) {
       await this.gtc
@@ -139,30 +71,15 @@ describe("GitcoinIdentityStaking", function () {
     }
   });
 
-  it.only("self stake gas tests", async function () {
-    const userAccounts = this.userAccounts.slice(0, 200);
+  it("gas tests", async function () {
+    // const numUsers = 200;
+    const numUsers = 20;
+    const userAccounts = this.userAccounts.slice(0, numUsers);
 
     await Promise.all(
-      [
-        this.gitcoinIdentityStaking
-        // this.gitcoinIdentityStaking2,
-        // this.gitcoinIdentityStaking3,
-        // this.gitcoinIdentityStaking4
-        // this.gitcoinIdentityStaking5,
-        // this.gitcoinIdentityStaking6,
-        // this.gitcoinIdentityStaking7,
-        // this.gitcoinIdentityStaking8
-        // this.gitcoinIdentityStaking10,
-        // this.gitcoinIdentityStaking11,
-        // this.gitcoinIdentityStaking12
-        // this.gitcoinIdentityStaking13
-      ].map(async (gitcoinIdentityStaking: any) => {
+      [this.gitcoinIdentityStaking].map(async (gitcoinIdentityStaking: any) => {
         gitcoinIdentityStaking.grantRole(
           await gitcoinIdentityStaking.SLASHER_ROLE(),
-          this.owner.address
-        );
-        gitcoinIdentityStaking.grantRole(
-          await gitcoinIdentityStaking.BURNER_ROLE(),
           this.owner.address
         );
         gitcoinIdentityStaking.grantRole(
@@ -170,15 +87,18 @@ describe("GitcoinIdentityStaking", function () {
           this.owner.address
         );
 
-        const slashAddresses: { staker: string; stakee: string }[] = [];
+        const unlockTime = Math.floor(new Date().getTime() / 1000) + 1000;
 
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
+            // This changes the order of the transactions
+            // which can affect gas. Randomizing to get an
+            // average gas cost.
             for (const func of shuffleArray([
               () =>
                 gitcoinIdentityStaking
                   .connect(userAccount)
-                  .selfStake(100000, 1703165387),
+                  .selfStake(100000, unlockTime),
 
               () =>
                 gitcoinIdentityStaking
@@ -186,7 +106,7 @@ describe("GitcoinIdentityStaking", function () {
                   .communityStake(
                     this.userAccounts[accountIdx + 1],
                     100000,
-                    1703165387
+                    unlockTime + 1000
                   ),
 
               () =>
@@ -197,28 +117,11 @@ describe("GitcoinIdentityStaking", function () {
                       accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
                     ],
                     100000,
-                    1703165387
+                    unlockTime + 2000
                   )
             ])) {
               await func();
             }
-            slashAddresses.push(
-              {
-                staker: userAccount.address,
-                stakee: userAccount.address
-              },
-              {
-                staker: userAccount.address,
-                stakee: this.userAccounts[accountIdx + 1].address
-              },
-              {
-                staker: userAccount.address,
-                stakee:
-                  this.userAccounts[
-                    accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-                  ].address
-              }
-            );
           })
         );
 
@@ -226,84 +129,363 @@ describe("GitcoinIdentityStaking", function () {
         let slashMembers: any[][] = [];
 
         await Promise.all(
-          userAccounts.slice(0, 60).map(async (userAccount: any) => {
-            const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-              userAccount.address,
-              0
-            );
-            const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
-            slashMembers.push([userAccount.address, amount]);
-            stakeIds.push(stakeId);
-          })
+          userAccounts
+            .slice(0, Math.floor((numUsers * 3) / 10))
+            .map(async (userAccount: any) => {
+              const stakeId = await gitcoinIdentityStaking.selfStakeIds(
+                userAccount.address,
+                0
+              );
+              const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
+              slashMembers.push([userAccount.address, amount]);
+              stakeIds.push(stakeId);
+            })
         );
         slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
-        const slashProof = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            [
-              {
-                type: "tuple[]",
-                name: "SlashMember",
-                components: [
-                  {
-                    name: "account",
-                    type: "address",
-                    baseType: "address"
-                  },
-                  {
-                    name: "amount",
-                    type: "uint192",
-                    baseType: "uint192"
-                  }
-                ]
-              }
-            ],
-            [slashMembers]
-          )
-        );
+        const slashNonce = keccak256(Buffer.from(Math.random().toString()));
+
+        const slashProof = makeSlashProof(slashMembers, slashNonce);
 
         await gitcoinIdentityStaking
           .connect(this.owner)
           .slash(stakeIds, 50, slashProof);
 
-        const indexToRelease = 1;
-
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .release(slashMembers, indexToRelease, 500, slashProof);
+          .release(
+            slashMembers,
+            1,
+            500,
+            slashProof,
+            slashNonce,
+            ethers.keccak256(Buffer.from(Math.random().toString()))
+          );
 
-        slashMembers[indexToRelease][1] -= BigInt(500);
-
-        const newSlashProof = ethers.keccak256(
-          ethers.AbiCoder.defaultAbiCoder().encode(
-            [
-              {
-                type: "tuple[]",
-                name: "SlashMember",
-                components: [
-                  {
-                    name: "account",
-                    type: "address",
-                    baseType: "address"
-                  },
-                  {
-                    name: "amount",
-                    type: "uint192",
-                    baseType: "uint192"
-                  }
-                ]
-              }
-            ],
-            [slashMembers]
-          )
-        );
-
-        await gitcoinIdentityStaking
-          .connect(this.owner)
-          .release(slashMembers, 2, 1000, newSlashProof);
+        await time.increase(60 * 60 * 24 * 91);
 
         await gitcoinIdentityStaking.connect(this.owner).burn();
       })
     );
   }).timeout(1000000);
+
+  it("should reject burns too close together", async function () {
+    await time.increase(60 * 60 * 24 * 91);
+    await this.gitcoinIdentityStaking.connect(this.owner).burn();
+    await expect(
+      this.gitcoinIdentityStaking.connect(this.owner).burn()
+    ).to.be.revertedWithCustomError(
+      this.gitcoinIdentityStaking,
+      "MinimumBurnRoundDurationNotMet"
+    );
+  });
+
+  describe("failed stake tests", function () {
+    it("should reject self stake with invalid unlock time", async function () {
+      const unlockTime = Math.floor(new Date().getTime() / 1000) - 1000;
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.userAccounts[0])
+          .selfStake(100000, unlockTime)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "UnlockTimeMustBeInTheFuture"
+      );
+    });
+
+    it("should reject community stake with invalid unlock time", async function () {
+      const unlockTime = Math.floor(new Date().getTime() / 1000) - 1000;
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.userAccounts[0])
+          .communityStake(this.userAccounts[1], 100000, unlockTime)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "UnlockTimeMustBeInTheFuture"
+      );
+    });
+
+    it("should reject self stake with amount 0", async function () {
+      const unlockTime = Math.floor(new Date().getTime() / 1000) + 1000000000;
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.userAccounts[0])
+          .selfStake(0, unlockTime)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "AmountMustBeGreaterThanZero"
+      );
+    });
+
+    it("should reject community stake with amount 0", async function () {
+      const unlockTime = Math.floor(new Date().getTime() / 1000) + 1000000000;
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.userAccounts[0])
+          .communityStake(this.userAccounts[1], 0, unlockTime)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "AmountMustBeGreaterThanZero"
+      );
+    });
+
+    it("should reject community stake on self", async function () {
+      const unlockTime = Math.floor(new Date().getTime() / 1000) + 1000000000;
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.userAccounts[0])
+          .communityStake(this.userAccounts[0], 100000, unlockTime)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "CannotStakeOnSelf"
+      );
+    });
+  });
+
+  describe("standard tests", function () {
+    beforeEach(async function () {
+      const userAccounts = this.userAccounts.slice(0, 5);
+      this.gitcoinIdentityStaking.grantRole(
+        await this.gitcoinIdentityStaking.SLASHER_ROLE(),
+        this.owner.address
+      );
+      this.gitcoinIdentityStaking.grantRole(
+        await this.gitcoinIdentityStaking.RELEASER_ROLE(),
+        this.owner.address
+      );
+
+      this.unlockDelay = 100000000;
+
+      await Promise.all(
+        userAccounts.map(async (userAccount: any, accountIdx: number) => {
+          const unlockTime =
+            Math.floor(new Date().getTime() / 1000) + this.unlockDelay;
+
+          await this.gitcoinIdentityStaking
+            .connect(userAccount)
+            .selfStake(100000, unlockTime);
+          await this.gitcoinIdentityStaking
+            .connect(userAccount)
+            .communityStake(
+              this.userAccounts[accountIdx + 1],
+              100000,
+              unlockTime + 1000
+            );
+        })
+      );
+    });
+
+    it("should slash stakes", async function () {
+      const stakeIds = [1, 2, 3];
+
+      const startingStakeAmount = (
+        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+      )[0];
+
+      await this.gitcoinIdentityStaking
+        .connect(this.owner)
+        .slash(stakeIds, 50, ethers.keccak256(Buffer.from("notARealProof")));
+
+      const afterSlashStakeAmount = (
+        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+      )[0];
+
+      expect(afterSlashStakeAmount).to.equal(startingStakeAmount / BigInt(2));
+      expect(afterSlashStakeAmount).to.equal(BigInt(50000));
+
+      await this.gitcoinIdentityStaking
+        .connect(this.owner)
+        .slash(stakeIds, 80, ethers.keccak256(Buffer.from("anotherFakeProof")));
+
+      const afterDoubleSlashStakeAmount = (
+        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+      )[0];
+
+      expect(afterDoubleSlashStakeAmount).to.equal(
+        startingStakeAmount / BigInt(2) / BigInt(5)
+      );
+      expect(afterDoubleSlashStakeAmount).to.equal(BigInt(10000));
+    });
+
+    it("should reject slash with already used proof", async function () {
+      const stakeIds = [1, 2, 3];
+
+      const proof = ethers.keccak256(Buffer.from("notARealProof"));
+
+      await this.gitcoinIdentityStaking
+        .connect(this.owner)
+        .slash(stakeIds, 50, proof);
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(stakeIds, 50, proof)
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "SlashProofHashAlreadyUsed"
+      );
+    });
+
+    describe("with valid slashMembers", function () {
+      beforeEach(async function () {
+        const stakeIds: number[] = [];
+        let slashMembers: any[][] = [];
+
+        await Promise.all(
+          this.userAccounts
+            .slice(0, 3)
+            .map(async (userAccount: any, index: number) => {
+              const selfStakeId =
+                await this.gitcoinIdentityStaking.selfStakeIds(
+                  userAccount.address,
+                  0
+                );
+              const selfStakeAmount = (
+                await this.gitcoinIdentityStaking.stakes(selfStakeId)
+              )[0];
+
+              slashMembers.push([userAccount.address, selfStakeAmount]);
+              stakeIds.push(selfStakeId);
+
+              const communityStakeId =
+                await this.gitcoinIdentityStaking.communityStakeIds(
+                  userAccount.address,
+                  this.userAccounts[index + 1].address,
+                  0
+                );
+
+              const communityStakeAmount = (
+                await this.gitcoinIdentityStaking.stakes(communityStakeId)
+              )[0];
+
+              slashMembers.push([
+                this.userAccounts[index + 1].address,
+                communityStakeAmount
+              ]);
+              stakeIds.push(communityStakeId);
+            })
+        );
+
+        slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+
+        this.slashMembers = slashMembers;
+        this.stakeIds = stakeIds;
+        this.slashNonce = keccak256(Buffer.from(Math.random().toString()));
+        this.slashProof = makeSlashProof(this.slashMembers, this.slashNonce);
+      });
+
+      it("should release given a valid proof", async function () {
+        await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(this.stakeIds, 50, this.slashProof);
+
+        const indexToRelease = 1;
+
+        const newNonce = keccak256(Buffer.from(Math.random().toString()));
+
+        await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .release(
+            this.slashMembers,
+            indexToRelease,
+            500,
+            this.slashProof,
+            this.slashNonce,
+            newNonce
+          );
+
+        this.slashMembers[indexToRelease][1] -= BigInt(500);
+
+        const newSlashProof = makeSlashProof(this.slashMembers, newNonce);
+
+        await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .release(
+            this.slashMembers,
+            2,
+            1000,
+            newSlashProof,
+            newNonce,
+            keccak256(Buffer.from(Math.random().toString()))
+          );
+      });
+
+      it("should reject release with an invalid proof", async function () {
+        await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(this.stakeIds, 50, this.slashProof);
+
+        [this.slashMembers[0], this.slashMembers[1]] = [
+          this.slashMembers[1],
+          this.slashMembers[0]
+        ];
+
+        await expect(
+          this.gitcoinIdentityStaking
+            .connect(this.owner)
+            .release(
+              this.slashMembers,
+              1,
+              500,
+              this.slashProof,
+              this.slashNonce,
+              keccak256(Buffer.from(Math.random().toString()))
+            )
+        ).to.be.revertedWithCustomError(
+          this.gitcoinIdentityStaking,
+          "SlashProofHashNotValid"
+        );
+      });
+
+      it("should reject release for too high of an amount", async function () {
+        await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(this.stakeIds, 50, this.slashProof);
+
+        const indexToRelease = 1;
+
+        await expect(
+          this.gitcoinIdentityStaking
+            .connect(this.owner)
+            .release(
+              this.slashMembers,
+              indexToRelease,
+              this.slashMembers[indexToRelease][1] + BigInt(1),
+              this.slashProof,
+              this.slashNonce,
+              keccak256(Buffer.from(Math.random().toString()))
+            )
+        ).to.be.revertedWithCustomError(
+          this.gitcoinIdentityStaking,
+          "FundsNotAvailableToRelease"
+        );
+      });
+    });
+
+    it("should reject release with an unregistered proof", async function () {
+      const slashNonce = keccak256(Buffer.from(Math.random().toString()));
+      const slashProof = keccak256(Buffer.from("notARealProof"));
+
+      await expect(
+        this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .release(
+            [],
+            1,
+            500,
+            slashProof,
+            slashNonce,
+            ethers.keccak256(Buffer.from(Math.random().toString()))
+          )
+      ).to.be.revertedWithCustomError(
+        this.gitcoinIdentityStaking,
+        "SlashProofHashNotFound"
+      );
+    });
+  });
 });

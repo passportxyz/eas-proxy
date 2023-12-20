@@ -23,8 +23,17 @@ contract GitcoinIdentityStaking is
 {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  error SlashProofHashNotFound();
+  error SlashProofHashNotValid();
+  error SlashProofHashAlreadyUsed();
+  error FundsNotAvailableToRelease();
+  error MinimumBurnRoundDurationNotMet();
+  error AmountMustBeGreaterThanZero();
+  error UnlockTimeMustBeInTheFuture();
+  error CannotStakeOnSelf();
+  error FailedTransfer();
+
   bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
-  bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
   bytes32 public constant RELEASER_ROLE = keccak256("RELEASER_ROLE");
 
   struct Stake {
@@ -39,19 +48,32 @@ contract GitcoinIdentityStaking is
   mapping(uint256 stakeId => Stake) public stakes;
   uint256 public stakeCount;
 
-  uint256 public currentBurnRound = 1;
+  uint256 public currentSlashRound = 1;
+
+  uint64 public burnRoundMinimumDuration = 90 days;
+
+  uint256 public lastBurnTimestamp;
+
+  address public burnAddress;
 
   mapping(uint256 round => uint192 amount) public totalSlashed;
 
   // Used to permit unfreeze
   mapping(bytes32 => bool) public slashProofHashes;
 
-  event SelfStake(address indexed staker, uint192 amount);
+  event SelfStake(
+    uint256 indexed id,
+    address indexed staker,
+    uint192 amount,
+    uint64 unlockTime
+  );
 
   event CommunityStake(
+    uint256 indexed id,
     address indexed staker,
     address indexed stakee,
-    uint192 amount
+    uint192 amount,
+    uint64 unlockTime
   );
 
   event Slash(
@@ -64,28 +86,37 @@ contract GitcoinIdentityStaking is
 
   GTC public gtc;
 
-  function initialize(address gtcAddress) public initializer {
+  function initialize(address gtcAddress, address _burnAddress) public initializer {
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
     __AccessControl_init();
     __Pausable_init();
 
     gtc = GTC(gtcAddress);
+    burnAddress = _burnAddress;
+
+    lastBurnTimestamp = block.timestamp;
   }
 
   function selfStake(uint192 amount, uint64 unlockTime) external {
-    require(amount > 0, "Amount must be greater than 0");
-    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+    if (unlockTime < block.timestamp) {
+      revert UnlockTimeMustBeInTheFuture();
+    }
+    if (amount == 0) {
+      revert AmountMustBeGreaterThanZero();
+    }
 
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
     stakes[stakeId].unlockTime = unlockTime;
 
-    gtc.transferFrom(msg.sender, address(this), amount);
-
     selfStakeIds[msg.sender].push(stakeId);
 
-    emit SelfStake(msg.sender, amount);
+    if(!gtc.transferFrom(msg.sender, address(this), amount)) {
+      revert FailedTransfer();
+    }
+
+    emit SelfStake(stakeId, msg.sender, amount, unlockTime);
   }
 
   function communityStake(
@@ -93,8 +124,15 @@ contract GitcoinIdentityStaking is
     uint192 amount,
     uint64 unlockTime
   ) external {
-    require(amount > 0, "Amount must be greater than 0");
-    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+    if (unlockTime < block.timestamp) {
+      revert UnlockTimeMustBeInTheFuture();
+    }
+    if (amount == 0) {
+      revert AmountMustBeGreaterThanZero();
+    }
+    if (stakee == msg.sender) {
+      revert CannotStakeOnSelf();
+    }
 
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
@@ -102,9 +140,11 @@ contract GitcoinIdentityStaking is
 
     communityStakeIds[msg.sender][stakee].push(stakeId);
 
-    gtc.transferFrom(msg.sender, address(this), amount);
+    if(!gtc.transferFrom(msg.sender, address(this), amount)) {
+      revert FailedTransfer();
+    }
 
-    emit CommunityStake(msg.sender, stakee, amount);
+    emit CommunityStake(stakeId, msg.sender, stakee, amount, unlockTime);
   }
 
   function slash(
@@ -112,12 +152,16 @@ contract GitcoinIdentityStaking is
     uint64 slashedPercent,
     bytes32 slashProofHash
   ) external onlyRole(SLASHER_ROLE) {
+    if (slashProofHashes[slashProofHash]) {
+      revert SlashProofHashAlreadyUsed();
+    }
+
     uint256 numStakes = stakeIds.length;
 
     for (uint256 i = 0; i < numStakes; i++) {
       uint256 stakeId = stakeIds[i];
       uint192 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
-      totalSlashed[currentBurnRound] += slashedAmount;
+      totalSlashed[currentSlashRound] += slashedAmount;
       stakes[stakeId].amount -= slashedAmount;
     }
 
@@ -126,16 +170,36 @@ contract GitcoinIdentityStaking is
     emit Slash(msg.sender, slashedPercent, slashProofHash);
   }
 
-  // Burn last round, start next round (locking this round)
-  // Rounds don't matter, this is just to time the slashing
-  function burn() external onlyRole(BURNER_ROLE) {
-    // TODO check that threshold has passed since last burn, save this timestamp
+  // Burn last round and start next round (locking this round)
+  //
+  // Rounds don't matter for staking, this is just to
+  // ensure that slashes are aged before being burned
+  //
+  // On each call...
+  // - the current round contains all the slashes younger than the last
+  //   burn (a minimum of the round mimimum duration, 0-90 days)
+  // - the previous round contains all the non-released slashes older
+  //   than this (at least 90 days), and so it is burned
+  // - the current round becomes the previous round, and a new round
+  //   is initiated
+  // On the very first call, nothing will be burned
+  function burn() external {
+    if (block.timestamp - lastBurnTimestamp < burnRoundMinimumDuration) {
+      revert MinimumBurnRoundDurationNotMet();
+    }
 
-    gtc.transfer(address(1), totalSlashed[currentBurnRound - 1]);
+    uint192 amountToBurn = totalSlashed[currentSlashRound - 1];
 
-    emit Burn(currentBurnRound - 1, totalSlashed[currentBurnRound - 1]);
+    if (amountToBurn > 0) {
+      if(!gtc.transfer(burnAddress, amountToBurn)) {
+        revert FailedTransfer();
+      }
+    }
 
-    currentBurnRound++;
+    emit Burn(currentSlashRound - 1, amountToBurn);
+
+    currentSlashRound++;
+    lastBurnTimestamp = block.timestamp;
   }
 
   struct SlashMember {
@@ -143,30 +207,41 @@ contract GitcoinIdentityStaking is
     uint192 amount;
   }
 
-  // Pseudocode
+  // The nonce is used in the proof in case we need to
+  // do the exact same slash multiple times
   function release(
     SlashMember[] calldata slashMembers,
     uint256 slashMemberIndex,
     uint192 amountToRelease,
-    bytes32 slashProofHash
+    bytes32 slashProofHash,
+    bytes32 nonce,
+    bytes32 newNonce
   ) external onlyRole(RELEASER_ROLE) {
-    require(slashProofHashes[slashProofHash], "Slash proof hash not found");
-    require(keccak256(abi.encode(slashMembers)) == slashProofHash, "Slash proof hash does not match");
+    if (!slashProofHashes[slashProofHash]) {
+      revert SlashProofHashNotFound();
+    }
+    if (keccak256(abi.encode(slashMembers, nonce)) != slashProofHash) {
+      revert SlashProofHashNotValid();
+    }
 
     SlashMember memory slashMemberToRelease = slashMembers[slashMemberIndex];
 
-    require(amountToRelease <= slashMemberToRelease.amount, "Amount to release must be less than or equal to amount slashed");
+    if (amountToRelease > slashMemberToRelease.amount) {
+      revert FundsNotAvailableToRelease();
+    }
 
     SlashMember[] memory newSlashMembers = slashMembers;
 
     newSlashMembers[slashMemberIndex].amount -= amountToRelease;
 
-    bytes32 newSlashProofHash = keccak256(abi.encode(newSlashMembers));
+    bytes32 newSlashProofHash = keccak256(abi.encode(newSlashMembers, newNonce));
 
     slashProofHashes[slashProofHash] = false;
     slashProofHashes[newSlashProofHash] = true;
 
-    gtc.transfer(slashMemberToRelease.account, amountToRelease);
+    if(!gtc.transfer(slashMemberToRelease.account, amountToRelease)) {
+      revert FailedTransfer();
+    }
   }
 
   function _authorizeUpgrade(

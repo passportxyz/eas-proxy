@@ -88,7 +88,6 @@ contract GTC {
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
     constructor(address account, address minter_, uint mintingAllowedAfter_) public {
-        require(mintingAllowedAfter_ >= block.timestamp, "GTC::constructor: minting can only begin after deployment");
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
         minter = minter_;
