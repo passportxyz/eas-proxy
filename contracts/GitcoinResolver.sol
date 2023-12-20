@@ -31,6 +31,8 @@ contract GitcoinResolver is
   error NotAllowlisted();
   error InvalidAttester();
 
+  event ScoreSchemaSet(bytes32 schema);
+
   // Mapping of addresses to schemas to an attestation UID
   mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 
@@ -44,11 +46,10 @@ contract GitcoinResolver is
   mapping(address => bool) public allowlist;
 
   // Mapping of addresses to scores
-  mapping(address => CachedScore) private scores;
+  mapping(address => CachedScore) public scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
-  // TODO: make this public
-  bytes32 private scoreSchema;
+  bytes32 public scoreSchema;
 
   /**
    * @dev Creates a new resolver.
@@ -100,8 +101,8 @@ contract GitcoinResolver is
    * @param _schema The score schema uid
    */
   function setScoreSchema(bytes32 _schema) external onlyOwner {
-    // TODO: emit event
     scoreSchema = _schema;
+    emit ScoreSchemaSet(_schema);
   }
 
   // solhint-disable-next-line no-empty-blocks

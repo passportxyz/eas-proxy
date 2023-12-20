@@ -125,6 +125,26 @@ describe("GitcoinResolver", function () {
     };
   });
 
+  describe("Setup", function () {
+    it("should revert if non-wner tries to set a score schema", async function () {
+      await expect(
+        gitcoinResolver
+          .connect(nonOwnerOrVerifier)
+          .setScoreSchema(this.scoreSchemaId)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+    it("should emit event when a score schema is set", async function () {
+      const tx = await gitcoinResolver
+        .connect(owner)
+        .setScoreSchema(this.scoreSchemaId);
+      const receipt = await tx.wait();
+      const EasSetEvent = receipt.logs.filter((log: any) => {
+        return log.fragment.name == "ScoreSchemaSet";
+      });
+      expect(EasSetEvent.length).to.equal(1);
+      expect(EasSetEvent[0].args[0]).to.equal(this.scoreSchemaId);
+    });
+  });
   describe("Attestations", function () {
     it("should make 1 attestation", async function () {
       await gitcoinResolver.connect(mockEas).attest(this.validAttestation);
