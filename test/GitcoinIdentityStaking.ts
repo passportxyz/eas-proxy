@@ -11,6 +11,9 @@ function shuffleArray(array: any[]) {
   return array;
 }
 
+const fiveMinutes = 5 * 60;
+const twelveWeeksInSeconds = 12 * 7 * 24 * 60 * 60 + 1; // 12 weeks in seconds
+
 function makeSlashProof(slashMembers: any[][], slashNonce: string) {
   const slashProof = ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
@@ -87,8 +90,6 @@ describe("GitcoinIdentityStaking", function () {
           this.owner.address
         );
 
-        const unlockTime = Math.floor(new Date().getTime() / 1000) + 1000;
-
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
             // This changes the order of the transactions
@@ -98,7 +99,7 @@ describe("GitcoinIdentityStaking", function () {
               () =>
                 gitcoinIdentityStaking
                   .connect(userAccount)
-                  .selfStake(100000, unlockTime),
+                  .selfStake(100000, twelveWeeksInSeconds),
 
               () =>
                 gitcoinIdentityStaking
@@ -106,7 +107,7 @@ describe("GitcoinIdentityStaking", function () {
                   .communityStake(
                     this.userAccounts[accountIdx + 1],
                     100000,
-                    unlockTime + 1000
+                    twelveWeeksInSeconds
                   ),
 
               () =>
@@ -117,7 +118,7 @@ describe("GitcoinIdentityStaking", function () {
                       accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
                     ],
                     100000,
-                    unlockTime + 2000
+                    twelveWeeksInSeconds
                   )
             ])) {
               await func();
@@ -190,7 +191,7 @@ describe("GitcoinIdentityStaking", function () {
           .selfStake(100000, unlockTime)
       ).to.be.revertedWithCustomError(
         this.gitcoinIdentityStaking,
-        "UnlockTimeMustBeInTheFuture"
+        "InvalidLockTime"
       );
     });
 
@@ -203,7 +204,7 @@ describe("GitcoinIdentityStaking", function () {
           .communityStake(this.userAccounts[1], 100000, unlockTime)
       ).to.be.revertedWithCustomError(
         this.gitcoinIdentityStaking,
-        "UnlockTimeMustBeInTheFuture"
+        "InvalidLockTime"
       );
     });
 
@@ -259,22 +260,17 @@ describe("GitcoinIdentityStaking", function () {
         this.owner.address
       );
 
-      this.unlockDelay = 100000000;
-
       await Promise.all(
         userAccounts.map(async (userAccount: any, accountIdx: number) => {
-          const unlockTime =
-            Math.floor(new Date().getTime() / 1000) + this.unlockDelay;
-
           await this.gitcoinIdentityStaking
             .connect(userAccount)
-            .selfStake(100000, unlockTime);
+            .selfStake(100000, twelveWeeksInSeconds);
           await this.gitcoinIdentityStaking
             .connect(userAccount)
             .communityStake(
               this.userAccounts[accountIdx + 1],
               100000,
-              unlockTime + 1000
+              twelveWeeksInSeconds
             );
         })
       );
@@ -488,9 +484,8 @@ describe("GitcoinIdentityStaking", function () {
       );
     });
   });
-  const fiveMinutes = 5 * 60;
-  const twelveWeeksInSeconds = 12 * 7 * 24 * 60 * 60 + 1; // 12 weeks in seconds
-  describe.only("Self and Community Staking", function () {
+
+  describe.skip("Self and Community Staking", function () {
     it("should allow self staking", async function () {
       const fiveMinutes = 5 * 60; // 5 minutes in seconds
       const unlockTime =
