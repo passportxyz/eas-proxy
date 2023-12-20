@@ -1,6 +1,14 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+function shuffleArray(array: any[]) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 describe("GitcoinIdentityStaking", function () {
   this.beforeEach(async function () {
     const [ownerAccount, ...userAccounts] = await ethers.getSigners();
@@ -106,6 +114,15 @@ describe("GitcoinIdentityStaking", function () {
       .connect(this.owner)
       .initialize(gtcAddress);
 
+    const GitcoinIdentityStaking12 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking12",
+      this.owner
+    );
+    this.gitcoinIdentityStaking12 = await GitcoinIdentityStaking12.deploy();
+    await this.gitcoinIdentityStaking12
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
     for (let i = 0; i < this.userAccounts.length; i++) {
       await this.gtc
         .connect(this.owner)
@@ -126,8 +143,9 @@ describe("GitcoinIdentityStaking", function () {
         this.gitcoinIdentityStaking6,
         this.gitcoinIdentityStaking7,
         // this.gitcoinIdentityStaking8
-        this.gitcoinIdentityStaking10,
-        this.gitcoinIdentityStaking11
+        // this.gitcoinIdentityStaking10,
+        this.gitcoinIdentityStaking11,
+        this.gitcoinIdentityStaking12
       ].map(async (gitcoinIdentityStaking: any) => {
         const slashAddresses: { staker: string; stakee: string }[] = [];
 
@@ -140,44 +158,60 @@ describe("GitcoinIdentityStaking", function () {
             } catch {}
 
             if (hasTimelock) {
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .selfStake(100000, 1703165387);
+              for (const func of shuffleArray([
+                () =>
+                  gitcoinIdentityStaking
+                    .connect(userAccount)
+                    .selfStake(100000, 1703165387),
 
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .communityStake(
-                  this.userAccounts[accountIdx + 1],
-                  100000,
-                  1703165387
-                );
+                () =>
+                  gitcoinIdentityStaking
+                    .connect(userAccount)
+                    .communityStake(
+                      this.userAccounts[accountIdx + 1],
+                      100000,
+                      1703165387
+                    ),
 
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .communityStake(
-                  this.userAccounts[
-                    accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-                  ],
-                  100000,
-                  1703165387
-                );
+                () =>
+                  gitcoinIdentityStaking
+                    .connect(userAccount)
+                    .communityStake(
+                      this.userAccounts[
+                        accountIdx
+                          ? accountIdx - 1
+                          : this.userAccounts.length - 1
+                      ],
+                      100000,
+                      1703165387
+                    )
+              ])) {
+                await func();
+              }
             } else {
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .selfStake(100000);
+              for (const func of shuffleArray([
+                () =>
+                  gitcoinIdentityStaking.connect(userAccount).selfStake(100000),
 
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .communityStake(this.userAccounts[accountIdx + 1], 100000);
+                () =>
+                  gitcoinIdentityStaking
+                    .connect(userAccount)
+                    .communityStake(this.userAccounts[accountIdx + 1], 100000),
 
-              await gitcoinIdentityStaking
-                .connect(userAccount)
-                .communityStake(
-                  this.userAccounts[
-                    accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-                  ],
-                  100000
-                );
+                () =>
+                  gitcoinIdentityStaking
+                    .connect(userAccount)
+                    .communityStake(
+                      this.userAccounts[
+                        accountIdx
+                          ? accountIdx - 1
+                          : this.userAccounts.length - 1
+                      ],
+                      100000
+                    )
+              ])) {
+                await func();
+              }
             }
             slashAddresses.push(
               {

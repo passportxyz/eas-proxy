@@ -483,8 +483,7 @@ contract GitcoinIdentityStaking3 is
     slashCount++;
   }
 
-  function withdraw() external {
-  }
+  function withdraw() external {}
 
   // This kind of sucks because if there are new community stakers
   // after your slash but before the burn, they'll be slashed too
@@ -722,9 +721,6 @@ contract GitcoinIdentityStaking5 is
   mapping(address => Stake) public selfStakeAmount;
   mapping(address => mapping(address => Stake)) public communityStakeAmounts;
 
-  mapping(address staker => mapping(address stakee => bool))
-    public unlockPending;
-
   mapping(address => EnumerableSet.AddressSet)
     private communityStakersForAddress;
   mapping(address => EnumerableSet.AddressSet)
@@ -765,7 +761,6 @@ contract GitcoinIdentityStaking5 is
 
   function selfStake(uint256 amount, uint64 unlockTime) external {
     require(amount > 0, "Amount must be greater than 0");
-    require(unlockPending[msg.sender][msg.sender] == false, "Unlock pending");
 
     gtc.transferFrom(msg.sender, address(this), amount);
 
@@ -781,7 +776,6 @@ contract GitcoinIdentityStaking5 is
     uint64 unlockTime
   ) external {
     require(amount > 0, "Amount must be greater than 0");
-    require(unlockPending[msg.sender][stakee] == false, "Unlock pending");
 
     communityStakeAmounts[msg.sender][stakee].amount += amount;
     communityStakeAmounts[msg.sender][stakee].unlockTime = unlockTime;
@@ -880,9 +874,6 @@ contract GitcoinIdentityStaking6 is
   mapping(address => Stake) public selfStakeAmount;
   mapping(address => mapping(address => Stake)) public communityStakeAmounts;
 
-  mapping(address staker => mapping(address stakee => bool))
-    public unlockPending;
-
   mapping(address => EnumerableSet.AddressSet)
     private communityStakersForAddress;
   mapping(address => EnumerableSet.AddressSet)
@@ -908,9 +899,7 @@ contract GitcoinIdentityStaking6 is
     uint256 slashProofHash
   );
 
-  event SlashAddresses(
-    address indexed slasher
-  );
+  event SlashAddresses(address indexed slasher);
 
   event Burn(uint256 indexed round, uint256 amount);
 
@@ -927,7 +916,6 @@ contract GitcoinIdentityStaking6 is
 
   function selfStake(uint192 amount, uint64 unlockTime) external {
     require(amount > 0, "Amount must be greater than 0");
-    require(unlockPending[msg.sender][msg.sender] == false, "Unlock pending");
 
     gtc.transferFrom(msg.sender, address(this), uint256(amount));
 
@@ -943,7 +931,6 @@ contract GitcoinIdentityStaking6 is
     uint64 unlockTime
   ) external {
     require(amount > 0, "Amount must be greater than 0");
-    require(unlockPending[msg.sender][stakee] == false, "Unlock pending");
 
     communityStakeAmounts[msg.sender][stakee].amount += amount;
     communityStakeAmounts[msg.sender][stakee].unlockTime = unlockTime;
@@ -995,20 +982,6 @@ contract GitcoinIdentityStaking6 is
     emit SlashEvent(msg.sender, slashedPercent, slashProofHash);
   }
 
-  function slashAddresses(address[] calldata stakers, address[] calldata stakees, uint64 percent) external {
-    for (uint256 i = 0; i < stakers.length; i++) {
-      address staker = stakers[i];
-      address stakee = stakees[i];
-
-      uint192 slashedAmount = (percent *
-        communityStakeAmounts[staker][stakee].amount) / 100;
-      totalSlashed[currentBurnRound] += slashedAmount;
-      communityStakeAmounts[staker][stakee].amount -= slashedAmount;
-    }
-
-    emit SlashAddresses(msg.sender);
-  }
-
   // Burn last round, start next round (locking this round)
   // Rounds don't matter, this is just to time the slashing
   function burn() external {
@@ -1016,7 +989,10 @@ contract GitcoinIdentityStaking6 is
 
     gtc.transfer(address(1), uint256(totalSlashed[currentBurnRound - 1]));
 
-    emit Burn(currentBurnRound - 1, uint256(totalSlashed[currentBurnRound - 1]));
+    emit Burn(
+      currentBurnRound - 1,
+      uint256(totalSlashed[currentBurnRound - 1])
+    );
 
     currentBurnRound++;
   }
@@ -1499,8 +1475,7 @@ contract GitcoinIdentityStaking10 is
     slashCount++;
   }
 
-  function withdraw() external {
-  }
+  function withdraw() external {}
 
   function burn(uint256[] calldata slashIds) external {
     uint192 amountToBurn = 0;
@@ -1673,3 +1648,141 @@ contract GitcoinIdentityStaking11 is
   ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
 
+// Only one stake per stakee:staker, store amount as uint192
+// slash with staker[], stakee[], percent
+contract GitcoinIdentityStaking12 is
+  Initializable,
+  UUPSUpgradeable,
+  AccessControlUpgradeable,
+  PausableUpgradeable
+{
+  using EnumerableSet for EnumerableSet.AddressSet;
+
+  bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
+
+  error OnlySlasher();
+  error OnlyAdmin();
+
+  struct Stake {
+    uint192 amount;
+    uint64 unlockTime;
+  }
+
+  mapping(address => Stake) public selfStakeAmount;
+  mapping(address => mapping(address => Stake)) public communityStakeAmounts;
+
+  uint256 public currentBurnRound = 1;
+
+  mapping(uint256 round => uint192 amount) public totalSlashed;
+
+  // Used to permit unfreeze
+  mapping(uint256 => bool) public slashProofHashes;
+
+  event SelfStake(address indexed staker, uint256 amount);
+  event CommunityStake(
+    address indexed staker,
+    address indexed stakee,
+    uint256 amount
+  );
+
+  event SlashEvent(
+    address indexed slasher,
+    uint64 slashedPercent,
+    uint256 slashProofHash
+  );
+
+  event SlashAddresses(address indexed slasher);
+
+  event Burn(uint256 indexed round, uint256 amount);
+
+  GTC public gtc;
+
+  function initialize(address gtcAddress) public initializer {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+    __AccessControl_init();
+    __Pausable_init();
+
+    gtc = GTC(gtcAddress);
+  }
+
+  function selfStake(uint192 amount, uint64 unlockTime) external {
+    require(amount > 0, "Amount must be greater than 0");
+    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+
+    gtc.transferFrom(msg.sender, address(this), uint256(amount));
+
+    selfStakeAmount[msg.sender].amount += amount;
+    selfStakeAmount[msg.sender].unlockTime = unlockTime;
+
+    emit SelfStake(msg.sender, amount);
+  }
+
+  function communityStake(
+    address stakee,
+    uint192 amount,
+    uint64 unlockTime
+  ) external {
+    require(amount > 0, "Amount must be greater than 0");
+    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+
+    communityStakeAmounts[msg.sender][stakee].amount += amount;
+    communityStakeAmounts[msg.sender][stakee].unlockTime = unlockTime;
+
+    gtc.transferFrom(msg.sender, address(this), uint256(amount));
+
+    emit CommunityStake(msg.sender, stakee, amount);
+  }
+
+  function slashAddresses(
+    address[] calldata stakers,
+    address[] calldata stakees,
+    uint64 percent
+  ) external {
+    for (uint256 i = 0; i < stakers.length; i++) {
+      address staker = stakers[i];
+      address stakee = stakees[i];
+
+      if (stakee == staker) {
+        uint192 slashedAmount = (percent * selfStakeAmount[staker].amount) /
+          100;
+        totalSlashed[currentBurnRound] += slashedAmount;
+        selfStakeAmount[staker].amount -= slashedAmount;
+      } else {
+        uint192 slashedAmount = (percent *
+          communityStakeAmounts[staker][stakee].amount) / 100;
+        totalSlashed[currentBurnRound] += slashedAmount;
+        communityStakeAmounts[staker][stakee].amount -= slashedAmount;
+      }
+    }
+
+    emit SlashAddresses(msg.sender);
+  }
+
+  // Burn last round, start next round (locking this round)
+  // Rounds don't matter, this is just to time the slashing
+  function burn() external {
+    // TODO check that threshold has passed since last burn, save this timestamp
+
+    gtc.transfer(address(1), uint256(totalSlashed[currentBurnRound - 1]));
+
+    emit Burn(
+      currentBurnRound - 1,
+      uint256(totalSlashed[currentBurnRound - 1])
+    );
+
+    currentBurnRound++;
+  }
+
+  // Pseudocode
+  // function release(address, amount, proof, slashProofHash) external {
+  //   require(msg.sender has Releaser role)
+  //   require(slashProofHashes[slashProofHash], "Slash proof hash not found");
+  //   checkProof(proof, slashProofHash); // Probably merkle membership?
+  //   // release
+  // }
+
+  function _authorizeUpgrade(
+    address
+  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+}
