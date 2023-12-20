@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { time, reset } from "@nomicfoundation/hardhat-network-helpers";
 import { keccak256 } from "ethers";
 
 function shuffleArray(array: any[]) {
@@ -45,6 +45,7 @@ function makeSlashProof(slashMembers: any[][], slashNonce: string) {
 
 describe("GitcoinIdentityStaking", function () {
   this.beforeEach(async function () {
+    await reset();
     const [ownerAccount, ...userAccounts] = await ethers.getSigners();
 
     this.owner = ownerAccount;
@@ -485,7 +486,7 @@ describe("GitcoinIdentityStaking", function () {
     });
   });
 
-  describe.skip("Self and Community Staking", function () {
+  describe("Self and Community Staking", function () {
     it("should allow self staking", async function () {
       const fiveMinutes = 5 * 60; // 5 minutes in seconds
       const unlockTime =

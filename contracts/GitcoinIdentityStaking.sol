@@ -120,7 +120,6 @@ contract GitcoinIdentityStaking is
 
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
-    // double check conversion
     stakes[stakeId].unlockTime = unlockTime;
 
     selfStakeIds[msg.sender].push(stakeId);
