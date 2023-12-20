@@ -1786,3 +1786,151 @@ contract GitcoinIdentityStaking12 is
     address
   ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
+
+// Tracking slashes explicitly in contract
+// store amount as uint192
+// slash with slash IDs
+contract GitcoinIdentityStaking13 is
+  Initializable,
+  UUPSUpgradeable,
+  AccessControlUpgradeable,
+  PausableUpgradeable
+{
+  using EnumerableSet for EnumerableSet.AddressSet;
+
+  bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
+
+  error OnlySlasher();
+  error OnlyAdmin();
+
+  struct Stake {
+    uint192 amount;
+    uint64 unlockTime;
+  }
+
+  struct Slash {
+    uint192 amount;
+    uint64 time;
+    uint256[] stakeIds;
+  }
+
+  mapping(address => uint256[]) public selfStakeIds;
+  mapping(address => mapping(address => uint256[])) public communityStakeIds;
+
+  mapping(uint256 stakeId => Stake) public stakes;
+  mapping(uint256 slashId => Slash) public slashes;
+  uint256 public stakeCount;
+  uint256 public slashCount;
+
+  event SelfStake(address indexed staker, uint256 amount);
+  event CommunityStake(
+    address indexed staker,
+    address indexed stakee,
+    uint256 amount
+  );
+
+  event SlashEvent(
+    address indexed slasher,
+    uint64 slashedPercent,
+    uint256 slashCount
+  );
+
+  event Burn(address indexed burner);
+
+  GTC public gtc;
+
+  function initialize(address gtcAddress) public initializer {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+    __AccessControl_init();
+    __Pausable_init();
+
+    gtc = GTC(gtcAddress);
+  }
+
+  function selfStake(uint192 amount, uint64 unlockTime) external {
+    require(amount > 0, "Amount must be greater than 0");
+    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+
+    uint256 stakeId = ++stakeCount;
+    stakes[stakeId].amount = amount;
+    stakes[stakeId].unlockTime = unlockTime;
+
+    selfStakeIds[msg.sender].push(stakeId);
+
+    gtc.transferFrom(msg.sender, address(this), uint256(amount));
+
+    emit SelfStake(msg.sender, amount);
+  }
+
+  function communityStake(
+    address stakee,
+    uint192 amount,
+    uint64 unlockTime
+  ) external {
+    require(amount > 0, "Amount must be greater than 0");
+    require(unlockTime > block.timestamp, "Unlock time must be in the future");
+
+    uint256 stakeId = ++stakeCount;
+    stakes[stakeId].amount = amount;
+    stakes[stakeId].unlockTime = unlockTime;
+
+    communityStakeIds[msg.sender][stakee].push(stakeId);
+
+    gtc.transferFrom(msg.sender, address(this), uint256(amount));
+
+    emit CommunityStake(msg.sender, stakee, amount);
+  }
+
+  function slash(
+    uint256[] calldata stakeIds,
+    uint64 slashedPercent
+  ) external {
+    uint192 totalSlashed = 0;
+    uint256 numStakes = stakeIds.length;
+
+    for (uint256 i = 0; i < numStakes; i++) {
+      uint256 stakeId = stakeIds[i];
+      uint192 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
+      totalSlashed += slashedAmount;
+      stakes[stakeId].amount -= slashedAmount;
+    }
+
+    slashes[slashCount].amount = totalSlashed;
+    slashes[slashCount].time = uint64(block.timestamp);
+    slashes[slashCount].stakeIds = stakeIds;
+
+    slashCount++;
+
+    emit SlashEvent(msg.sender, slashedPercent, slashCount);
+  }
+
+  function burn(uint256[] calldata slashIds) external {
+    uint192 amountToBurn = 0;
+
+    uint256 numIds = slashIds.length;
+    for (uint256 i = 0; i < numIds; i++) {
+      uint256 slashId = slashIds[i];
+      if (slashes[slashId].time > 0) {
+        amountToBurn += slashes[slashId].amount;
+        delete slashes[slashId];
+      }
+    }
+
+    gtc.transfer(address(1), uint256(amountToBurn));
+
+    emit Burn(msg.sender);
+  }
+
+  // Pseudocode
+  // function release(address, amount, slashId) external {
+  //   require(msg.sender has Releaser role)
+  //   require(slashed[slashId] exists)
+  //   require(slashes[slashId].accounts.contains(address))
+  //   // release
+  // }
+
+  function _authorizeUpgrade(
+    address
+  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+}

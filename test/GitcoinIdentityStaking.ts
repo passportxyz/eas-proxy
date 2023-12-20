@@ -123,6 +123,15 @@ describe("GitcoinIdentityStaking", function () {
       .connect(this.owner)
       .initialize(gtcAddress);
 
+    const GitcoinIdentityStaking13 = await ethers.getContractFactory(
+      "GitcoinIdentityStaking13",
+      this.owner
+    );
+    this.gitcoinIdentityStaking13 = await GitcoinIdentityStaking13.deploy();
+    await this.gitcoinIdentityStaking13
+      .connect(this.owner)
+      .initialize(gtcAddress);
+
     for (let i = 0; i < this.userAccounts.length; i++) {
       await this.gtc
         .connect(this.owner)
@@ -146,6 +155,7 @@ describe("GitcoinIdentityStaking", function () {
         // this.gitcoinIdentityStaking10,
         this.gitcoinIdentityStaking11,
         this.gitcoinIdentityStaking12
+        // this.gitcoinIdentityStaking13
       ].map(async (gitcoinIdentityStaking: any) => {
         const slashAddresses: { staker: string; stakee: string }[] = [];
 
