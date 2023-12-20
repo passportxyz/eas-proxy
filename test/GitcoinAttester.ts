@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
   MultiRevocationRequest,
-  EAS,
+  EAS
 } from "@ethereum-attestation-service/eas-sdk";
 
 import { multiAttestationRequest } from "./helpers/mockAttestations";
@@ -44,7 +44,7 @@ describe("GitcoinAttester", function () {
         recipientAccount,
         mockVerifierAccount,
         nonOwnerOrVerifierAccount,
-        easDeployer,
+        easDeployer
       ] = await ethers.getSigners();
 
       owner = ownerAccount;
@@ -68,12 +68,29 @@ describe("GitcoinAttester", function () {
     await loadFixture(deployGitcoinAttester);
   });
   describe("Attestations", function () {
+    it("should revert when non-owner tries to set EAS address", async function () {
+      const tx = await gitcoinAttester
+        .connect(owner)
+        .setEASAddress(EASContractAddress);
+      const receipt = await tx.wait();
+      const EasSetEvent = receipt.logs.filter((log: any) => {
+        return log.fragment.name == "EASSet";
+      });
+      expect(EasSetEvent.length).to.equal(1);
+    });
+
+    it("should emit event when new EAS address is set", async function () {
+      await expect(
+        gitcoinAttester.connect(iamAccount).setEASAddress(EASContractAddress)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
     it("Should write multiple attestations", async function () {
       const tx = await gitcoinAttester.addVerifier(owner.address);
       await tx.wait();
 
       const resultTx = await gitcoinAttester.submitAttestations([
-        multiAttestationRequest,
+        multiAttestationRequest
       ]);
 
       const result = await resultTx.wait();
@@ -162,7 +179,7 @@ describe("GitcoinAttester", function () {
           if (existingRevocationRequest) {
             existingRevocationRequest.data.push({
               uid,
-              value,
+              value
             });
           } else {
             multiRevocationRequest.push({
@@ -170,9 +187,9 @@ describe("GitcoinAttester", function () {
               data: [
                 {
                   uid,
-                  value,
-                },
-              ],
+                  value
+                }
+              ]
             });
           }
         }
