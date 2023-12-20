@@ -33,104 +33,104 @@ describe("GitcoinIdentityStaking", function () {
       .connect(this.owner)
       .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking2 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking2",
-      this.owner
-    );
-    this.gitcoinIdentityStaking2 = await GitcoinIdentityStaking2.deploy();
-    await this.gitcoinIdentityStaking2
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking2 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking2",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking2 = await GitcoinIdentityStaking2.deploy();
+    // await this.gitcoinIdentityStaking2
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking3 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking3",
-      this.owner
-    );
-    this.gitcoinIdentityStaking3 = await GitcoinIdentityStaking3.deploy();
-    await this.gitcoinIdentityStaking3
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking3 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking3",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking3 = await GitcoinIdentityStaking3.deploy();
+    // await this.gitcoinIdentityStaking3
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking4 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking4",
-      this.owner
-    );
-    this.gitcoinIdentityStaking4 = await GitcoinIdentityStaking4.deploy();
-    await this.gitcoinIdentityStaking4
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking4 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking4",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking4 = await GitcoinIdentityStaking4.deploy();
+    // await this.gitcoinIdentityStaking4
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking5 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking5",
-      this.owner
-    );
-    this.gitcoinIdentityStaking5 = await GitcoinIdentityStaking5.deploy();
-    await this.gitcoinIdentityStaking5
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking5 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking5",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking5 = await GitcoinIdentityStaking5.deploy();
+    // await this.gitcoinIdentityStaking5
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking6 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking6",
-      this.owner
-    );
-    this.gitcoinIdentityStaking6 = await GitcoinIdentityStaking6.deploy();
-    await this.gitcoinIdentityStaking6
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking6 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking6",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking6 = await GitcoinIdentityStaking6.deploy();
+    // await this.gitcoinIdentityStaking6
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking7 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking7",
-      this.owner
-    );
-    this.gitcoinIdentityStaking7 = await GitcoinIdentityStaking7.deploy();
-    await this.gitcoinIdentityStaking7
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking7 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking7",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking7 = await GitcoinIdentityStaking7.deploy();
+    // await this.gitcoinIdentityStaking7
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking8 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking8",
-      this.owner
-    );
-    this.gitcoinIdentityStaking8 = await GitcoinIdentityStaking8.deploy();
-    await this.gitcoinIdentityStaking8
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking8 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking8",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking8 = await GitcoinIdentityStaking8.deploy();
+    // await this.gitcoinIdentityStaking8
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking10 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking10",
-      this.owner
-    );
-    this.gitcoinIdentityStaking10 = await GitcoinIdentityStaking10.deploy();
-    await this.gitcoinIdentityStaking10
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking10 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking10",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking10 = await GitcoinIdentityStaking10.deploy();
+    // await this.gitcoinIdentityStaking10
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking11 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking11",
-      this.owner
-    );
-    this.gitcoinIdentityStaking11 = await GitcoinIdentityStaking11.deploy();
-    await this.gitcoinIdentityStaking11
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking11 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking11",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking11 = await GitcoinIdentityStaking11.deploy();
+    // await this.gitcoinIdentityStaking11
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking12 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking12",
-      this.owner
-    );
-    this.gitcoinIdentityStaking12 = await GitcoinIdentityStaking12.deploy();
-    await this.gitcoinIdentityStaking12
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking12 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking12",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking12 = await GitcoinIdentityStaking12.deploy();
+    // await this.gitcoinIdentityStaking12
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
-    const GitcoinIdentityStaking13 = await ethers.getContractFactory(
-      "GitcoinIdentityStaking13",
-      this.owner
-    );
-    this.gitcoinIdentityStaking13 = await GitcoinIdentityStaking13.deploy();
-    await this.gitcoinIdentityStaking13
-      .connect(this.owner)
-      .initialize(gtcAddress);
+    // const GitcoinIdentityStaking13 = await ethers.getContractFactory(
+    //   "GitcoinIdentityStaking13",
+    //   this.owner
+    // );
+    // this.gitcoinIdentityStaking13 = await GitcoinIdentityStaking13.deploy();
+    // await this.gitcoinIdentityStaking13
+    //   .connect(this.owner)
+    //   .initialize(gtcAddress);
 
     for (let i = 0; i < this.userAccounts.length; i++) {
       await this.gtc
@@ -144,84 +144,63 @@ describe("GitcoinIdentityStaking", function () {
 
     await Promise.all(
       [
-        // this.gitcoinIdentityStaking,
+        this.gitcoinIdentityStaking
         // this.gitcoinIdentityStaking2,
         // this.gitcoinIdentityStaking3,
         // this.gitcoinIdentityStaking4
         // this.gitcoinIdentityStaking5,
-        this.gitcoinIdentityStaking6,
-        this.gitcoinIdentityStaking7,
+        // this.gitcoinIdentityStaking6,
+        // this.gitcoinIdentityStaking7,
         // this.gitcoinIdentityStaking8
         // this.gitcoinIdentityStaking10,
-        this.gitcoinIdentityStaking11,
-        this.gitcoinIdentityStaking12
+        // this.gitcoinIdentityStaking11,
+        // this.gitcoinIdentityStaking12
         // this.gitcoinIdentityStaking13
       ].map(async (gitcoinIdentityStaking: any) => {
+        gitcoinIdentityStaking.grantRole(
+          await gitcoinIdentityStaking.SLASHER_ROLE(),
+          this.owner.address
+        );
+        gitcoinIdentityStaking.grantRole(
+          await gitcoinIdentityStaking.BURNER_ROLE(),
+          this.owner.address
+        );
+        gitcoinIdentityStaking.grantRole(
+          await gitcoinIdentityStaking.RELEASER_ROLE(),
+          this.owner.address
+        );
+
         const slashAddresses: { staker: string; stakee: string }[] = [];
 
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
-            let hasTimelock = true;
-            try {
-              gitcoinIdentityStaking["selfStake(uint256)"];
-              hasTimelock = false;
-            } catch {}
+            for (const func of shuffleArray([
+              () =>
+                gitcoinIdentityStaking
+                  .connect(userAccount)
+                  .selfStake(100000, 1703165387),
 
-            if (hasTimelock) {
-              for (const func of shuffleArray([
-                () =>
-                  gitcoinIdentityStaking
-                    .connect(userAccount)
-                    .selfStake(100000, 1703165387),
+              () =>
+                gitcoinIdentityStaking
+                  .connect(userAccount)
+                  .communityStake(
+                    this.userAccounts[accountIdx + 1],
+                    100000,
+                    1703165387
+                  ),
 
-                () =>
-                  gitcoinIdentityStaking
-                    .connect(userAccount)
-                    .communityStake(
-                      this.userAccounts[accountIdx + 1],
-                      100000,
-                      1703165387
-                    ),
-
-                () =>
-                  gitcoinIdentityStaking
-                    .connect(userAccount)
-                    .communityStake(
-                      this.userAccounts[
-                        accountIdx
-                          ? accountIdx - 1
-                          : this.userAccounts.length - 1
-                      ],
-                      100000,
-                      1703165387
-                    )
-              ])) {
-                await func();
-              }
-            } else {
-              for (const func of shuffleArray([
-                () =>
-                  gitcoinIdentityStaking.connect(userAccount).selfStake(100000),
-
-                () =>
-                  gitcoinIdentityStaking
-                    .connect(userAccount)
-                    .communityStake(this.userAccounts[accountIdx + 1], 100000),
-
-                () =>
-                  gitcoinIdentityStaking
-                    .connect(userAccount)
-                    .communityStake(
-                      this.userAccounts[
-                        accountIdx
-                          ? accountIdx - 1
-                          : this.userAccounts.length - 1
-                      ],
-                      100000
-                    )
-              ])) {
-                await func();
-              }
+              () =>
+                gitcoinIdentityStaking
+                  .connect(userAccount)
+                  .communityStake(
+                    this.userAccounts[
+                      accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
+                    ],
+                    100000,
+                    1703165387
+                  )
+            ])) {
+              await func();
             }
             slashAddresses.push(
               {
@@ -243,55 +222,87 @@ describe("GitcoinIdentityStaking", function () {
           })
         );
 
-        // expect(await gitcoinIdentityStaking.stakeCount()).to.equal(
-        //   userAccounts.length * 3
-        // );
+        const stakeIds: number[] = [];
+        let slashMembers: any[][] = [];
 
-        const addresses = userAccounts
-          .slice(0, 20)
-          .map(({ address }: { address: string }) => address);
+        await Promise.all(
+          userAccounts.slice(0, 60).map(async (userAccount: any) => {
+            const stakeId = await gitcoinIdentityStaking.selfStakeIds(
+              userAccount.address,
+              0
+            );
+            const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
+            slashMembers.push([userAccount.address, amount]);
+            stakeIds.push(stakeId);
+          })
+        );
+        slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
-        const stakeIds = Array.from({ length: 60 }, (_, i) => i);
+        const slashProof = ethers.keccak256(
+          ethers.AbiCoder.defaultAbiCoder().encode(
+            [
+              {
+                type: "tuple[]",
+                name: "SlashMember",
+                components: [
+                  {
+                    name: "account",
+                    type: "address",
+                    baseType: "address"
+                  },
+                  {
+                    name: "amount",
+                    type: "uint192",
+                    baseType: "uint192"
+                  }
+                ]
+              }
+            ],
+            [slashMembers]
+          )
+        );
 
-        for (const slashMethod of [
-          ["slash(uint256[],uint64)", [stakeIds, 50]],
-          ["slash(uint256[],uint64,uint256)", [stakeIds, 50, 123]],
-          ["slash(address[],uint64)", [addresses, 50]],
-          ["slash(address[],uint64,uint256)", [addresses, 50, 123]]
-        ]) {
-          const [func, args]: any = slashMethod;
-          try {
-            gitcoinIdentityStaking[func];
-          } catch {
-            continue;
-          }
-          await gitcoinIdentityStaking.connect(this.owner)[func](...args);
-        }
+        await gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(stakeIds, 50, slashProof);
 
-        let hasBurnArgs = false;
-        try {
-          gitcoinIdentityStaking["burn(uint256[])"];
-          hasBurnArgs = true;
-        } catch {}
+        const indexToRelease = 1;
 
-        if (hasBurnArgs) {
-          await gitcoinIdentityStaking.connect(this.owner).burn([0, 1]);
-        } else {
-          await gitcoinIdentityStaking.connect(this.owner).burn();
-        }
+        await gitcoinIdentityStaking
+          .connect(this.owner)
+          .release(slashMembers, indexToRelease, 500, slashProof);
 
-        let hasSlashAddresses = false;
-        try {
-          gitcoinIdentityStaking.slashAddresses;
-          hasSlashAddresses = true;
-        } catch {}
-        if (hasSlashAddresses) {
-          await gitcoinIdentityStaking.connect(this.owner).slashAddresses(
-            slashAddresses.slice(0, 60).map(({ staker }) => staker),
-            slashAddresses.slice(0, 60).map(({ stakee }) => stakee),
-            50
-          );
-        }
+        slashMembers[indexToRelease][1] -= BigInt(500);
+
+        const newSlashProof = ethers.keccak256(
+          ethers.AbiCoder.defaultAbiCoder().encode(
+            [
+              {
+                type: "tuple[]",
+                name: "SlashMember",
+                components: [
+                  {
+                    name: "account",
+                    type: "address",
+                    baseType: "address"
+                  },
+                  {
+                    name: "amount",
+                    type: "uint192",
+                    baseType: "uint192"
+                  }
+                ]
+              }
+            ],
+            [slashMembers]
+          )
+        );
+
+        await gitcoinIdentityStaking
+          .connect(this.owner)
+          .release(slashMembers, 2, 1000, newSlashProof);
+
+        await gitcoinIdentityStaking.connect(this.owner).burn();
       })
     );
   }).timeout(1000000);
