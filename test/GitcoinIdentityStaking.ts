@@ -488,4 +488,68 @@ describe("GitcoinIdentityStaking", function () {
       );
     });
   });
+  const fiveMinutes = 5 * 60;
+  const twelveWeeksInSeconds = 12 * 7 * 24 * 60 * 60 + 1; // 12 weeks in seconds
+  describe.only("Self and Community Staking", function () {
+    it("should allow self staking", async function () {
+      const fiveMinutes = 5 * 60; // 5 minutes in seconds
+      const unlockTime =
+        twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000);
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .selfStake(100000n, twelveWeeksInSeconds);
+
+      const userStake = await this.gitcoinIdentityStaking.selfStakeIds(
+        this.userAccounts[0],
+        0
+      );
+
+      const stake = await this.gitcoinIdentityStaking.stakes(userStake);
+
+      expect(stake[0]).to.deep.equal(100000n);
+      expect(stake[1]).to.be.closeTo(unlockTime, fiveMinutes);
+    });
+    it("should allow withdrawal of self stake", async function () {
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .selfStake(100000n, twelveWeeksInSeconds);
+      await time.increaseTo(
+        twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000)
+      );
+
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .withdrawSelfStake(1);
+    });
+    it("should allow community staking", async function () {
+      const unlockTime =
+        twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000);
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .communityStake(this.userAccounts[1], 100000n, twelveWeeksInSeconds);
+      const communityStake =
+        await this.gitcoinIdentityStaking.communityStakeIds(
+          this.userAccounts[0],
+          this.userAccounts[1],
+          0
+        );
+
+      const stake = await this.gitcoinIdentityStaking.stakes(communityStake);
+
+      expect(stake[0]).to.deep.equal(100000n);
+      expect(stake[1]).to.be.closeTo(unlockTime, fiveMinutes);
+    });
+    it("should allow withdrawal of self stake", async function () {
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .selfStake(100000n, twelveWeeksInSeconds);
+      await time.increaseTo(
+        twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000)
+      );
+
+      await this.gitcoinIdentityStaking
+        .connect(this.userAccounts[0])
+        .withdrawSelfStake(1);
+    });
+  });
 });

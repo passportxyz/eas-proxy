@@ -32,6 +32,8 @@ contract GitcoinIdentityStaking is
   error UnlockTimeMustBeInTheFuture();
   error CannotStakeOnSelf();
   error FailedTransfer();
+  error InvalidLockTime();
+  error StakeIsLocked();
 
   bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
   bytes32 public constant RELEASER_ROLE = keccak256("RELEASER_ROLE");
@@ -86,7 +88,10 @@ contract GitcoinIdentityStaking is
 
   GTC public gtc;
 
-  function initialize(address gtcAddress, address _burnAddress) public initializer {
+  function initialize(
+    address gtcAddress,
+    address _burnAddress
+  ) public initializer {
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
     __AccessControl_init();
@@ -98,49 +103,75 @@ contract GitcoinIdentityStaking is
     lastBurnTimestamp = block.timestamp;
   }
 
-  function selfStake(uint192 amount, uint64 unlockTime) external {
-    if (unlockTime < block.timestamp) {
-      revert UnlockTimeMustBeInTheFuture();
-    }
+  function selfStake(uint192 amount, uint64 duration) external {
+    // revert if amount is 0. Since this value is unsigned integer
     if (amount == 0) {
       revert AmountMustBeGreaterThanZero();
     }
 
+    uint64 unlockTime = duration + uint64(block.timestamp);
+
+    if (
+      unlockTime < block.timestamp + 12 weeks ||
+      unlockTime > block.timestamp + 104 weeks
+    ) {
+      revert InvalidLockTime();
+    }
+
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
+    // double check conversion
     stakes[stakeId].unlockTime = unlockTime;
 
     selfStakeIds[msg.sender].push(stakeId);
 
-    if(!gtc.transferFrom(msg.sender, address(this), amount)) {
+    if (!gtc.transferFrom(msg.sender, address(this), amount)) {
       revert FailedTransfer();
     }
 
     emit SelfStake(stakeId, msg.sender, amount, unlockTime);
   }
 
+  function withdrawSelfStake(uint256 stakeId) external {
+    if (stakes[stakeId].unlockTime < block.timestamp) {
+      revert StakeIsLocked();
+    }
+
+    uint192 amount = stakes[stakeId].amount;
+
+    delete stakes[stakeId];
+
+    gtc.transfer(msg.sender, amount);
+  }
+
   function communityStake(
     address stakee,
     uint192 amount,
-    uint64 unlockTime
+    uint64 duration
   ) external {
-    if (unlockTime < block.timestamp) {
-      revert UnlockTimeMustBeInTheFuture();
+    if (stakee == msg.sender) {
+      revert CannotStakeOnSelf();
     }
     if (amount == 0) {
       revert AmountMustBeGreaterThanZero();
     }
-    if (stakee == msg.sender) {
-      revert CannotStakeOnSelf();
+
+    uint64 unlockTime = duration + uint64(block.timestamp);
+
+    if (
+      unlockTime < block.timestamp + 12 weeks ||
+      unlockTime > block.timestamp + 104 weeks
+    ) {
+      revert InvalidLockTime();
     }
 
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
-    stakes[stakeId].unlockTime = unlockTime;
+    stakes[stakeId].unlockTime = uint64(unlockTime);
 
     communityStakeIds[msg.sender][stakee].push(stakeId);
 
-    if(!gtc.transferFrom(msg.sender, address(this), amount)) {
+    if (!gtc.transferFrom(msg.sender, address(this), amount)) {
       revert FailedTransfer();
     }
 
@@ -191,7 +222,7 @@ contract GitcoinIdentityStaking is
     uint192 amountToBurn = totalSlashed[currentSlashRound - 1];
 
     if (amountToBurn > 0) {
-      if(!gtc.transfer(burnAddress, amountToBurn)) {
+      if (!gtc.transfer(burnAddress, amountToBurn)) {
         revert FailedTransfer();
       }
     }
@@ -234,12 +265,14 @@ contract GitcoinIdentityStaking is
 
     newSlashMembers[slashMemberIndex].amount -= amountToRelease;
 
-    bytes32 newSlashProofHash = keccak256(abi.encode(newSlashMembers, newNonce));
+    bytes32 newSlashProofHash = keccak256(
+      abi.encode(newSlashMembers, newNonce)
+    );
 
     slashProofHashes[slashProofHash] = false;
     slashProofHashes[newSlashProofHash] = true;
 
-    if(!gtc.transfer(slashMemberToRelease.account, amountToRelease)) {
+    if (!gtc.transfer(slashMemberToRelease.account, amountToRelease)) {
       revert FailedTransfer();
     }
   }
