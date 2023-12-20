@@ -1558,10 +1558,6 @@ contract GitcoinIdentityStaking11 is
 
   mapping(address => uint256[]) public selfStakeIds;
   mapping(address => mapping(address => uint256[])) public communityStakeIds;
-  mapping(address => EnumerableSet.AddressSet)
-    private communityStakersForAddress;
-  mapping(address => EnumerableSet.AddressSet)
-    private communityStakeesForAddress;
 
   mapping(uint256 stakeId => Stake) public stakes;
   uint256 public stakeCount;
@@ -1573,11 +1569,11 @@ contract GitcoinIdentityStaking11 is
   // Used to permit unfreeze
   mapping(uint256 => bool) public slashProofHashes;
 
-  event SelfStake(address indexed staker, uint256 amount);
+  event SelfStake(address indexed staker, uint192 amount);
   event CommunityStake(
     address indexed staker,
     address indexed stakee,
-    uint256 amount
+    uint192 amount
   );
 
   event SlashEvent(
@@ -1586,7 +1582,7 @@ contract GitcoinIdentityStaking11 is
     uint256 slashProofHash
   );
 
-  event Burn(uint256 indexed round, uint256 amount);
+  event Burn(uint256 indexed round, uint192 amount);
 
   GTC public gtc;
 

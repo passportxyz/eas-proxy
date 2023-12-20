@@ -118,7 +118,7 @@ describe("GitcoinIdentityStaking", function () {
 
     await Promise.all(
       [
-        this.gitcoinIdentityStaking,
+        // this.gitcoinIdentityStaking,
         // this.gitcoinIdentityStaking2,
         // this.gitcoinIdentityStaking3,
         // this.gitcoinIdentityStaking4
@@ -209,13 +209,13 @@ describe("GitcoinIdentityStaking", function () {
 
         const stakeIds = Array.from({ length: 60 }, (_, i) => i);
 
-        for (const slashMethod in [
+        for (const slashMethod of [
           ["slash(uint256[],uint64)", [stakeIds, 50]],
-          ["slash(uint256[],uint64, uint256)", [stakeIds, 50, 123]],
+          ["slash(uint256[],uint64,uint256)", [stakeIds, 50, 123]],
           ["slash(address[],uint64)", [addresses, 50]],
-          ["slash(address[],uint64, uint256)", [addresses, 50, 123]]
+          ["slash(address[],uint64,uint256)", [addresses, 50, 123]]
         ]) {
-          const [func, args] = slashMethod;
+          const [func, args]: any = slashMethod;
           try {
             gitcoinIdentityStaking[func];
           } catch {
