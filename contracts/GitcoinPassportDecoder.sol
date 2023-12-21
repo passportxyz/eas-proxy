@@ -28,6 +28,7 @@ contract GitcoinPassportDecoder is
   mapping(uint32 => string[]) public providerVersions;
 
   // Mapping of previously stored providers
+  // TODO: use uint8 instead of uint256
   mapping(uint32 => mapping(string => uint256)) public reversedMappingVersions;
 
   // Current version number
@@ -86,6 +87,8 @@ contract GitcoinPassportDecoder is
   function initialize() public initializer {
     __Ownable_init();
     __Pausable_init();
+
+    _initCurrentVersion(new string[](0));
   }
 
   function pause() public onlyOwner {
@@ -209,7 +212,7 @@ contract GitcoinPassportDecoder is
    * @dev Creates a new provider.
    * @param providers Array of provider names
    */
-  function createNewVersion(string[] memory providers) external onlyOwner {
+  function _initCurrentVersion(string[] memory providers) internal {
     for (uint256 i = 0; i < providers.length; ) {
       if (bytes(providers[i]).length == 0) {
         revert EmptyProvider();
@@ -219,8 +222,16 @@ contract GitcoinPassportDecoder is
         ++i;
       }
     }
-    currentVersion++;
     providerVersions[currentVersion] = providers;
+  }
+
+  /**
+   * @dev Creates a new provider.
+   * @param providers Array of provider names
+   */
+  function createNewVersion(string[] memory providers) external onlyOwner {
+    currentVersion++;
+    _initCurrentVersion(providers);
     emit NewVersionCreated();
   }
 

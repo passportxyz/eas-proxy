@@ -91,7 +91,6 @@
     "function currentVersion() view returns (uint32)",
     "function eas() view returns (address)",
     "function getAttestation(bytes32 attestationUID) view returns (tuple(bytes32 uid, bytes32 schema, uint64 time, uint64 expirationTime, uint64 revocationTime, bytes32 refUID, address recipient, address attester, bool revocable, bytes data))",
-    "function getEASAddress() view returns (address)",
     "function getPassport(address user) view returns (tuple(string provider, bytes32 hash, uint64 time, uint64 expirationTime)[])",
     "function getProviders(uint32 version) view returns (string[])",
     "function getScore(address user) view returns (uint256)",

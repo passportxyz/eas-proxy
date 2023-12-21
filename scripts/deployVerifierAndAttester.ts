@@ -5,7 +5,7 @@ import {
   assertEnvironment,
   confirmContinue,
   getEASAddress,
-  getIssuerAddress,
+  getIssuerAddress
 } from "./lib/utils";
 import { deployAttester } from "./lib/attester";
 import { deployVerifier } from "./lib/verifier";
@@ -23,15 +23,17 @@ export async function main() {
     easAddress: easAddress
   });
 
+  // console.log("🚀 Deploying GitcoinAttester...");
+  // const attester = await deployAttester();
+  const attesterAddress = "0x8B1A76795e3CbadD79C5410d2C4D4827D9C1503a";
+  // const attesterAddress = await attester.getAddress();
 
-  const attester = await deployAttester();
-  const verifier = await deployVerifier(
-    await attester.getAddress(),
-    issuerAddress
-  );
+  console.log("🚀 Deploying GitcoinVerifier...");
+  const verifier = await deployVerifier(attesterAddress, issuerAddress);
 
-  await attester.addVerifier(await verifier.getAddress());
-  console.log("✅ Added verifier to attester");
+  // console.log("🚀 adding Verifier to attester ...");
+  // await attester.addVerifier(await verifier.getAddress());
+  // console.log("✅ Added verifier to attester");
 }
 
 main().catch((error) => {

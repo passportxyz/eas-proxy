@@ -1,5 +1,38 @@
 {
+  "0x1a4": {
+    "description": "Optimism Goerli",
+    "issuer": {
+      "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
+    },
+    "EAS": {
+      "address": "0x4200000000000000000000000000000000000021"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x4200000000000000000000000000000000000020"
+    },
+    "GitcoinResolver": {
+      "address": ""
+    },
+    "GitcoinVerifier": {
+      "address": ""
+    },
+    "GitcoinAttester": {
+      "address": ""
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": ""
+      },
+      "score": {
+        "uid": ""
+      }
+    },
+    "GitcoinPassportDecoder": {
+      "address": ""
+    }
+  },
   "0x14a33": {
+    "description": "Base Goerli",
     "issuer": {
       "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
     },
@@ -27,10 +60,11 @@
       }
     },
     "GitcoinPassportDecoder": {
-      "address": "0x88265f8860F78b7A448739bD79594bdC82329b69"
+      "address": "0xa652BE6A92c7efbBfEEf6b67eEF10A146AAA8ADc"
     }
   },
   "0xa": {
+    "description": "OP Mainnet",
     "issuer": {
       "address": "0x804233b96cbd6d81efeb6517347177ef7bD488ED"
     },
@@ -59,6 +93,7 @@
     }
   },
   "0xe704": {
+    "description": "Linea Testnet",
     "issuer": {
       "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
     },
@@ -103,6 +138,7 @@
     }
   },
   "0xe708": {
+    "description": "Linea",
     "issuer": {
       "address": "0x804233b96cbd6d81efeb6517347177ef7bD488ED"
     },
