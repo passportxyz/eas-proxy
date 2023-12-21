@@ -547,5 +547,19 @@ describe("GitcoinIdentityStaking", function () {
         .connect(this.userAccounts[0])
         .withdrawSelfStake(1);
     });
+    // it("should not allow withdrawal of self stake before unlock time", async function () {
+    //   await this.gitcoinIdentityStaking
+    //     .connect(this.userAccounts[0])
+    //     .selfStake(100000n, twelveWeeksInSeconds);
+    //   await time.increaseTo(10000 + Math.floor(new Date().getTime() / 1000));
+    //   await expect(
+    //     this.gitcoinIdentityStaking
+    //       .connect(this.userAccounts[0])
+    //       .withdrawSelfStake(1)
+    //   ).to.be.revertedWithCustomError(
+    //     this.gitcoinIdentityStaking,
+    //     "StakeIsLocked"
+    //   );
+    // });
   });
 });

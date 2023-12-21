@@ -34,6 +34,7 @@ contract GitcoinIdentityStaking is
   error FailedTransfer();
   error InvalidLockTime();
   error StakeIsLocked();
+  error NotOwnerOfStake();
 
   bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
   bytes32 public constant RELEASER_ROLE = keccak256("RELEASER_ROLE");
@@ -76,6 +77,19 @@ contract GitcoinIdentityStaking is
     address indexed stakee,
     uint192 amount,
     uint64 unlockTime
+  );
+
+  event SelfStakeWithdrawn(
+    uint256 indexed id,
+    address indexed staker,
+    uint192 amount
+  );
+
+  event CommunityStakeWithdrawn(
+    uint256 indexed id,
+    address indexed staker,
+    address indexed stakee,
+    uint192 amount
   );
 
   event Slash(
@@ -131,9 +145,27 @@ contract GitcoinIdentityStaking is
     emit SelfStake(stakeId, msg.sender, amount, unlockTime);
   }
 
+  function ownerOfStake(address staker, uint value) public view returns (bool) {
+    uint[] memory currentStakes = selfStakeIds[staker];
+    for (uint i = 0; i < currentStakes.length; i++) {
+      if (currentStakes[i] == value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function withdrawSelfStake(uint256 stakeId) external {
+    if (!ownerOfStake(msg.sender, stakeId)) {
+      revert NotOwnerOfStake();
+    }
+
     if (stakes[stakeId].unlockTime < block.timestamp) {
       revert StakeIsLocked();
+    }
+
+    if (selfStakeIds[msg.sender].length == 0) {
+      revert CannotStakeOnSelf();
     }
 
     uint192 amount = stakes[stakeId].amount;
@@ -141,6 +173,8 @@ contract GitcoinIdentityStaking is
     delete stakes[stakeId];
 
     gtc.transfer(msg.sender, amount);
+
+    emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
   }
 
   function communityStake(
@@ -175,6 +209,38 @@ contract GitcoinIdentityStaking is
     }
 
     emit CommunityStake(stakeId, msg.sender, stakee, amount, unlockTime);
+  }
+
+  function ownerOfCommunityStake(
+    address staker,
+    address stakee,
+    uint value
+  ) public view returns (bool) {
+    uint[] memory currentStakes = communityStakeIds[staker][stakee];
+    for (uint i = 0; i < currentStakes.length; i++) {
+      if (currentStakes[i] == value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function withdrawCommunityStake(address stakee, uint256 stakeId) external {
+    if (!ownerOfCommunityStake(msg.sender, stakee, stakeId)) {
+      revert NotOwnerOfStake();
+    }
+
+    if (stakes[stakeId].unlockTime < block.timestamp) {
+      revert StakeIsLocked();
+    }
+
+    uint192 amount = stakes[stakeId].amount;
+
+    delete stakes[stakeId];
+
+    gtc.transfer(msg.sender, amount);
+
+    emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
   }
 
   function slash(
