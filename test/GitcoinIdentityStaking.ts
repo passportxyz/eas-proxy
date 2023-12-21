@@ -31,16 +31,80 @@ function makeSlashProof(slashMembers: any[][], slashNonce: string) {
               name: "amount",
               type: "uint192",
               baseType: "uint192"
+            },
+            {
+              type: "tuple[]",
+              name: "stakes",
+              components: [
+                {
+                  name: "staker",
+                  type: "address",
+                  baseType: "address"
+                },
+                {
+                  name: "stakeId",
+                  type: "uint256",
+                  baseType: "uint256"
+                }
+              ]
             }
           ]
         },
-        "bytes32"
+        "uint256"
       ],
       [slashMembers, slashNonce]
     )
   );
 
   return slashProof;
+}
+
+async function makeSlashMembers(
+  userAccounts: any,
+  gitcoinIdentityStaking: any,
+  numSlashMembers: number
+) {
+  let slashMembers: any[][] = [];
+
+  await Promise.all(
+    userAccounts
+      .slice(0, numSlashMembers)
+      .map(async (userAccount: any, index: number) => {
+        const selfStakeId = await gitcoinIdentityStaking.selfStakeIds(
+          userAccount.address,
+          0
+        );
+        const selfStakeAmount = (
+          await gitcoinIdentityStaking.stakes(selfStakeId)
+        )[0];
+
+        slashMembers.push([
+          userAccount.address,
+          selfStakeAmount / BigInt(2),
+          [[userAccount.address, selfStakeId]]
+        ]);
+
+        const communityStakeId = await gitcoinIdentityStaking.communityStakeIds(
+          userAccount.address,
+          userAccounts[index + 1].address,
+          0
+        );
+
+        const communityStakeAmount = (
+          await gitcoinIdentityStaking.stakes(communityStakeId)
+        )[0];
+
+        slashMembers.push([
+          userAccounts[index + 1].address,
+          communityStakeAmount / BigInt(2),
+          [[userAccount.address, communityStakeId]]
+        ]);
+      })
+  );
+
+  slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+
+  return slashMembers;
 }
 
 describe("GitcoinIdentityStaking", function () {
@@ -74,7 +138,7 @@ describe("GitcoinIdentityStaking", function () {
     }
   });
 
-  it("gas tests", async function () {
+  it.only("gas tests", async function () {
     // const numUsers = 200;
     const numUsers = 20;
     const userAccounts = this.userAccounts.slice(0, numUsers);
@@ -126,42 +190,26 @@ describe("GitcoinIdentityStaking", function () {
           })
         );
 
-        const stakeIds: number[] = [];
-        let slashMembers: any[][] = [];
-
-        await Promise.all(
-          userAccounts
-            .slice(0, Math.floor((numUsers * 3) / 10))
-            .map(async (userAccount: any) => {
-              const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-                userAccount.address,
-                0
-              );
-              const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
-              slashMembers.push([userAccount.address, amount]);
-              stakeIds.push(stakeId);
-            })
+        const slashMembers = await makeSlashMembers(
+          userAccounts,
+          gitcoinIdentityStaking,
+          Math.floor((numUsers * 3) / 10)
         );
-        slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
-        const slashNonce = keccak256(Buffer.from(Math.random().toString()));
+        const slashTx = await gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(slashMembers, 50);
 
-        const slashProof = makeSlashProof(slashMembers, slashNonce);
+        const slashReceipt = await slashTx.wait();
+
+        const slashEvent = slashReceipt.logs[0];
+
+        const slashProof = slashEvent.args[2];
+        const slashNonce = slashEvent.args[3];
 
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .slash(stakeIds, 50, slashProof);
-
-        await gitcoinIdentityStaking
-          .connect(this.owner)
-          .release(
-            slashMembers,
-            1,
-            500,
-            slashProof,
-            slashNonce,
-            ethers.keccak256(Buffer.from(Math.random().toString()))
-          );
+          .release(slashMembers, 1, 500, slashProof, slashNonce);
 
         await time.increase(60 * 60 * 24 * 91);
 
@@ -277,29 +325,65 @@ describe("GitcoinIdentityStaking", function () {
     });
 
     it("should slash stakes", async function () {
-      const stakeIds = [1, 2, 3];
+      const selfStakeId = await this.gitcoinIdentityStaking.selfStakeIds(
+        this.userAccounts[0].address,
+        0
+      );
+
+      const communityStakeId =
+        await this.gitcoinIdentityStaking.communityStakeIds(
+          this.userAccounts[0].address,
+          this.userAccounts[1].address,
+          0
+        );
+
+      const slashMembers = [
+        [
+          this.userAccounts[0].address,
+          50000,
+          [[this.userAccounts[0].address, selfStakeId]]
+        ],
+        [
+          this.userAccounts[1].address,
+          50000,
+          [[this.userAccounts[0].address, communityStakeId]]
+        ]
+      ];
 
       const startingStakeAmount = (
-        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+        await this.gitcoinIdentityStaking.stakes(selfStakeId)
       )[0];
 
       await this.gitcoinIdentityStaking
         .connect(this.owner)
-        .slash(stakeIds, 50, ethers.keccak256(Buffer.from("notARealProof")));
+        .slash(slashMembers, 50);
 
       const afterSlashStakeAmount = (
-        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+        await this.gitcoinIdentityStaking.stakes(selfStakeId)
       )[0];
 
       expect(afterSlashStakeAmount).to.equal(startingStakeAmount / BigInt(2));
       expect(afterSlashStakeAmount).to.equal(BigInt(50000));
 
+      const nextSlashMembers = [
+        [
+          this.userAccounts[0].address,
+          40000,
+          [[this.userAccounts[0].address, selfStakeId]]
+        ],
+        [
+          this.userAccounts[1].address,
+          40000,
+          [[this.userAccounts[0].address, communityStakeId]]
+        ]
+      ];
+
       await this.gitcoinIdentityStaking
         .connect(this.owner)
-        .slash(stakeIds, 80, ethers.keccak256(Buffer.from("anotherFakeProof")));
+        .slash(nextSlashMembers, 80);
 
       const afterDoubleSlashStakeAmount = (
-        await this.gitcoinIdentityStaking.stakes(stakeIds[0])
+        await this.gitcoinIdentityStaking.stakes(selfStakeId)
       )[0];
 
       expect(afterDoubleSlashStakeAmount).to.equal(
@@ -308,81 +392,34 @@ describe("GitcoinIdentityStaking", function () {
       expect(afterDoubleSlashStakeAmount).to.equal(BigInt(10000));
     });
 
-    it("should reject slash with already used proof", async function () {
-      const stakeIds = [1, 2, 3];
-
-      const proof = ethers.keccak256(Buffer.from("notARealProof"));
-
-      await this.gitcoinIdentityStaking
-        .connect(this.owner)
-        .slash(stakeIds, 50, proof);
-
-      await expect(
-        this.gitcoinIdentityStaking
-          .connect(this.owner)
-          .slash(stakeIds, 50, proof)
-      ).to.be.revertedWithCustomError(
-        this.gitcoinIdentityStaking,
-        "SlashProofHashAlreadyUsed"
-      );
-    });
-
     describe("with valid slashMembers", function () {
       beforeEach(async function () {
-        const stakeIds: number[] = [];
-        let slashMembers: any[][] = [];
-
-        await Promise.all(
-          this.userAccounts
-            .slice(0, 3)
-            .map(async (userAccount: any, index: number) => {
-              const selfStakeId =
-                await this.gitcoinIdentityStaking.selfStakeIds(
-                  userAccount.address,
-                  0
-                );
-              const selfStakeAmount = (
-                await this.gitcoinIdentityStaking.stakes(selfStakeId)
-              )[0];
-
-              slashMembers.push([userAccount.address, selfStakeAmount]);
-              stakeIds.push(selfStakeId);
-
-              const communityStakeId =
-                await this.gitcoinIdentityStaking.communityStakeIds(
-                  userAccount.address,
-                  this.userAccounts[index + 1].address,
-                  0
-                );
-
-              const communityStakeAmount = (
-                await this.gitcoinIdentityStaking.stakes(communityStakeId)
-              )[0];
-
-              slashMembers.push([
-                this.userAccounts[index + 1].address,
-                communityStakeAmount
-              ]);
-              stakeIds.push(communityStakeId);
-            })
+        this.slashMembers = await makeSlashMembers(
+          this.userAccounts,
+          this.gitcoinIdentityStaking,
+          3
         );
 
-        slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+        const slashTx = await this.gitcoinIdentityStaking
+          .connect(this.owner)
+          .slash(this.slashMembers, 50);
 
-        this.slashMembers = slashMembers;
-        this.stakeIds = stakeIds;
-        this.slashNonce = keccak256(Buffer.from(Math.random().toString()));
-        this.slashProof = makeSlashProof(this.slashMembers, this.slashNonce);
+        const slashReceipt = await slashTx.wait();
+
+        const slashEvent = slashReceipt.logs[0];
+
+        this.slashProof = slashEvent.args[2];
+        this.slashNonce = slashEvent.args[3];
+
+        expect(this.slashProof).to.not.be.null;
+        expect(this.slashNonce).to.not.be.null;
+
+        console.log("Slash Proof: ", this.slashProof);
+        console.log("Slash Nonce: ", this.slashNonce);
       });
 
       it("should release given a valid proof", async function () {
-        await this.gitcoinIdentityStaking
-          .connect(this.owner)
-          .slash(this.stakeIds, 50, this.slashProof);
-
         const indexToRelease = 1;
-
-        const newNonce = keccak256(Buffer.from(Math.random().toString()));
 
         await this.gitcoinIdentityStaking
           .connect(this.owner)
@@ -391,31 +428,22 @@ describe("GitcoinIdentityStaking", function () {
             indexToRelease,
             500,
             this.slashProof,
-            this.slashNonce,
-            newNonce
+            this.slashNonce
           );
 
         this.slashMembers[indexToRelease][1] -= BigInt(500);
 
-        const newSlashProof = makeSlashProof(this.slashMembers, newNonce);
+        const newSlashProof = makeSlashProof(
+          this.slashMembers,
+          this.slashNonce
+        );
 
         await this.gitcoinIdentityStaking
           .connect(this.owner)
-          .release(
-            this.slashMembers,
-            2,
-            1000,
-            newSlashProof,
-            newNonce,
-            keccak256(Buffer.from(Math.random().toString()))
-          );
+          .release(this.slashMembers, 2, 1000, newSlashProof, this.slashNonce);
       });
 
       it("should reject release with an invalid proof", async function () {
-        await this.gitcoinIdentityStaking
-          .connect(this.owner)
-          .slash(this.stakeIds, 50, this.slashProof);
-
         [this.slashMembers[0], this.slashMembers[1]] = [
           this.slashMembers[1],
           this.slashMembers[0]
@@ -429,8 +457,7 @@ describe("GitcoinIdentityStaking", function () {
               1,
               500,
               this.slashProof,
-              this.slashNonce,
-              keccak256(Buffer.from(Math.random().toString()))
+              this.slashNonce
             )
         ).to.be.revertedWithCustomError(
           this.gitcoinIdentityStaking,
@@ -439,10 +466,6 @@ describe("GitcoinIdentityStaking", function () {
       });
 
       it("should reject release for too high of an amount", async function () {
-        await this.gitcoinIdentityStaking
-          .connect(this.owner)
-          .slash(this.stakeIds, 50, this.slashProof);
-
         const indexToRelease = 1;
 
         await expect(
@@ -453,8 +476,7 @@ describe("GitcoinIdentityStaking", function () {
               indexToRelease,
               this.slashMembers[indexToRelease][1] + BigInt(1),
               this.slashProof,
-              this.slashNonce,
-              keccak256(Buffer.from(Math.random().toString()))
+              this.slashNonce
             )
         ).to.be.revertedWithCustomError(
           this.gitcoinIdentityStaking,
@@ -470,14 +492,7 @@ describe("GitcoinIdentityStaking", function () {
       await expect(
         this.gitcoinIdentityStaking
           .connect(this.owner)
-          .release(
-            [],
-            1,
-            500,
-            slashProof,
-            slashNonce,
-            ethers.keccak256(Buffer.from(Math.random().toString()))
-          )
+          .release([], 1, 500, slashProof, slashNonce)
       ).to.be.revertedWithCustomError(
         this.gitcoinIdentityStaking,
         "SlashProofHashNotFound"

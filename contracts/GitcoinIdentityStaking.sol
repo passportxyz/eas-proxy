@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 import {Initializable, AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {GTC} from "./mocks/GTC.sol";
@@ -21,8 +20,6 @@ contract GitcoinIdentityStaking is
   AccessControlUpgradeable,
   PausableUpgradeable
 {
-  using EnumerableSet for EnumerableSet.AddressSet;
-
   error SlashProofHashNotFound();
   error SlashProofHashNotValid();
   error SlashProofHashAlreadyUsed();
@@ -34,6 +31,10 @@ contract GitcoinIdentityStaking is
   error FailedTransfer();
   error InvalidLockTime();
   error StakeIsLocked();
+  error StakeIsUnlocked();
+  error MismatchedStakersAndStakees();
+  error InvalidSlashMemberStake(uint256 stakeId);
+  error InvalidSlashMember(address stakee);
 
   bytes32 public constant SLASHER_ROLE = keccak256("SLASHER_ROLE");
   bytes32 public constant RELEASER_ROLE = keccak256("RELEASER_ROLE");
@@ -41,6 +42,17 @@ contract GitcoinIdentityStaking is
   struct Stake {
     uint192 amount;
     uint64 unlockTime;
+  }
+
+  struct SlashedStake {
+    address staker;
+    uint256 stakeId;
+  }
+
+  struct SlashMember {
+    address stakee;
+    uint192 slashTotal;
+    SlashedStake[] stakes;
   }
 
   // TODO func selfStakeIdsLength(address) => uint256
@@ -81,10 +93,19 @@ contract GitcoinIdentityStaking is
   event Slash(
     address indexed slasher,
     uint64 slashedPercent,
-    bytes32 slashProofHash
+    bytes32 slashProofHash,
+    uint256 nonce
   );
 
   event Burn(uint256 indexed round, uint192 amount);
+
+  event Release(
+    address indexed stakee,
+    uint192 amount,
+    bytes32 slashProofHash,
+    bytes32 newSlashProofHash,
+    uint256 nonce
+  );
 
   GTC public gtc;
 
@@ -178,27 +199,80 @@ contract GitcoinIdentityStaking is
     emit CommunityStake(stakeId, msg.sender, stakee, amount, unlockTime);
   }
 
+  // This is lots of looping, which is not ideal.
+  // You can't declare mappings in memory
+  // The nested loop is limited to the max number of stakes
+  // per staker:stakee pair, which doesn't currently
+  // have a cap, perhaps it should. But this should generally
+  // be a small number, so it should be fine.
   function slash(
-    uint256[] calldata stakeIds,
-    uint64 slashedPercent,
-    bytes32 slashProofHash
+    SlashMember[] calldata slashMembers,
+    uint64 slashedPercent
   ) external onlyRole(SLASHER_ROLE) {
+    uint256 numSlashMembers = slashMembers.length;
+
+    for (uint256 i = 0; i < numSlashMembers; i++) {
+      SlashMember memory slashMember = slashMembers[i];
+      uint192 slashMemberTotal = 0;
+
+      uint256 numStakes = slashMember.stakes.length;
+
+      for (uint256 j = 0; j < numStakes; j++) {
+        uint256 stakeId = slashMember.stakes[j].stakeId;
+        address staker = slashMember.stakes[j].staker;
+
+        if (stakes[stakeId].unlockTime < block.timestamp) {
+          revert StakeIsUnlocked();
+        }
+
+        bool found = false;
+        if (slashMember.stakee == staker) {
+          for (uint256 k = 0; k < numStakes; k++) {
+            if (selfStakeIds[staker][k] == stakeId) {
+              found = true;
+              break;
+            }
+          }
+        } else {
+          for (uint256 k = 0; k < numStakes; k++) {
+            if (communityStakeIds[staker][slashMember.stakee][k] == stakeId) {
+              found = true;
+              break;
+            }
+          }
+        }
+
+        // This ensures that the payout address for
+        // a `release` is a stakee from this slash
+        if (!found) {
+          revert InvalidSlashMemberStake(stakeId);
+        }
+
+        uint192 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
+        slashMemberTotal += slashedAmount;
+        stakes[stakeId].amount -= slashedAmount;
+      }
+
+      // This ensures that we cannot `release` more
+      // to this user than what was slashed
+      if (slashMemberTotal != slashMember.slashTotal) {
+        revert InvalidSlashMember(slashMember.stakee);
+      }
+
+      totalSlashed[currentSlashRound] += slashMemberTotal;
+    }
+
+    // Nonce in case we need to do the exact same slash multiple times
+    uint256 nonce = block.timestamp;
+    bytes32 slashProofHash = keccak256(abi.encode(slashMembers, nonce));
+
     if (slashProofHashes[slashProofHash]) {
       revert SlashProofHashAlreadyUsed();
     }
 
-    uint256 numStakes = stakeIds.length;
-
-    for (uint256 i = 0; i < numStakes; i++) {
-      uint256 stakeId = stakeIds[i];
-      uint192 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
-      totalSlashed[currentSlashRound] += slashedAmount;
-      stakes[stakeId].amount -= slashedAmount;
-    }
-
     slashProofHashes[slashProofHash] = true;
 
-    emit Slash(msg.sender, slashedPercent, slashProofHash);
+    emit Slash(msg.sender, slashedPercent, slashProofHash, nonce);
   }
 
   // Burn last round and start next round (locking this round)
@@ -233,20 +307,12 @@ contract GitcoinIdentityStaking is
     lastBurnTimestamp = block.timestamp;
   }
 
-  struct SlashMember {
-    address account;
-    uint192 amount;
-  }
-
-  // The nonce is used in the proof in case we need to
-  // do the exact same slash multiple times
   function release(
     SlashMember[] calldata slashMembers,
     uint256 slashMemberIndex,
     uint192 amountToRelease,
     bytes32 slashProofHash,
-    bytes32 nonce,
-    bytes32 newNonce
+    uint256 nonce
   ) external onlyRole(RELEASER_ROLE) {
     if (!slashProofHashes[slashProofHash]) {
       revert SlashProofHashNotFound();
@@ -257,24 +323,32 @@ contract GitcoinIdentityStaking is
 
     SlashMember memory slashMemberToRelease = slashMembers[slashMemberIndex];
 
-    if (amountToRelease > slashMemberToRelease.amount) {
+    if (amountToRelease > slashMemberToRelease.slashTotal) {
       revert FundsNotAvailableToRelease();
     }
 
     SlashMember[] memory newSlashMembers = slashMembers;
 
-    newSlashMembers[slashMemberIndex].amount -= amountToRelease;
+    newSlashMembers[slashMemberIndex].slashTotal -= amountToRelease;
 
     bytes32 newSlashProofHash = keccak256(
-      abi.encode(newSlashMembers, newNonce)
+      abi.encode(newSlashMembers, nonce)
     );
 
     slashProofHashes[slashProofHash] = false;
     slashProofHashes[newSlashProofHash] = true;
 
-    if (!gtc.transfer(slashMemberToRelease.account, amountToRelease)) {
+    if (!gtc.transfer(slashMemberToRelease.stakee, amountToRelease)) {
       revert FailedTransfer();
     }
+
+    emit Release(
+      slashMemberToRelease.stakee,
+      amountToRelease,
+      slashProofHash,
+      newSlashProofHash,
+      nonce
+    );
   }
 
   function _authorizeUpgrade(
