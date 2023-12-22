@@ -7,6 +7,8 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {GTC} from "./mocks/GTC.sol";
 
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 import "hardhat/console.sol";
 
 /**
@@ -64,6 +66,11 @@ contract GitcoinIdentityStaking is
   // Used to permit unfreeze
   mapping(bytes32 => bool) public slashProofHashes;
 
+  mapping(bytes32 => bool) public slashMerkleRoots;
+  mapping(bytes32 => uint192) public slashTotals;
+
+  bytes32 public slashMerkleRoot;
+
   event SelfStake(
     uint256 indexed id,
     address indexed staker,
@@ -94,8 +101,8 @@ contract GitcoinIdentityStaking is
 
   event Slash(
     address indexed slasher,
-    uint64 slashedPercent,
-    bytes32 slashProofHash
+    bytes32 slashProofHash,
+    uint192 slashAmount
   );
 
   event Burn(uint256 indexed round, uint192 amount);
@@ -243,27 +250,28 @@ contract GitcoinIdentityStaking is
     emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
   }
 
+  error InvalidSlashProof();
+
   function slash(
-    uint256[] calldata stakeIds,
-    uint64 slashedPercent,
-    bytes32 slashProofHash
+    bytes32 slashMerkleRoot,
+    uint192 slashTotal,
+    bytes32[] memory slashTotalProof
   ) external onlyRole(SLASHER_ROLE) {
-    if (slashProofHashes[slashProofHash]) {
+    if (slashMerkleRoots[slashMerkleRoot]) {
       revert SlashProofHashAlreadyUsed();
     }
 
-    uint256 numStakes = stakeIds.length;
-
-    for (uint256 i = 0; i < numStakes; i++) {
-      uint256 stakeId = stakeIds[i];
-      uint192 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
-      totalSlashed[currentSlashRound] += slashedAmount;
-      stakes[stakeId].amount -= slashedAmount;
+    bytes32 leaf = keccak256(
+      bytes.concat(keccak256(abi.encode(address(0), slashTotal, uint192(0))))
+    );
+    if (!MerkleProof.verify(slashTotalProof, slashMerkleRoot, leaf)) {
+      revert InvalidSlashProof();
     }
 
-    slashProofHashes[slashProofHash] = true;
+    slashMerkleRoots[slashMerkleRoot] = true;
+    slashTotals[slashMerkleRoot] = slashTotal;
 
-    emit Slash(msg.sender, slashedPercent, slashProofHash);
+    emit Slash(msg.sender, slashMerkleRoot, slashTotal);
   }
 
   // Burn last round and start next round (locking this round)

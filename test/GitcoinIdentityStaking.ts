@@ -15,6 +15,7 @@ const fiveMinutes = 5 * 60;
 const twelveWeeksInSeconds = 12 * 7 * 24 * 60 * 60 + 1; // 12 weeks in seconds
 
 function makeSlashProof(slashMembers: any[][], slashNonce: string) {
+  debugger;
   const slashProof = ethers.keccak256(
     ethers.AbiCoder.defaultAbiCoder().encode(
       [
