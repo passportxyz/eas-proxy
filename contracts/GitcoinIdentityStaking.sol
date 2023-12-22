@@ -44,9 +44,15 @@ contract GitcoinIdentityStaking is
     uint64 unlockTime;
   }
 
+  // Replacement for below
+  // mapping(uint256 stakeId => address) public stakeToAddress;
+  mapping(uint256 => address) public stakeToAddress;
+  // mapping(uint256 stakeId => mapping(address staker => address stakee))
+  mapping(uint256 => mapping(address => address)) public communityStakeIds;
+
   // TODO func selfStakeIdsLength(address) => uint256
-  mapping(address => uint256[]) public selfStakeIds;
-  mapping(address => mapping(address => uint256[])) public communityStakeIds;
+  // mapping(address => uint256[]) public selfStakeIds;
+  // mapping(address => mapping(address => uint256[])) public communityStakeIds;
 
   mapping(uint256 stakeId => Stake) public stakes;
   uint256 public stakeCount;
@@ -136,7 +142,8 @@ contract GitcoinIdentityStaking is
     stakes[stakeId].amount = amount;
     stakes[stakeId].unlockTime = unlockTime;
 
-    selfStakeIds[msg.sender].push(stakeId);
+    // selfStakeIds[msg.sender].push(stakeId);
+    stakeToAddress[stakeId] = msg.sender;
 
     if (!gtc.transferFrom(msg.sender, address(this), amount)) {
       revert FailedTransfer();
@@ -145,18 +152,8 @@ contract GitcoinIdentityStaking is
     emit SelfStake(stakeId, msg.sender, amount, unlockTime);
   }
 
-  function ownerOfStake(address staker, uint value) public view returns (bool) {
-    uint[] memory currentStakes = selfStakeIds[staker];
-    for (uint i = 0; i < currentStakes.length; i++) {
-      if (currentStakes[i] == value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   function withdrawSelfStake(uint256 stakeId) external {
-    if (!ownerOfStake(msg.sender, stakeId)) {
+    if (stakeToAddress[stakeId] != msg.sender) {
       revert NotOwnerOfStake();
     }
 
@@ -164,13 +161,9 @@ contract GitcoinIdentityStaking is
       revert StakeIsLocked();
     }
 
-    if (selfStakeIds[msg.sender].length == 0) {
-      revert CannotStakeOnSelf();
-    }
-
     uint192 amount = stakes[stakeId].amount;
 
-    delete stakes[stakeId];
+    delete stakeToAddress[stakeId];
 
     gtc.transfer(msg.sender, amount);
 
@@ -202,7 +195,7 @@ contract GitcoinIdentityStaking is
     stakes[stakeId].amount = amount;
     stakes[stakeId].unlockTime = uint64(unlockTime);
 
-    communityStakeIds[msg.sender][stakee].push(stakeId);
+    communityStakeIds[stakeId][msg.sender] = stakee;
 
     if (!gtc.transferFrom(msg.sender, address(this), amount)) {
       revert FailedTransfer();
@@ -211,22 +204,8 @@ contract GitcoinIdentityStaking is
     emit CommunityStake(stakeId, msg.sender, stakee, amount, unlockTime);
   }
 
-  function ownerOfCommunityStake(
-    address staker,
-    address stakee,
-    uint value
-  ) public view returns (bool) {
-    uint[] memory currentStakes = communityStakeIds[staker][stakee];
-    for (uint i = 0; i < currentStakes.length; i++) {
-      if (currentStakes[i] == value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   function withdrawCommunityStake(address stakee, uint256 stakeId) external {
-    if (!ownerOfCommunityStake(msg.sender, stakee, stakeId)) {
+    if (communityStakeIds[stakeId][msg.sender] != stakee) {
       revert NotOwnerOfStake();
     }
 
@@ -245,12 +224,16 @@ contract GitcoinIdentityStaking is
 
   function slash(
     uint256[] calldata stakeIds,
-    uint64 slashedPercent,
-    bytes32 slashProofHash
+    address[] calldata slashedStakers,
+    uint64 slashedPercent
   ) external onlyRole(SLASHER_ROLE) {
     if (slashProofHashes[slashProofHash]) {
       revert SlashProofHashAlreadyUsed();
     }
+
+    // Check that each stakId is associated with a slashedStaker
+    // build slash proof
+    // Calculate ammounts via percent
 
     uint256 numStakes = stakeIds.length;
 

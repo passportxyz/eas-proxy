@@ -43,7 +43,7 @@ function makeSlashProof(slashMembers: any[][], slashNonce: string) {
   return slashProof;
 }
 
-describe("GitcoinIdentityStaking", function () {
+describe.only("GitcoinIdentityStaking", function () {
   this.beforeEach(async function () {
     await reset();
     const [ownerAccount, ...userAccounts] = await ethers.getSigners();
@@ -59,11 +59,12 @@ describe("GitcoinIdentityStaking", function () {
     );
     const gtcAddress = await this.gtc.getAddress();
 
-    const GitcoinIdentityStaking = await ethers.getContractFactory(
+    this.gitcoinIdentityStakingFactory = await ethers.getContractFactory(
       "GitcoinIdentityStaking",
       this.owner
     );
-    this.gitcoinIdentityStaking = await GitcoinIdentityStaking.deploy();
+    this.gitcoinIdentityStaking =
+      await this.gitcoinIdentityStakingFactory.deploy();
     await this.gitcoinIdentityStaking
       .connect(this.owner)
       .initialize(gtcAddress, "0x0000000000000000000000000000000000000001");
@@ -75,7 +76,7 @@ describe("GitcoinIdentityStaking", function () {
     }
   });
 
-  it("gas tests", async function () {
+  it.only("gas tests", async function () {
     // const numUsers = 200;
     const numUsers = 20;
     const userAccounts = this.userAccounts.slice(0, numUsers);
@@ -133,14 +134,11 @@ describe("GitcoinIdentityStaking", function () {
         await Promise.all(
           userAccounts
             .slice(0, Math.floor((numUsers * 3) / 10))
-            .map(async (userAccount: any) => {
-              const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-                userAccount.address,
-                0
-              );
-              const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
+            .map(async (userAccount: any, i: number) => {
+              // Will need to index these from logs
+              const amount = (await gitcoinIdentityStaking.stakes(i))[0];
               slashMembers.push([userAccount.address, amount]);
-              stakeIds.push(stakeId);
+              stakeIds.push(i);
             })
         );
         slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
@@ -491,16 +489,19 @@ describe("GitcoinIdentityStaking", function () {
       const fiveMinutes = 5 * 60; // 5 minutes in seconds
       const unlockTime =
         twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000);
-      await this.gitcoinIdentityStaking
+      const tx = await this.gitcoinIdentityStaking
         .connect(this.userAccounts[0])
         .selfStake(100000n, twelveWeeksInSeconds);
 
-      const userStake = await this.gitcoinIdentityStaking.selfStakeIds(
-        this.userAccounts[0],
-        0
-      );
+      // const userStake = await this.gitcoinIdentityStaking.stakeToAddress(
+      //   this.userAccounts[0],
+      //   0
+      // );
 
-      const stake = await this.gitcoinIdentityStaking.stakes(userStake);
+      // TODO: get from logs
+      const stakeId = 1;
+
+      const stake = await this.gitcoinIdentityStaking.stakes(stakeId);
 
       expect(stake[0]).to.deep.equal(100000n);
       expect(stake[1]).to.be.closeTo(unlockTime, fiveMinutes);
@@ -523,14 +524,10 @@ describe("GitcoinIdentityStaking", function () {
       await this.gitcoinIdentityStaking
         .connect(this.userAccounts[0])
         .communityStake(this.userAccounts[1], 100000n, twelveWeeksInSeconds);
-      const communityStake =
-        await this.gitcoinIdentityStaking.communityStakeIds(
-          this.userAccounts[0],
-          this.userAccounts[1],
-          0
-        );
 
-      const stake = await this.gitcoinIdentityStaking.stakes(communityStake);
+      // TODO: get from logs
+      const communitySteakId = 1;
+      const stake = await this.gitcoinIdentityStaking.stakes(1);
 
       expect(stake[0]).to.deep.equal(100000n);
       expect(stake[1]).to.be.closeTo(unlockTime, fiveMinutes);
