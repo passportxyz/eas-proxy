@@ -274,8 +274,9 @@ describe("GitcoinPassportDecoder", function () {
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
 
-      const savedProviders =
-        await gitcoinPassportDecoder.getProviders(currentVersion);
+      const savedProviders = await gitcoinPassportDecoder.getProviders(
+        currentVersion
+      );
 
       expect(savedProviders.length === providers.length);
       expect(savedProviders).to.eql(providers);
@@ -940,12 +941,10 @@ describe("GitcoinPassportDecoder", function () {
       });
       it("should return false if the score is below the threshold", async function () {
         await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(333456);
-        await expect(
-          gitcoinPassportDecoder.isHuman(recipientAccount.address)
-        ).to.be.revertedWithCustomError(
-          gitcoinPassportDecoder,
-          "ScoreDoesNotMeetThreshold"
+        const isHuman = await gitcoinPassportDecoder.isHuman(
+          recipientAccount.address
         );
+        expect(isHuman).to.equal(false);
       });
     });
 
@@ -1054,12 +1053,10 @@ describe("GitcoinPassportDecoder", function () {
       });
       it("should return false if the score is below the threshold", async function () {
         await gitcoinPassportDecoder.connect(ownerAccount).setThreshold(333456);
-        await expect(
-          gitcoinPassportDecoder.isHuman(recipientAccount.address)
-        ).to.be.revertedWithCustomError(
-          gitcoinPassportDecoder,
-          "ScoreDoesNotMeetThreshold"
+        const isHuman = await gitcoinPassportDecoder.isHuman(
+          recipientAccount.address
         );
+        expect(isHuman).to.equal(false);
       });
     });
   });
