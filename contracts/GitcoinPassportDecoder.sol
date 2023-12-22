@@ -463,12 +463,6 @@ contract GitcoinPassportDecoder is
    */
   function isHuman(address user) public view returns (bool) {
     uint256 score = getScore(user);
-    bool isAboveThreshold = score >= threshold;
-
-    if (!isAboveThreshold) {
-      revert ScoreDoesNotMeetThreshold(score);
-    }
-
-    return isAboveThreshold;
+    return score >= threshold;
   }
 }
