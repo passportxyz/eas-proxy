@@ -20,21 +20,22 @@ const buildMerkleTree = (
 ): {
   merkleRoot: string;
   slashTotal: number;
+  slashedUsers: string[];
 } => {
-  const slashedUsers = [];
+  const slashedUsers: string[] = [];
   let slashTotal = 0;
   const values: [string, string, string][] = users.map((user, i) => {
     const shouldSlash = i > Math.floor((numUsers * 3) / 10);
     let slashAmount = 0;
     if (shouldSlash) {
-      slashedUsers.push(user);
+      slashedUsers.push(user.address);
       slashAmount += Number(user.amount) / 2;
     }
     slashTotal += slashAmount;
     return [
       user.address,
       // if shouldSlash, Slash half of the users stake
-      shouldSlash ? BigInt(0).toString() : BigInt(slashAmount).toString(),
+      shouldSlash ? BigInt(slashAmount).toString() : BigInt(0).toString(),
       BigInt(user.stakeId).toString()
     ];
   });
@@ -52,7 +53,7 @@ const buildMerkleTree = (
 
   fs.writeFileSync("slashMerkleTree.json", JSON.stringify(merkleTree.dump()));
 
-  return { merkleRoot, slashTotal };
+  return { merkleRoot, slashTotal, slashedUsers };
 };
 
 const getMerkleProof = (address: string) => {
@@ -115,7 +116,7 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
         .mint(userAccounts[i].address, 100000000000);
     }
   });
-  it("should stake each user", async function () {
+  it("should self stake each user", async function () {
     // const numUsers = 200;
     const numUsers = 20;
     const userAccounts = this.userAccounts.slice(0, numUsers);
@@ -140,27 +141,27 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
               () =>
                 gitcoinIdentityStaking
                   .connect(userAccount)
-                  .selfStake(100000, twelveWeeksInSeconds),
+                  .selfStake(100000, twelveWeeksInSeconds)
 
-              () =>
-                gitcoinIdentityStaking
-                  .connect(userAccount)
-                  .communityStake(
-                    this.userAccounts[accountIdx + 1],
-                    100000,
-                    twelveWeeksInSeconds
-                  ),
+              // () =>
+              //   gitcoinIdentityStaking
+              //     .connect(userAccount)
+              //     .communityStake(
+              //       this.userAccounts[accountIdx + 1],
+              //       100000,
+              //       twelveWeeksInSeconds
+              //     ),
 
-              () =>
-                gitcoinIdentityStaking
-                  .connect(userAccount)
-                  .communityStake(
-                    this.userAccounts[
-                      accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-                    ],
-                    100000,
-                    twelveWeeksInSeconds
-                  )
+              // () =>
+              //   gitcoinIdentityStaking
+              //     .connect(userAccount)
+              //     .communityStake(
+              //       this.userAccounts[
+              //         accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
+              //       ],
+              //       100000,
+              //       twelveWeeksInSeconds
+              //     )
             ])) {
               await func();
             }
@@ -188,7 +189,7 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           })
         );
 
-        const { merkleRoot, slashTotal } = buildMerkleTree(
+        const { merkleRoot, slashTotal, slashedUsers } = buildMerkleTree(
           allStakeMembers,
           numUsers
         );
@@ -199,7 +200,33 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           .connect(this.owner)
           .slash(merkleRoot, slashTotal, slashTotalProof);
 
-        debugger;
+        await time.increaseTo(
+          twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000)
+        );
+
+        // withdraw funds for each user
+        userAccounts.map(async (userAccount: any) => {
+          const stakeId = await gitcoinIdentityStaking.selfStakeIds(
+            userAccount.address,
+            0
+          );
+          let amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
+          if (slashedUsers.includes(userAccount.address)) {
+            amount = Number(amount) / 2;
+          } else {
+            amount = 0;
+          }
+
+          try {
+            const proof = getMerkleProof(userAccount.address);
+            const withdrawTx = await gitcoinIdentityStaking
+              .connect(userAccount)
+              .withdrawSelfStake(stakeId, BigInt(amount), proof);
+          } catch (e) {
+            // debugger;
+            console.log(e);
+          }
+        });
 
         // const slashNonce = keccak256(Buffer.from(Math.random().toString()));
 
@@ -226,4 +253,5 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
       })
     );
   });
+  // it("should withdraw each user", async function () {});
 });

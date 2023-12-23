@@ -162,24 +162,39 @@ contract GitcoinIdentityStaking is
     return false;
   }
 
-  function withdrawSelfStake(uint256 stakeId) external {
-    if (!ownerOfStake(msg.sender, stakeId)) {
-      revert NotOwnerOfStake();
-    }
+  error InvalidWithdrawProof();
+
+  function withdrawSelfStake(
+    uint256 stakeId,
+    uint192 slashAmnt,
+    bytes32[] memory stakeProof
+  ) external {
+    // not really needed anymore since withdraws are dependent on a valid proof that contains msg.sender
+    // if (!ownerOfStake(msg.sender, stakeId)) {
+    //   revert NotOwnerOfStake();
+    // }
 
     if (stakes[stakeId].unlockTime < block.timestamp) {
       revert StakeIsLocked();
     }
 
-    if (selfStakeIds[msg.sender].length == 0) {
-      revert CannotStakeOnSelf();
+    console.log("slashAmnt", slashAmnt);
+    console.log("stakes[stakeId].amount", stakes[stakeId].amount);
+    bytes32 leaf = keccak256(
+      bytes.concat(keccak256(abi.encode(msg.sender, slashAmnt, stakeId)))
+    );
+
+    console.logBytes32(slashMerkleRoot);
+    if (!MerkleProof.verify(stakeProof, slashMerkleRoot, leaf)) {
+      revert InvalidWithdrawProof();
     }
 
-    uint192 amount = stakes[stakeId].amount;
-
-    delete stakes[stakeId];
+    // For good users this will always be zero. For bad users this will be the slash amount
+    uint192 amount = stakes[stakeId].amount - slashAmnt;
 
     gtc.transfer(msg.sender, amount);
+
+    delete stakes[stakeId];
 
     emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
   }
@@ -253,23 +268,24 @@ contract GitcoinIdentityStaking is
   error InvalidSlashProof();
 
   function slash(
-    bytes32 slashMerkleRoot,
+    bytes32 currentSlashMerkleRoot,
     uint192 slashTotal,
     bytes32[] memory slashTotalProof
   ) external onlyRole(SLASHER_ROLE) {
-    if (slashMerkleRoots[slashMerkleRoot]) {
+    if (slashMerkleRoots[currentSlashMerkleRoot]) {
       revert SlashProofHashAlreadyUsed();
     }
 
     bytes32 leaf = keccak256(
       bytes.concat(keccak256(abi.encode(address(0), slashTotal, uint192(0))))
     );
-    if (!MerkleProof.verify(slashTotalProof, slashMerkleRoot, leaf)) {
+    if (!MerkleProof.verify(slashTotalProof, currentSlashMerkleRoot, leaf)) {
       revert InvalidSlashProof();
     }
 
-    slashMerkleRoots[slashMerkleRoot] = true;
-    slashTotals[slashMerkleRoot] = slashTotal;
+    slashMerkleRoots[currentSlashMerkleRoot] = true;
+    slashTotals[currentSlashMerkleRoot] = slashTotal;
+    slashMerkleRoot = currentSlashMerkleRoot;
 
     emit Slash(msg.sender, slashMerkleRoot, slashTotal);
   }
