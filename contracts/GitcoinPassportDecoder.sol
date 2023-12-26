@@ -28,8 +28,7 @@ contract GitcoinPassportDecoder is
   mapping(uint32 => string[]) public providerVersions;
 
   // Mapping of previously stored providers
-  // TODO: use uint8 instead of uint256
-  mapping(uint32 => mapping(string => uint256)) public reversedMappingVersions;
+  mapping(uint32 => mapping(string => uint8)) public reversedMappingVersions;
 
   // Current version number
   uint32 public currentVersion;
