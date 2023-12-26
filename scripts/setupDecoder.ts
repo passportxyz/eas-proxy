@@ -15,16 +15,9 @@ assertEnvironment();
 
 export async function main() {
   const chainInfo = getThisChainInfo();
-  const maxScoreAge = 90 * 24 * 3600; // 90 days
-  const threshold = 200000; // that means 20.0000
+  const maxScoreAge = ethers.toBigInt(90 * 24 * 3600); // 90 days
+  const threshold = ethers.toBigInt(200000); // that means 20.0000
 
-  await confirmContinue({
-    contract: "Add schema and bitmap information to GitcoinPassportDecoder",
-    network: hre.network.name,
-    chainId: hre.network.config.chainId,
-    maxScoreAge: maxScoreAge,
-    threshold: threshold
-  });
 
   const GitcoinPassportDecoder = await ethers.getContractFactory(
     "GitcoinPassportDecoder"
@@ -36,9 +29,6 @@ export async function main() {
   const easAddress = getEASAddress();
 
   const currentEas = await passportDecoder.eas();
-  console.log("== currentEas", currentEas);
-  // await passportDecoder.setEASAddress(easAddress);
-  // console.log(`✅ Set EAS address ${easAddress} on GitcoinPassportDecoder.`);
 
   const currentGitcoinResolver = await passportDecoder.gitcoinResolver();
   const currentPassportSchemaUID = await passportDecoder.passportSchemaUID();
@@ -46,15 +36,60 @@ export async function main() {
   const currentMaxScoreAge = await passportDecoder.maxScoreAge();
   const currentThreshold = await passportDecoder.threshold();
 
-  console.log("== currentGitcoinResolver", currentGitcoinResolver);
-  console.log("== currentPassportSchemaUID", currentPassportSchemaUID);
-  console.log("== currentScoreSchemaUID", currentScoreSchemaUID);
-  console.log("== currentMaxScoreAge", currentMaxScoreAge);
-  console.log("== currentThreshold", currentThreshold);
+  console.log("== currentEas", currentEas, "/", easAddress);
+  console.log(
+    "== currentGitcoinResolver",
+    currentGitcoinResolver,
+    "/",
+    getResolverAddress()
+  );
+  console.log(
+    "== currentPassportSchemaUID",
+    currentPassportSchemaUID,
+    "/",
+    chainInfo.easSchemas.passport.uid
+  );
+  console.log(
+    "== currentScoreSchemaUID",
+    currentScoreSchemaUID,
+    "/",
+    chainInfo.easSchemas.score.uid
+  );
+  console.log("== currentMaxScoreAge", currentMaxScoreAge, "/", maxScoreAge);
+  console.log("== currentThreshold", currentThreshold, "/", threshold);
+
+  if (currentEas != easAddress) {
+    await passportDecoder.setEASAddress(easAddress);
+    console.log(`✅ Set EAS address ${easAddress} on GitcoinPassportDecoder.`);
+  } else {
+    console.log(
+      `-> skip setting EAS address ${easAddress} on GitcoinPassportDecoder.`
+    );
+  }
+
+  const providers = new Array(256).fill("");
+  let maxProviderIndex = 0;
+  console.log(`🚀 Adding providers...`);
+  providerBitMapInfo.forEach(async (provider) => {
+    providers[provider.bit] = provider.name;
+    if (provider.bit > maxProviderIndex) {
+      maxProviderIndex = provider.bit;
+    }
+  });
+
+  // Drop the empty elemnts at the end
+  providers.splice(maxProviderIndex + 1);
+  console.log(`🚀 providers to be added: `, providers);
+
+  await confirmContinue({
+    contract: "Add schema and bitmap information to GitcoinPassportDecoder",
+    network: hre.network.name,
+    chainId: hre.network.config.chainId,
+    maxScoreAge: maxScoreAge,
+    threshold: threshold
+  });
 
   if (currentGitcoinResolver != getResolverAddress()) {
-    const currentGitcoinResolver = await passportDecoder.gitcoinResolver();
-    console.log("== gitcoinResolver", gitcoinResolver);
     await passportDecoder.setGitcoinResolver(getResolverAddress());
     console.log(
       `✅ Set GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
@@ -65,7 +100,7 @@ export async function main() {
     );
   }
 
-  if (currentGitcoinResolver != getResolverAddress()) {
+  if (currentPassportSchemaUID != chainInfo.easSchemas.passport.uid) {
     await passportDecoder.setPassportSchemaUID(
       chainInfo.easSchemas.passport.uid
     );
@@ -89,48 +124,35 @@ export async function main() {
     );
   }
 
-  const currentMaxScoreAge = await passportDecoder.maxScoreAge();
-  console.log("== maxScoreAge", maxScoreAge);
-  // await passportDecoder.setMaxScoreAge(maxScoreAge);
-  // console.log(
-  //   `✅ Set maxScoreAge to ${maxScoreAge} on GitcoinPassportDecoder.`
-  // );
+  if (currentMaxScoreAge != maxScoreAge) {
+    await passportDecoder.setMaxScoreAge(maxScoreAge);
+    console.log(
+      `✅ Set maxScoreAge to ${maxScoreAge} on GitcoinPassportDecoder.`
+    );
+  } else {
+    console.log(
+      `-> skip setting maxScoreAge to ${maxScoreAge} on GitcoinPassportDecoder.`
+    );
+  }
 
-  const currentThreshold = await passportDecoder.threshold();
-  console.log("== threshold", threshold);
-  // await passportDecoder.setThreshold(threshold);
-  // console.log(`✅ Set threshold to ${threshold} on GitcoinPassportDecoder.`);
+  if (currentThreshold != threshold) {
+    await passportDecoder.setThreshold(threshold);
+    console.log(`✅ Set threshold to ${threshold} on GitcoinPassportDecoder.`);
+  } else {
+    console.log(
+      `-> skip set threshold to ${threshold} on GitcoinPassportDecoder.`
+    );
+  }
 
   // We do this considering we have only index = 0 in the providerBitMapInfo
   const currentVersion = await passportDecoder.currentVersion();
   console.log("currentVersion", currentVersion);
-  // const currentProviders = await passportDecoder.providerVersions(
-  //   currentVersion, 0
-  // );
-  // console.log("currentProviders", currentProviders);
 
-  const providers = new Array(256).fill("");
-  let maxProviderIndex = 0;
-  console.log(`🚀 Adding providers...`);
-  providerBitMapInfo.forEach(async (provider) => {
-    console.log("   adding provider", provider);
-    providers[provider.bit] = provider.name;
-    if (provider.bit > maxProviderIndex) {
-      maxProviderIndex = provider.bit;
-    }
-  });
 
-  // Drop the empty elemnts at the end
-
-  ///////////////////////////
-
-  // providers.splice(maxProviderIndex + 1);
-  // console.log("   providers: ", providers);
-  // console.log(`🚀    writing providers to blockchain...`);
-  // const tx = await passportDecoder.addProviders(providers);
-  // const receipt = await tx.wait();
-
-  ///////////////////////////
+  console.log("   providers: ", providers);
+  console.log(`🚀    writing providers to blockchain...`);
+  const tx = await passportDecoder.addProviders(providers);
+  const receipt = await tx.wait();
 
   console.log(`✅ Added providers to GitcoinPassportDecoder.`);
 }
