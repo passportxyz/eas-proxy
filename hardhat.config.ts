@@ -11,17 +11,17 @@ import { HttpNetworkHDAccountsConfig } from "hardhat/types";
 
 dotenv.config();
 
-
 // this is already a public mnemonic ...
-const MNEMONIC = "chief loud snack trend chief net field husband vote message decide replace";
-const testAccounts:HttpNetworkHDAccountsConfig = {
+const MNEMONIC =
+  "chief loud snack trend chief net field husband vote message decide replace";
+const testAccounts: HttpNetworkHDAccountsConfig = {
   mnemonic: MNEMONIC,
   path: "m/44'/60'/0'/0",
   initialIndex: 0,
-  // We will use different recipients for some of the tests (like GitcoinResolver for example), 
+  // We will use different recipients for some of the tests (like GitcoinResolver for example),
   // hence we need t ohave enough accounts
   count: 30,
-  passphrase: "",
+  passphrase: ""
 };
 
 let config: HardhatUserConfig = {
@@ -58,6 +58,14 @@ let config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.lineascan.build/api",
           browserURL: "https://goerli.lineascan.build/"
+        }
+      },
+      {
+        network: "optimism-goerli",
+        chainId: 420,
+        urls: {
+          apiURL: "https://api-goerli-optimism.etherscan.io/api",
+          browserURL: "https://goerli-optimism.etherscan.io/"
         }
       }
     ]
@@ -116,6 +124,16 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 420,
         from: process.env.DEPLOYER_ADDRESS as string
+        // gasPrice: 6168663,
+        // gasPrice: 9068663
+      };
+    }
+    if (process.env.OP_SEPOLIA_PROVIDER_URL) {
+      config.networks["optimism-sepolia"] = {
+        url: process.env.OP_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 0xaa37dc,
+        from: process.env.DEPLOYER_ADDRESS as string
       };
     }
   }
@@ -130,12 +148,12 @@ if (
     chainId: 59140,
     gasPrice: 582000007,
     url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
   };
   config.networks["linea"] = {
     chainId: 59144,
     url: `https://linea-mainnet.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""],
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
   };
 }
 

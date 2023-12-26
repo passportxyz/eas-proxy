@@ -11,24 +11,24 @@
       "address": "0x4200000000000000000000000000000000000020"
     },
     "GitcoinResolver": {
-      "address": ""
+      "address": "0x0BB1B1539f1535645821b88419E2BcB937F36cA7"
     },
     "GitcoinVerifier": {
-      "address": ""
+      "address": "0x074761E1Dc6E6cF9cdeE67dd180E01E818716Ce0"
     },
     "GitcoinAttester": {
-      "address": ""
+      "address": "0xbCD1f602b87704f071034f206Fb4ed5872DAfd91"
     },
     "easSchemas": {
       "passport": {
-        "uid": ""
+        "uid": "0x6868093985e2c8d5d67d5cfb1785ba1618792361d395db0feffab35c8ba00782"
       },
       "score": {
-        "uid": ""
+        "uid": "0x1b3881ffb4a1311e7ffd27db310346d058c7fa435fe9de9426db9daa8de6abf5"
       }
     },
     "GitcoinPassportDecoder": {
-      "address": ""
+      "address": "0xa9f07557c2AAf8C9b2FeAA82150C24bA094670e0"
     }
   },
   "0x14a33": {
