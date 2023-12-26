@@ -581,8 +581,10 @@ describe("GitcoinPassportDecoder", function () {
     const mockAddress = "0x8869E49DE43ca33026D9feB8580977333F07A228";
     const mockBytes32 =
       "0xadc444fd654fe0a6aedaa8fadd67d791941738b645c9955f4a1dd66a7af1aae1";
+
     async function testSetAddress(
       functionName: string,
+      getterName: string,
       addressConstant: string,
       error: string,
       addressParam: boolean
@@ -595,6 +597,10 @@ describe("GitcoinPassportDecoder", function () {
         await gitcoinPassportDecoder
           .connect(ownerAccount)
           [functionName](mockValue);
+        const setValue = await gitcoinPassportDecoder
+          .connect(ownerAccount)
+          [getterName]();
+        expect(setValue).to.equal(mockValue);
       });
 
       it(`should not allow anyone other than owner to set the ${addressConstant}`, async function () {
@@ -614,17 +620,76 @@ describe("GitcoinPassportDecoder", function () {
       });
     }
 
+    async function testSetValue(
+      functionName: string,
+      getterName: string,
+      attrName: string,
+      valuesSets: { value: any; error: string | undefined }[]
+    ) {
+      for (let i = 0; i < valuesSets.length; i++) {
+        const vs = valuesSets[i];
+        if (vs.error === undefined) {
+          it(`should set the ${attrName} to ${vs.value}`, async function () {
+            const otherValue = vs.value + 1;
+            // First set another value - just to make sure the value we test is not there from the start
+            await gitcoinPassportDecoder
+              .connect(ownerAccount)
+              [functionName](otherValue);
+            const setOtherValue = await gitcoinPassportDecoder
+              .connect(ownerAccount)
+              [getterName]();
+            expect(setOtherValue).to.equal(otherValue);
+
+            // Now set and check the expected value
+            await gitcoinPassportDecoder
+              .connect(ownerAccount)
+              [functionName](vs.value);
+            const setValue = await gitcoinPassportDecoder
+              .connect(ownerAccount)
+              [getterName]();
+            expect(setValue).to.equal(vs.value);
+          });
+        } else {
+          it(`should throw ${vs.error} when setting ${attrName} to ${vs.value}`, async function () {
+            await expect(
+              gitcoinPassportDecoder
+                .connect(ownerAccount)
+                [functionName](vs.value)
+            ).to.be.revertedWithCustomError(
+              gitcoinPassportDecoder,
+              vs.error as string
+            );
+          });
+        }
+      }
+
+      it(`should not allow anyone other than owner to set the ${attrName}`, async function () {
+        await expect(
+          gitcoinPassportDecoder
+            .connect(recipientAccount)
+            [functionName](valuesSets[0].value) // We just pick any value here, since we are testing the permission
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+    }
+
     describe("getting and setting EAS address", function () {
-      testSetAddress("setEASAddress", "EAS", "ZeroValue", true);
+      testSetAddress("setEASAddress", "eas", "EAS", "ZeroValue", true);
     });
 
     describe("setting resolver address", function () {
-      testSetAddress("setGitcoinResolver", "Resolver", "ZeroValue", true);
+      testSetAddress(
+        "setGitcoinResolver",
+        "gitcoinResolver",
+        "Resolver",
+        "ZeroValue",
+        true
+      );
     });
 
     describe("setting passport schema", function () {
       testSetAddress(
         "setPassportSchemaUID",
+        "passportSchemaUID",
         "Passport SchemaUID",
         "ZeroValue",
         false
@@ -634,10 +699,25 @@ describe("GitcoinPassportDecoder", function () {
     describe("setting score schema", function () {
       testSetAddress(
         "setScoreSchemaUID",
+        "scoreSchemaUID",
         "Score SchemaUID",
         "ZeroValue",
         false
       );
+    });
+
+    describe("setting max score age", function () {
+      testSetValue("setMaxScoreAge", "maxScoreAge", "maxScoreAge", [
+        { value: 2, error: undefined },
+        { value: 0, error: "ZeroMaxScoreAge" }
+      ]);
+    });
+
+    describe("setting max threshold", function () {
+      testSetValue("setThreshold", "threshold", "threshold", [
+        { value: 2, error: undefined },
+        { value: 0, error: "ZeroThreshold" }
+      ]);
     });
   });
   describe("getScore", function () {
