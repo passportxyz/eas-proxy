@@ -13,8 +13,34 @@ type StakeMember = {
   stakeId: number;
 };
 
+const shouldSlash = (numUsers: number, i: number): boolean =>
+  i < Math.floor((numUsers * 3) / 10);
+
+const buildBadListMerkleTree = (
+  users: StakeMember[],
+  numUsers: number
+): {
+  merkleRoot: string;
+  slashTotal: number;
+  slashedUsers: string[];
+} => {
+  const slashedUsers: string[] = [];
+  let slashTotal = 0;
+  const values: [string, string][] = users
+    .filter((user, i) => !shouldSlash(numUsers, i))
+    .map((user) => [user.address, BigInt(user.address).toString()]);
+
+  const merkleTree = StandardMerkleTree.of(values, ["address", "uint192"]);
+
+  const merkleRoot = merkleTree.root;
+
+  fs.writeFileSync("badList.json", JSON.stringify(merkleTree.dump()));
+
+  return { merkleRoot, slashTotal, slashedUsers };
+};
+
 // https://github.com/OpenZeppelin/merkle-tree
-const buildMerkleTree = (
+const buildSlashMerkleTree = (
   users: StakeMember[],
   numUsers: number
 ): {
@@ -25,9 +51,9 @@ const buildMerkleTree = (
   const slashedUsers: string[] = [];
   let slashTotal = 0;
   const values: [string, string, string][] = users.map((user, i) => {
-    const shouldSlash = i > Math.floor((numUsers * 3) / 10);
+    const slash = shouldSlash(numUsers, i);
     let slashAmount = 0;
-    if (shouldSlash) {
+    if (slash) {
       slashedUsers.push(user.address);
       slashAmount += Number(user.amount) / 2;
     }
@@ -35,7 +61,7 @@ const buildMerkleTree = (
     return [
       user.address,
       // if shouldSlash, Slash half of the users stake
-      shouldSlash ? BigInt(slashAmount).toString() : BigInt(0).toString(),
+      slash ? BigInt(slashAmount).toString() : BigInt(0).toString(),
       BigInt(user.stakeId).toString()
     ];
   });
@@ -56,15 +82,15 @@ const buildMerkleTree = (
   return { merkleRoot, slashTotal, slashedUsers };
 };
 
-const getMerkleProof = (address: string) => {
+const getMerkleProof = (address: string, isBadList: boolean) => {
+  const fileName = isBadList ? "badList.json" : "slashMerkleTree.json";
   const merkleTree = StandardMerkleTree.load(
-    JSON.parse(fs.readFileSync("slashMerkleTree.json", "utf8"))
+    JSON.parse(fs.readFileSync(fileName, "utf8"))
   );
 
-  let proof: any = null;
+  let proof: any = [];
   for (const [i, v] of merkleTree.entries()) {
     if (v[0] === address) {
-      // (3)
       proof = merkleTree.getProof(i);
       console.log("Value:", v);
       console.log("Proof:", proof);
@@ -84,6 +110,19 @@ function shuffleArray(array: any[]) {
 
 const fiveMinutes = 5 * 60;
 const twelveWeeksInSeconds = 12 * 7 * 24 * 60 * 60 + 1; // 12 weeks in seconds
+
+// Two merkle proofs one that has slash ids
+// one that has all slashed amounts and stake ids.
+
+// In order to withdrawal you just need to verify that the stake id is not on a bad list
+
+// If on bad list amount will be withdrawn to the bad list.
+
+// You wouldn't need to do the second one if you just did the first one.
+
+// Need round associated for each merkle proof
+
+// Associate round with merkle proof, merkle proof can be updated with a release.
 
 describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
   this.beforeEach(async function () {
@@ -117,7 +156,6 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
     }
   });
   it("should self stake each user", async function () {
-    // const numUsers = 200;
     const numUsers = 20;
     const userAccounts = this.userAccounts.slice(0, numUsers);
 
@@ -189,16 +227,21 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           })
         );
 
-        const { merkleRoot, slashTotal, slashedUsers } = buildMerkleTree(
+        const { merkleRoot, slashTotal, slashedUsers } = buildSlashMerkleTree(
           allStakeMembers,
           numUsers
         );
 
-        const slashTotalProof = getMerkleProof(ZERO_ADDRESS);
+        const { merkleRoot: badListMerkleRoot } = buildBadListMerkleTree(
+          allStakeMembers,
+          numUsers
+        );
+
+        const slashTotalProof = getMerkleProof(ZERO_ADDRESS, false);
 
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .slash(merkleRoot, slashTotal, slashTotalProof);
+          .slash(merkleRoot, badListMerkleRoot, slashTotal, slashTotalProof);
 
         await time.increaseTo(
           twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000)
@@ -218,7 +261,8 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           }
 
           try {
-            const proof = getMerkleProof(userAccount.address);
+            const proof = getMerkleProof(userAccount.address, true);
+            console.log("Proof:", proof);
             const withdrawTx = await gitcoinIdentityStaking
               .connect(userAccount)
               .withdrawSelfStake(stakeId, BigInt(amount), proof);

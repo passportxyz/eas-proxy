@@ -67,9 +67,12 @@ contract GitcoinIdentityStaking is
   mapping(bytes32 => bool) public slashProofHashes;
 
   mapping(bytes32 => bool) public slashMerkleRoots;
+  mapping(bytes32 => bool) public slashUserMerkleRoots;
+
   mapping(bytes32 => uint192) public slashTotals;
 
   bytes32 public slashMerkleRoot;
+  bytes32 public slashUserMerkleRoot;
 
   event SelfStake(
     uint256 indexed id,
@@ -167,25 +170,17 @@ contract GitcoinIdentityStaking is
   function withdrawSelfStake(
     uint256 stakeId,
     uint192 slashAmnt,
-    bytes32[] memory stakeProof
+    bytes32[] memory slashUserProof
   ) external {
-    // not really needed anymore since withdraws are dependent on a valid proof that contains msg.sender
-    // if (!ownerOfStake(msg.sender, stakeId)) {
-    //   revert NotOwnerOfStake();
-    // }
-
     if (stakes[stakeId].unlockTime < block.timestamp) {
       revert StakeIsLocked();
     }
 
-    console.log("slashAmnt", slashAmnt);
-    console.log("stakes[stakeId].amount", stakes[stakeId].amount);
-    bytes32 leaf = keccak256(
-      bytes.concat(keccak256(abi.encode(msg.sender, slashAmnt, stakeId)))
-    );
+    bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender))));
 
-    console.logBytes32(slashMerkleRoot);
-    if (!MerkleProof.verify(stakeProof, slashMerkleRoot, leaf)) {
+    console.logBytes32(leaf);
+    console.logBytes32(slashUserMerkleRoot);
+    if (!MerkleProof.verify(slashUserProof, slashUserMerkleRoot, leaf)) {
       revert InvalidWithdrawProof();
     }
 
@@ -269,10 +264,15 @@ contract GitcoinIdentityStaking is
 
   function slash(
     bytes32 currentSlashMerkleRoot,
+    bytes32 currentSlashUserMerkleRoot,
     uint192 slashTotal,
     bytes32[] memory slashTotalProof
   ) external onlyRole(SLASHER_ROLE) {
     if (slashMerkleRoots[currentSlashMerkleRoot]) {
+      revert SlashProofHashAlreadyUsed();
+    }
+
+    if (slashUserMerkleRoots[slashUserMerkleRoot]) {
       revert SlashProofHashAlreadyUsed();
     }
 
@@ -283,9 +283,11 @@ contract GitcoinIdentityStaking is
       revert InvalidSlashProof();
     }
 
+    slashUserMerkleRoots[slashUserMerkleRoot] = true;
     slashMerkleRoots[currentSlashMerkleRoot] = true;
     slashTotals[currentSlashMerkleRoot] = slashTotal;
     slashMerkleRoot = currentSlashMerkleRoot;
+    slashUserMerkleRoot = currentSlashUserMerkleRoot;
 
     emit Slash(msg.sender, slashMerkleRoot, slashTotal);
   }
