@@ -223,7 +223,7 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
     await gitcoinIdentityStaking.connect(this.owner).burn();
   });
 
-  it("should self stake each user - minimal", async function () {
+  it.only("should self stake each user - minimal", async function () {
     const userAccount1 = this.userAccounts[0];
     const gitcoinIdentityStaking = this.gitcoinIdentityStaking;
 
@@ -275,33 +275,6 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
     await setMerkleRootTx.wait();
 
     ///////////////////////////
-    // Fast forward
-    ///////////////////////////
-    await time.increaseTo(
-      twelveWeeksInSeconds +
-        twelveWeeksInSeconds +
-        Math.floor(new Date().getTime() / 1000)
-    );
-
-    ///////////////////////////
-    // Withdraw user 1
-    ///////////////////////////
-    const user1Proof = merkleTree.getProof([
-      allStakeMembers[0].address,
-      allStakeMembers[0].slashAmount,
-      allStakeMembers[0].stakeId.toString()
-    ]); // This here is the tree index ...
-    console.log("Proof:", user1Proof);
-    console.log("First user:", allStakeMembers[0]);
-    await gitcoinIdentityStaking
-      .connect(userAccount1)
-      .withdrawSelfStake(
-        allStakeMembers[0].stakeId,
-        allStakeMembers[0].slashAmount,
-        user1Proof
-      );
-
-    ///////////////////////////
     // Slash amounts
     ///////////////////////////
     await gitcoinIdentityStaking
@@ -333,6 +306,33 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           allStakeMembers[9].slashAmount,
           allStakeMembers[10].slashAmount
         ]
+      );
+
+    ///////////////////////////
+    // Fast forward
+    ///////////////////////////
+    await time.increaseTo(
+      twelveWeeksInSeconds +
+        twelveWeeksInSeconds +
+        Math.floor(new Date().getTime() / 1000)
+    );
+
+    ///////////////////////////
+    // Withdraw user 1
+    ///////////////////////////
+    const user1Proof = merkleTree.getProof([
+      allStakeMembers[0].address,
+      allStakeMembers[0].slashAmount,
+      allStakeMembers[0].stakeId.toString()
+    ]); // This here is the tree index ...
+    console.log("Proof:", user1Proof);
+    console.log("First user:", allStakeMembers[0]);
+    await gitcoinIdentityStaking
+      .connect(userAccount1)
+      .withdrawSelfStake(
+        allStakeMembers[0].stakeId,
+        allStakeMembers[0].slashAmount,
+        user1Proof
       );
 
     await gitcoinIdentityStaking
