@@ -13,55 +13,30 @@ type StakeMember = {
   stakeId: number;
 };
 
+type SlashMember = {
+  address: string;
+  slashAmount: string;
+  stakeId: number;
+};
+
 const shouldSlash = (numUsers: number, i: number): boolean =>
   i < Math.floor((numUsers * 3) / 10);
 
-const buildBadListMerkleTree = (
-  users: StakeMember[],
-  numUsers: number
-): {
-  merkleRoot: string;
-  slashTotal: number;
-  slashedUsers: string[];
-} => {
-  const slashedUsers: string[] = [];
-  let slashTotal = 0;
-  const values: [string, string][] = users
-    .filter((user, i) => !shouldSlash(numUsers, i))
-    .map((user) => [user.address, BigInt(user.stakeId).toString()]);
-
-  const merkleTree = StandardMerkleTree.of(values, ["address", "uint192"]);
-
-  const merkleRoot = merkleTree.root;
-
-  fs.writeFileSync("badList.json", JSON.stringify(merkleTree.dump()));
-
-  return { merkleRoot, slashTotal, slashedUsers };
-};
-
 // https://github.com/OpenZeppelin/merkle-tree
 const buildSlashMerkleTree = (
-  users: StakeMember[],
-  numUsers: number
+  users: SlashMember[]
 ): {
   merkleRoot: string;
   slashTotal: number;
-  slashedUsers: string[];
+  merkleTree: StandardMerkleTree<[string, string, string]>;
 } => {
-  const slashedUsers: string[] = [];
   let slashTotal = 0;
   const values: [string, string, string][] = users.map((user, i) => {
-    const slash = shouldSlash(numUsers, i);
-    let slashAmount = 0;
-    if (slash) {
-      slashedUsers.push(user.address);
-      slashAmount += Number(user.amount) / 2;
-    }
-    slashTotal += slashAmount;
+    slashTotal += Number(user.slashAmount);
     return [
       user.address,
       // if shouldSlash, Slash half of the users stake
-      slash ? BigInt(slashAmount).toString() : BigInt(0).toString(),
+      BigInt(user.slashAmount).toString(),
       BigInt(user.stakeId).toString()
     ];
   });
@@ -72,14 +47,14 @@ const buildSlashMerkleTree = (
   const merkleTree = StandardMerkleTree.of(values, [
     "address",
     "uint192",
-    "uint192"
+    "uint256"
   ]);
 
   const merkleRoot = merkleTree.root;
 
   fs.writeFileSync("slashMerkleTree.json", JSON.stringify(merkleTree.dump()));
 
-  return { merkleRoot, slashTotal, slashedUsers };
+  return { merkleRoot, slashTotal, merkleTree };
 };
 
 const getMerkleProof = (address: string, isBadList: boolean) => {
@@ -157,145 +132,209 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
   });
   it("should self stake each user", async function () {
     const numUsers = 20;
-    const userAccounts = this.userAccounts.slice(0, numUsers);
+    const gitcoinIdentityStaking = this.gitcoinIdentityStaking;
 
-    await Promise.all(
-      [this.gitcoinIdentityStaking].map(async (gitcoinIdentityStaking: any) => {
-        gitcoinIdentityStaking.grantRole(
-          await gitcoinIdentityStaking.SLASHER_ROLE(),
-          this.owner.address
-        );
-        gitcoinIdentityStaking.grantRole(
-          await gitcoinIdentityStaking.RELEASER_ROLE(),
-          this.owner.address
-        );
-
-        await Promise.all(
-          userAccounts.map(async (userAccount: any, accountIdx: number) => {
-            // This changes the order of the transactions
-            // which can affect gas. Randomizing to get an
-            // average gas cost.
-            for (const func of shuffleArray([
-              () =>
-                gitcoinIdentityStaking
-                  .connect(userAccount)
-                  .selfStake(100000, twelveWeeksInSeconds)
-
-              // () =>
-              //   gitcoinIdentityStaking
-              //     .connect(userAccount)
-              //     .communityStake(
-              //       this.userAccounts[accountIdx + 1],
-              //       100000,
-              //       twelveWeeksInSeconds
-              //     ),
-
-              // () =>
-              //   gitcoinIdentityStaking
-              //     .connect(userAccount)
-              //     .communityStake(
-              //       this.userAccounts[
-              //         accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-              //       ],
-              //       100000,
-              //       twelveWeeksInSeconds
-              //     )
-            ])) {
-              await func();
-            }
-          })
-        );
-
-        // let slashMembers: {
-        //   address: string;
-        //   amount: string;
-        //   stakeId: number;
-        // }[] = [];
-
-        const allStakeMembers: StakeMember[] = await Promise.all(
-          userAccounts.map(async (userAccount: any) => {
-            const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-              userAccount.address,
-              0
-            );
-            const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
-            return {
-              address: userAccount.address,
-              amount,
-              stakeId
-            };
-          })
-        );
-
-        const { merkleRoot, slashTotal, slashedUsers } = buildSlashMerkleTree(
-          allStakeMembers,
-          numUsers
-        );
-
-        const { merkleRoot: badListMerkleRoot } = buildBadListMerkleTree(
-          allStakeMembers,
-          numUsers
-        );
-
-        const slashTotalProof = getMerkleProof(ZERO_ADDRESS, false);
-
-        await gitcoinIdentityStaking
-          .connect(this.owner)
-          .slash(merkleRoot, badListMerkleRoot, slashTotal, slashTotalProof);
-
-        await time.increaseTo(
-          twelveWeeksInSeconds + Math.floor(new Date().getTime() / 1000)
-        );
-
-        // withdraw funds for each user
-        userAccounts.map(async (userAccount: any) => {
-          const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-            userAccount.address,
-            0
-          );
-          let amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
-          if (slashedUsers.includes(userAccount.address)) {
-            amount = Number(amount) / 2;
-          } else {
-            amount = 0;
-          }
-
-          try {
-            const proof = getMerkleProof(userAccount.address, true);
-            console.log("Proof:", proof);
-            const withdrawTx = await gitcoinIdentityStaking
-              .connect(userAccount)
-              .withdrawSelfStake(stakeId, BigInt(amount), proof);
-          } catch (e) {
-            // debugger;
-            console.log(e);
-          }
-        });
-
-        // const slashNonce = keccak256(Buffer.from(Math.random().toString()));
-
-        // const slashProof = makeSlashProof(slashMembers, slashNonce);
-
-        // await gitcoinIdentityStaking
-        //   .connect(this.owner)
-        //   .slash(stakeIds, 50, slashProof);
-
-        // await gitcoinIdentityStaking
-        //   .connect(this.owner)
-        //   .release(
-        //     slashMembers,
-        //     1,
-        //     500,
-        //     slashProof,
-        //     slashNonce,
-        //     ethers.keccak256(Buffer.from(Math.random().toString()))
-        //   );
-
-        // await time.increase(60 * 60 * 24 * 91);
-
-        // await gitcoinIdentityStaking.connect(this.owner).burn();
-      })
+    gitcoinIdentityStaking.grantRole(
+      await gitcoinIdentityStaking.SLASHER_ROLE(),
+      this.owner.address
     );
+    gitcoinIdentityStaking.grantRole(
+      await gitcoinIdentityStaking.RELEASER_ROLE(),
+      this.owner.address
+    );
+
+    const allStakeMembers: SlashMember[] = [];
+    let totalSlashAmount = BigInt(0);
+
+    for (let i = 0; i < 20; i++) {
+      const userAccount = this.userAccounts[i];
+      ///////////////////////////
+      // Stake user i
+      ///////////////////////////
+      const selfStakeTx = await gitcoinIdentityStaking
+        .connect(userAccount)
+        .selfStake(100000, twelveWeeksInSeconds);
+      await selfStakeTx.wait();
+
+      allStakeMembers.push({
+        address: userAccount.address,
+        // Slash half
+        slashAmount: "50000",
+        stakeId: Number(await gitcoinIdentityStaking.stakeCount())
+      });
+
+      totalSlashAmount += BigInt(50000);
+    }
+
+    console.log("allStakeMembers", allStakeMembers);
+    const { merkleRoot, slashTotal, merkleTree } =
+      buildSlashMerkleTree(allStakeMembers);
+
+    ///////////////////////////
+    // Set merkle root
+    ///////////////////////////
+    const setMerkleRootTx = await gitcoinIdentityStaking.setMerkleRoot(
+      merkleRoot
+    );
+    await setMerkleRootTx.wait();
+
+    ///////////////////////////
+    // Fast forward
+    ///////////////////////////
+    await time.increaseTo(
+      twelveWeeksInSeconds +
+        twelveWeeksInSeconds +
+        Math.floor(new Date().getTime() / 1000)
+    );
+
+    ///////////////////////////
+    // Withdraw user 1
+    ///////////////////////////
+    const user1Proof = merkleTree.getProof([
+      allStakeMembers[0].address,
+      allStakeMembers[0].slashAmount,
+      allStakeMembers[0].stakeId.toString()
+    ]); // This here is the tree index ...
+    console.log("Proof:", user1Proof);
+    console.log("First user:", allStakeMembers[0]);
+    await gitcoinIdentityStaking
+      .connect(this.userAccounts[0])
+      .withdrawSelfStake(
+        allStakeMembers[0].stakeId,
+        allStakeMembers[0].slashAmount,
+        user1Proof
+      );
+
+    ///////////////////////////
+    // Slash amounts
+    ///////////////////////////
+    await gitcoinIdentityStaking
+      .connect(this.owner)
+      .slash(merkleRoot, totalSlashAmount.toString());
+
+    await gitcoinIdentityStaking
+      .connect(this.owner)
+      .updateSlashingRound(0, merkleRoot, totalSlashAmount.toString());
+
+    await gitcoinIdentityStaking.connect(this.owner).burn();
   });
-  // it("should withdraw each user", async function () {});
+
+  it("should self stake each user - minimal", async function () {
+    const userAccount1 = this.userAccounts[0];
+    const gitcoinIdentityStaking = this.gitcoinIdentityStaking;
+
+    gitcoinIdentityStaking.grantRole(
+      await gitcoinIdentityStaking.SLASHER_ROLE(),
+      this.owner.address
+    );
+    gitcoinIdentityStaking.grantRole(
+      await gitcoinIdentityStaking.RELEASER_ROLE(),
+      this.owner.address
+    );
+
+    const allStakeMembers: SlashMember[] = [];
+    let totalSlashAmount = BigInt(0);
+
+    for (let i = 0; i < 20; i++) {
+      const userAccount = this.userAccounts[i];
+      ///////////////////////////
+      // Stake user i
+      ///////////////////////////
+      const selfStakeTx = await gitcoinIdentityStaking
+        .connect(userAccount)
+        .selfStakeMinimal(100000, twelveWeeksInSeconds);
+      await selfStakeTx.wait();
+      const stakeId = Number(await gitcoinIdentityStaking.stakeCount());
+
+      allStakeMembers.push({
+        address: userAccount.address,
+        // Slash half
+        slashAmount: "50000",
+        stakeId: stakeId
+      });
+      totalSlashAmount += BigInt(50000);
+
+      const stake = await gitcoinIdentityStaking.stakes(stakeId);
+      console.log("Stake: ", stake);
+    }
+
+    console.log("allStakeMembers", allStakeMembers);
+    const { merkleRoot, slashTotal, merkleTree } =
+      buildSlashMerkleTree(allStakeMembers);
+
+    ///////////////////////////
+    // Set merkle root
+    ///////////////////////////
+    const setMerkleRootTx = await gitcoinIdentityStaking.setMerkleRoot(
+      merkleRoot
+    );
+    await setMerkleRootTx.wait();
+
+    ///////////////////////////
+    // Fast forward
+    ///////////////////////////
+    await time.increaseTo(
+      twelveWeeksInSeconds +
+        twelveWeeksInSeconds +
+        Math.floor(new Date().getTime() / 1000)
+    );
+
+    ///////////////////////////
+    // Withdraw user 1
+    ///////////////////////////
+    const user1Proof = merkleTree.getProof([
+      allStakeMembers[0].address,
+      allStakeMembers[0].slashAmount,
+      allStakeMembers[0].stakeId.toString()
+    ]); // This here is the tree index ...
+    console.log("Proof:", user1Proof);
+    console.log("First user:", allStakeMembers[0]);
+    await gitcoinIdentityStaking
+      .connect(userAccount1)
+      .withdrawSelfStake(
+        allStakeMembers[0].stakeId,
+        allStakeMembers[0].slashAmount,
+        user1Proof
+      );
+
+    ///////////////////////////
+    // Slash amounts
+    ///////////////////////////
+    await gitcoinIdentityStaking
+      .connect(this.owner)
+      .slashAndCheck(
+        merkleRoot,
+        totalSlashAmount.toString(),
+        [
+          allStakeMembers[1].stakeId,
+          allStakeMembers[2].stakeId,
+          allStakeMembers[3].stakeId,
+          allStakeMembers[4].stakeId,
+          allStakeMembers[5].stakeId,
+          allStakeMembers[6].stakeId,
+          allStakeMembers[7].stakeId,
+          allStakeMembers[8].stakeId,
+          allStakeMembers[9].stakeId,
+          allStakeMembers[10].stakeId
+        ],
+        [
+          allStakeMembers[1].slashAmount,
+          allStakeMembers[2].slashAmount,
+          allStakeMembers[3].slashAmount,
+          allStakeMembers[4].slashAmount,
+          allStakeMembers[5].slashAmount,
+          allStakeMembers[6].slashAmount,
+          allStakeMembers[7].slashAmount,
+          allStakeMembers[8].slashAmount,
+          allStakeMembers[9].slashAmount,
+          allStakeMembers[10].slashAmount
+        ]
+      );
+
+    await gitcoinIdentityStaking
+      .connect(this.owner)
+      .updateSlashingRound(0, merkleRoot, totalSlashAmount.toString());
+
+    await gitcoinIdentityStaking.connect(this.owner).burn();
+  });
 });

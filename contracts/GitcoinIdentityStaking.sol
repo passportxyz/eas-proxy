@@ -44,6 +44,15 @@ contract GitcoinIdentityStaking is
   struct Stake {
     uint192 amount;
     uint64 unlockTime;
+    address owner;
+    // uint8 status; // 0x01 - unstaked, 0x02 - slashed
+  }
+
+  struct SlashingRound {
+    uint192 totalSlashed; // This includes the total slashed from beginning of time
+    bytes32 merkleRoot;
+    bool isBurned;
+    uint64 slashingTime;
   }
 
   // TODO func selfStakeIdsLength(address) => uint256
@@ -53,26 +62,27 @@ contract GitcoinIdentityStaking is
   mapping(uint256 stakeId => Stake) public stakes;
   uint256 public stakeCount;
 
-  uint256 public currentSlashRound = 1;
+  uint256 public nextSlashingRound = 0;
+  uint256 public nextBurnRound = 0;
 
-  uint64 public burnRoundMinimumDuration = 90 days;
+  uint64 public objectionPeriod = 90 days;
 
   uint256 public lastBurnTimestamp;
 
   address public burnAddress;
 
-  mapping(uint256 round => uint192 amount) public totalSlashed;
+  mapping(uint256 round => SlashingRound) public slashingRounds;
 
   // Used to permit unfreeze
-  mapping(bytes32 => bool) public slashProofHashes;
+  // mapping(bytes32 => bool) public slashProofHashes;
 
-  mapping(bytes32 => bool) public slashMerkleRoots;
-  mapping(bytes32 => bool) public slashUserMerkleRoots;
+  // mapping(bytes32 => bool) public slashMerkleRoots;
+  // mapping(bytes32 => bool) public slashUserMerkleRoots;
 
-  mapping(bytes32 => uint192) public slashTotals;
+  // mapping(bytes32 => uint192) public slashTotals;
 
   bytes32 public slashMerkleRoot;
-  bytes32 public slashUserMerkleRoot;
+  // bytes32 public slashUserMerkleRoot;
 
   event SelfStake(
     uint256 indexed id,
@@ -127,12 +137,30 @@ contract GitcoinIdentityStaking is
     lastBurnTimestamp = block.timestamp;
   }
 
+  function selfStakeMinimal(uint192 amount, uint64 duration) external {
+    // revert if amount is 0. Since this value is unsigned integer
+    if (amount == 0) {
+      revert AmountMustBeGreaterThanZero();
+    }
+    uint64 unlockTime = duration + uint64(block.timestamp);
+    uint256 stakeId = ++stakeCount;
+
+    stakes[stakeId].amount = amount;
+    stakes[stakeId].unlockTime = unlockTime;
+    stakes[stakeId].owner = msg.sender;
+
+    if (!gtc.transferFrom(msg.sender, address(this), amount)) {
+      revert FailedTransfer();
+    }
+
+    emit SelfStake(stakeId, msg.sender, amount, unlockTime);
+  }
+
   function selfStake(uint192 amount, uint64 duration) external {
     // revert if amount is 0. Since this value is unsigned integer
     if (amount == 0) {
       revert AmountMustBeGreaterThanZero();
     }
-
     uint64 unlockTime = duration + uint64(block.timestamp);
 
     if (
@@ -145,6 +173,7 @@ contract GitcoinIdentityStaking is
     uint256 stakeId = ++stakeCount;
     stakes[stakeId].amount = amount;
     stakes[stakeId].unlockTime = unlockTime;
+    stakes[stakeId].owner = msg.sender;
 
     selfStakeIds[msg.sender].push(stakeId);
 
@@ -172,17 +201,20 @@ contract GitcoinIdentityStaking is
     uint192 slashAmnt,
     bytes32[] memory slashUserProof
   ) external {
-    if (stakes[stakeId].unlockTime < block.timestamp) {
+    require(
+      stakes[stakeId].owner == msg.sender,
+      "Only the owner of the stake can withdraw"
+    );
+
+    if (stakes[stakeId].unlockTime > block.timestamp) {
       revert StakeIsLocked();
     }
 
     bytes32 leaf = keccak256(
-      bytes.concat(keccak256(abi.encode(msg.sender, stakeId)))
+      bytes.concat(keccak256(abi.encode(msg.sender, slashAmnt, stakeId)))
     );
 
-    console.logBytes32(leaf);
-    console.logBytes32(slashUserMerkleRoot);
-    if (!MerkleProof.verify(slashUserProof, slashUserMerkleRoot, leaf)) {
+    if (!MerkleProof.verify(slashUserProof, slashMerkleRoot, leaf)) {
       revert InvalidWithdrawProof();
     }
 
@@ -264,34 +296,65 @@ contract GitcoinIdentityStaking is
 
   error InvalidSlashProof();
 
+  function setMerkleRoot(bytes32 merkleRoot) external onlyRole(SLASHER_ROLE) {
+    slashMerkleRoot = merkleRoot;
+  }
+
   function slash(
-    bytes32 currentSlashMerkleRoot,
-    bytes32 currentSlashUserMerkleRoot,
-    uint192 slashTotal,
-    bytes32[] memory slashTotalProof
+    bytes32 _slashMerkleRoot,
+    uint192 totalSlashed
   ) external onlyRole(SLASHER_ROLE) {
-    if (slashMerkleRoots[currentSlashMerkleRoot]) {
-      revert SlashProofHashAlreadyUsed();
-    }
+    uint256 slashingRound = nextSlashingRound;
+    nextSlashingRound++;
 
-    if (slashUserMerkleRoots[slashUserMerkleRoot]) {
-      revert SlashProofHashAlreadyUsed();
-    }
+    slashingRounds[slashingRound].merkleRoot = _slashMerkleRoot;
+    slashingRounds[slashingRound].totalSlashed = totalSlashed;
+    slashingRounds[slashingRound].slashingTime = uint64(block.timestamp);
+    slashingRounds[slashingRound].isBurned = false;
 
-    bytes32 leaf = keccak256(
-      bytes.concat(keccak256(abi.encode(address(0), slashTotal, uint192(0))))
+    // TODO: this is redundant because it already exists in the slashingRounds mapping
+    slashMerkleRoot = slashMerkleRoot;
+
+    emit Slash(msg.sender, slashMerkleRoot, totalSlashed);
+  }
+
+  function slashAndCheck(
+    bytes32 _slashMerkleRoot,
+    uint192 totalSlashed,
+    uint256[] calldata stakeIds,
+    uint192[] calldata amounts
+  ) external onlyRole(SLASHER_ROLE) {
+    require(
+      stakeIds.length == amounts.length,
+      "StakeIds and amounts must be the same length"
     );
-    if (!MerkleProof.verify(slashTotalProof, currentSlashMerkleRoot, leaf)) {
-      revert InvalidSlashProof();
+
+    // Make sure the sladhed amounts are less than or equal to the staked amounts
+    for (uint i = 0; i < stakeIds.length; i++) {
+      uint256 stakeId = stakeIds[i];
+      uint192 amountToSlash = amounts[i];
+      console.log("stakeId, stakeAmount, amountToSlash");
+      console.log(stakeId);
+      console.log(stakes[stakeId].amount);
+      console.log(amountToSlash);
+      require(
+        stakes[stakeId].amount >= amountToSlash,
+        "Cannot slash more than the stake amount"
+      );
     }
 
-    slashUserMerkleRoots[slashUserMerkleRoot] = true;
-    slashMerkleRoots[currentSlashMerkleRoot] = true;
-    slashTotals[currentSlashMerkleRoot] = slashTotal;
-    slashMerkleRoot = currentSlashMerkleRoot;
-    slashUserMerkleRoot = currentSlashUserMerkleRoot;
+    uint256 slashingRound = nextSlashingRound;
+    nextSlashingRound++;
 
-    emit Slash(msg.sender, slashMerkleRoot, slashTotal);
+    slashingRounds[slashingRound].merkleRoot = _slashMerkleRoot;
+    slashingRounds[slashingRound].totalSlashed = totalSlashed;
+    slashingRounds[slashingRound].slashingTime = uint64(block.timestamp);
+    slashingRounds[slashingRound].isBurned = false;
+
+    // TODO: this is redundant because it already exists in the slashingRounds mapping
+    slashMerkleRoot = slashMerkleRoot;
+
+    emit Slash(msg.sender, slashMerkleRoot, totalSlashed);
   }
 
   // Burn last round and start next round (locking this round)
@@ -308,11 +371,32 @@ contract GitcoinIdentityStaking is
   //   is initiated
   // On the very first call, nothing will be burned
   function burn() external {
-    if (block.timestamp - lastBurnTimestamp < burnRoundMinimumDuration) {
-      revert MinimumBurnRoundDurationNotMet();
+    // With this assert we want to make sure that the previous round has been burned
+    assert(nextBurnRound == 0 || slashingRounds[nextBurnRound - 1].isBurned);
+
+    uint256 roundThatIsBurned = nextBurnRound;
+    nextBurnRound++;
+
+    uint192 lastSlashRoundAmount = 0;
+
+    if (roundThatIsBurned > 0) {
+      // We always track the total amount ever slashed in `totalSlashed`
+      // So in order to determine how much to slash this round, we need to subtract the total amount slashed from the previous round
+      lastSlashRoundAmount =
+        slashingRounds[roundThatIsBurned].totalSlashed -
+        slashingRounds[roundThatIsBurned - 1].totalSlashed;
     }
 
-    uint192 amountToBurn = totalSlashed[currentSlashRound - 1];
+    if (
+      block.timestamp - slashingRounds[roundThatIsBurned].slashingTime <
+      objectionPeriod
+    ) {
+      revert MinimumBurnRoundDurationNotMet();
+    }
+    slashingRounds[roundThatIsBurned].isBurned = true;
+
+    uint192 amountToBurn = slashingRounds[roundThatIsBurned].totalSlashed -
+      lastSlashRoundAmount;
 
     if (amountToBurn > 0) {
       if (!gtc.transfer(burnAddress, amountToBurn)) {
@@ -320,54 +404,30 @@ contract GitcoinIdentityStaking is
       }
     }
 
-    emit Burn(currentSlashRound - 1, amountToBurn);
-
-    currentSlashRound++;
-    lastBurnTimestamp = block.timestamp;
-  }
-
-  struct SlashMember {
-    address account;
-    uint192 amount;
+    emit Burn(roundThatIsBurned, amountToBurn);
   }
 
   // The nonce is used in the proof in case we need to
   // do the exact same slash multiple times
-  function release(
-    SlashMember[] calldata slashMembers,
-    uint256 slashMemberIndex,
-    uint192 amountToRelease,
-    bytes32 slashProofHash,
-    bytes32 nonce,
-    bytes32 newNonce
+  function updateSlashingRound(
+    uint256 slashingRound,
+    bytes32 _slashMerkleRoot,
+    uint192 totalSlashed
   ) external onlyRole(RELEASER_ROLE) {
-    if (!slashProofHashes[slashProofHash]) {
-      revert SlashProofHashNotFound();
-    }
-    if (keccak256(abi.encode(slashMembers, nonce)) != slashProofHash) {
-      revert SlashProofHashNotValid();
-    }
-
-    SlashMember memory slashMemberToRelease = slashMembers[slashMemberIndex];
-
-    if (amountToRelease > slashMemberToRelease.amount) {
-      revert FundsNotAvailableToRelease();
-    }
-
-    SlashMember[] memory newSlashMembers = slashMembers;
-
-    newSlashMembers[slashMemberIndex].amount -= amountToRelease;
-
-    bytes32 newSlashProofHash = keccak256(
-      abi.encode(newSlashMembers, newNonce)
+    // SlashingRound memory slashingRoundToUpdate = slashingRounds[slashingRound];
+    require(
+      slashingRounds[slashingRound].isBurned == false,
+      "Funds have already been burned for this round"
+    );
+    // Make sure the total slashed is not decreased
+    require(
+      slashingRound == 0 ||
+        slashingRounds[slashingRound - 1].totalSlashed <= totalSlashed,
+      "Funds have already been burned for this round"
     );
 
-    slashProofHashes[slashProofHash] = false;
-    slashProofHashes[newSlashProofHash] = true;
-
-    if (!gtc.transfer(slashMemberToRelease.account, amountToRelease)) {
-      revert FailedTransfer();
-    }
+    slashingRounds[slashingRound].merkleRoot = _slashMerkleRoot;
+    slashingRounds[slashingRound].totalSlashed = totalSlashed;
   }
 
   function _authorizeUpgrade(
