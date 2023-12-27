@@ -28,7 +28,7 @@ const buildBadListMerkleTree = (
   let slashTotal = 0;
   const values: [string, string][] = users
     .filter((user, i) => !shouldSlash(numUsers, i))
-    .map((user) => [user.address, BigInt(user.address).toString()]);
+    .map((user) => [user.address, BigInt(user.stakeId).toString()]);
 
   const merkleTree = StandardMerkleTree.of(values, ["address", "uint192"]);
 

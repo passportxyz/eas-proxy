@@ -176,7 +176,9 @@ contract GitcoinIdentityStaking is
       revert StakeIsLocked();
     }
 
-    bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender))));
+    bytes32 leaf = keccak256(
+      bytes.concat(keccak256(abi.encode(msg.sender, stakeId)))
+    );
 
     console.logBytes32(leaf);
     console.logBytes32(slashUserMerkleRoot);
