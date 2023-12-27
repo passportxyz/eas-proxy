@@ -45,7 +45,7 @@ contract GitcoinIdentityStaking is
     uint192 amount;
     uint64 unlockTime;
     address owner;
-    // uint8 status; // 0x01 - unstaked, 0x02 - slashed
+    uint8 status; // 0x01 - unstaked, 0x02 - slashed
   }
 
   struct SlashingRound {
@@ -337,6 +337,7 @@ contract GitcoinIdentityStaking is
       console.log(stakeId);
       console.log(stakes[stakeId].amount);
       console.log(amountToSlash);
+      stakes[stakeId].status = 0x02;
       require(
         stakes[stakeId].amount >= amountToSlash,
         "Cannot slash more than the stake amount"

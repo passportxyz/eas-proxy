@@ -216,6 +216,10 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
       .connect(this.owner)
       .updateSlashingRound(0, merkleRoot, totalSlashAmount.toString());
 
+    await time.increaseTo(
+      twelveWeeksInSeconds * 4 + Math.floor(new Date().getTime() / 1000)
+    );
+
     await gitcoinIdentityStaking.connect(this.owner).burn();
   });
 
@@ -334,6 +338,10 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
     await gitcoinIdentityStaking
       .connect(this.owner)
       .updateSlashingRound(0, merkleRoot, totalSlashAmount.toString());
+
+    await time.increaseTo(
+      twelveWeeksInSeconds * 4 + Math.floor(new Date().getTime() / 1000)
+    );
 
     await gitcoinIdentityStaking.connect(this.owner).burn();
   });
