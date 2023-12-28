@@ -67,13 +67,11 @@ contract GitcoinIdentityStaking is
   );
 
   event SelfStakeWithdrawn(
-    uint256 indexed id,
     address indexed staker,
     uint192 amount
   );
 
   event CommunityStakeWithdrawn(
-    uint256 indexed id,
     address indexed staker,
     address indexed stakee,
     uint192 amount
@@ -125,36 +123,18 @@ contract GitcoinIdentityStaking is
     emit SelfStake(msg.sender, amount, unlockTime);
   }
 
-  function ownerOfStake(address staker, uint value) public view returns (bool) {
-    uint[] memory currentStakes = selfStakeIds[staker];
-    for (uint i = 0; i < currentStakes.length; i++) {
-      if (currentStakes[i] == value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function withdrawSelfStake(uint256 stakeId) external {
-    if (!ownerOfStake(msg.sender, stakeId)) {
-      revert NotOwnerOfStake();
-    }
-
-    if (stakes[stakeId].unlockTime < block.timestamp) {
+  function withdrawSelfStake() external {
+    if (selfStakes[msg.sender].unlockTime < block.timestamp) {
       revert StakeIsLocked();
     }
 
-    if (selfStakeIds[msg.sender].length == 0) {
-      revert CannotStakeOnSelf();
-    }
-
-    uint192 amount = stakes[stakeId].amount;
+    uint192 amount = selfStakes[msg.sender].amount;
 
     selfStakes[msg.sender].amount = 0;
 
     gtc.transfer(msg.sender, amount);
 
-    emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
+    emit SelfStakeWithdrawn(msg.sender, amount);
   }
 
   function communityStake(
@@ -188,36 +168,18 @@ contract GitcoinIdentityStaking is
     emit CommunityStake(msg.sender, stakee, amount, unlockTime);
   }
 
-  function ownerOfCommunityStake(
-    address staker,
-    address stakee,
-    uint value
-  ) public view returns (bool) {
-    uint[] memory currentStakes = communityStakeIds[staker][stakee];
-    for (uint i = 0; i < currentStakes.length; i++) {
-      if (currentStakes[i] == value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function withdrawCommunityStake(address stakee, uint256 stakeId) external {
-    if (!ownerOfCommunityStake(msg.sender, stakee, stakeId)) {
-      revert NotOwnerOfStake();
-    }
-
-    if (stakes[stakeId].unlockTime < block.timestamp) {
+  function withdrawCommunityStake(address stakee) external {
+    if (communityStakes[msg.sender][stakee].unlockTime < block.timestamp) {
       revert StakeIsLocked();
     }
 
-    uint192 amount = stakes[stakeId].amount;
+    uint192 amount = communityStakes[msg.sender][stakee].amount;
 
-    delete stakes[stakeId];
+    communityStakes[msg.sender][stakee].amount = 0;
 
     gtc.transfer(msg.sender, amount);
 
-    emit SelfStakeWithdrawn(stakeId, msg.sender, amount);
+    emit CommunityStakeWithdrawn(msg.sender, stakee, amount);
   }
 
   function slash(
