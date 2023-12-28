@@ -42,10 +42,11 @@ contract GitcoinIdentityStaking is
   bytes32 public constant RELEASER_ROLE = keccak256("RELEASER_ROLE");
 
   struct Stake {
-    uint192 amount;
+    uint128 amount;
+    uint128 slashedAmount;
     uint64 unlockTime;
     address owner;
-    uint8 status; // 0x01 - unstaked, 0x02 - slashed
+    address stakee;
   }
 
   struct SlashingRound {
@@ -74,7 +75,7 @@ contract GitcoinIdentityStaking is
   mapping(uint256 round => SlashingRound) public slashingRounds;
 
   // Used to permit unfreeze
-  // mapping(bytes32 => bool) public slashProofHashes;
+  mapping(bytes32 => bool) public slashProofHashes;
 
   // mapping(bytes32 => bool) public slashMerkleRoots;
   // mapping(bytes32 => bool) public slashUserMerkleRoots;
@@ -118,6 +119,8 @@ contract GitcoinIdentityStaking is
     uint192 slashAmount
   );
 
+  event StakeSlash(address indexed owner, uint128 slashAmount);
+
   event Burn(uint256 indexed round, uint192 amount);
 
   GTC public gtc;
@@ -137,12 +140,20 @@ contract GitcoinIdentityStaking is
     lastBurnTimestamp = block.timestamp;
   }
 
-  function selfStakeMinimal(uint192 amount, uint64 duration) external {
+  function selfStakeMinimal(uint128 amount, uint64 duration) external {
     // revert if amount is 0. Since this value is unsigned integer
     if (amount == 0) {
       revert AmountMustBeGreaterThanZero();
     }
     uint64 unlockTime = duration + uint64(block.timestamp);
+
+    if (
+      unlockTime < block.timestamp + 12 weeks ||
+      unlockTime > block.timestamp + 104 weeks
+    ) {
+      revert InvalidLockTime();
+    }
+
     uint256 stakeId = ++stakeCount;
 
     stakes[stakeId].amount = amount;
@@ -156,7 +167,7 @@ contract GitcoinIdentityStaking is
     emit SelfStake(stakeId, msg.sender, amount, unlockTime);
   }
 
-  function selfStake(uint192 amount, uint64 duration) external {
+  function selfStake(uint128 amount, uint64 duration) external {
     // revert if amount is 0. Since this value is unsigned integer
     if (amount == 0) {
       revert AmountMustBeGreaterThanZero();
@@ -196,11 +207,7 @@ contract GitcoinIdentityStaking is
 
   error InvalidWithdrawProof();
 
-  function withdrawSelfStake(
-    uint256 stakeId,
-    uint192 slashAmnt,
-    bytes32[] memory slashUserProof
-  ) external {
+  function withdrawSelfStake(uint256 stakeId) external {
     require(
       stakes[stakeId].owner == msg.sender,
       "Only the owner of the stake can withdraw"
@@ -210,16 +217,8 @@ contract GitcoinIdentityStaking is
       revert StakeIsLocked();
     }
 
-    bytes32 leaf = keccak256(
-      bytes.concat(keccak256(abi.encode(msg.sender, slashAmnt, stakeId)))
-    );
-
-    if (!MerkleProof.verify(slashUserProof, slashMerkleRoot, leaf)) {
-      revert InvalidWithdrawProof();
-    }
-
     // For good users this will always be zero. For bad users this will be the slash amount
-    uint192 amount = stakes[stakeId].amount - slashAmnt;
+    uint192 amount = stakes[stakeId].amount - stakes[stakeId].slashedAmount;
 
     gtc.transfer(msg.sender, amount);
 
@@ -230,7 +229,7 @@ contract GitcoinIdentityStaking is
 
   function communityStake(
     address stakee,
-    uint192 amount,
+    uint128 amount,
     uint64 duration
   ) external {
     if (stakee == msg.sender) {
@@ -301,28 +300,27 @@ contract GitcoinIdentityStaking is
   }
 
   function slash(
-    bytes32 _slashMerkleRoot,
-    uint192 totalSlashed
+    uint256[] calldata stakeIds,
+    uint64 slashedPercent
   ) external onlyRole(SLASHER_ROLE) {
-    uint256 slashingRound = nextSlashingRound;
-    nextSlashingRound++;
-
-    slashingRounds[slashingRound].merkleRoot = _slashMerkleRoot;
-    slashingRounds[slashingRound].totalSlashed = totalSlashed;
-    slashingRounds[slashingRound].slashingTime = uint64(block.timestamp);
-    slashingRounds[slashingRound].isBurned = false;
-
-    // TODO: this is redundant because it already exists in the slashingRounds mapping
-    slashMerkleRoot = slashMerkleRoot;
-
-    emit Slash(msg.sender, slashMerkleRoot, totalSlashed);
+    for (uint256 i = 0; i < stakeIds.length; i++) {
+      uint256 stakeId = stakeIds[i];
+      uint128 slashedAmount = (slashedPercent * stakes[stakeId].amount) / 100;
+      // totalSlashed[currentSlashRound] += slashedAmount;
+      stakes[stakeId].slashedAmount += slashedAmount;
+      require(
+        stakes[stakeId].slashedAmount < stakes[stakeId].amount,
+        "Slashed amount cannot exceed staked amount"
+      );
+      emit StakeSlash(stakes[stakeId].owner, stakes[stakeId].slashedAmount);
+    }
   }
 
   function slashAndCheck(
     bytes32 _slashMerkleRoot,
     uint192 totalSlashed,
     uint256[] calldata stakeIds,
-    uint192[] calldata amounts
+    uint128[] calldata amounts
   ) external onlyRole(SLASHER_ROLE) {
     require(
       stakeIds.length == amounts.length,
@@ -332,12 +330,8 @@ contract GitcoinIdentityStaking is
     // Make sure the sladhed amounts are less than or equal to the staked amounts
     for (uint i = 0; i < stakeIds.length; i++) {
       uint256 stakeId = stakeIds[i];
-      uint192 amountToSlash = amounts[i];
-      console.log("stakeId, stakeAmount, amountToSlash");
-      console.log(stakeId);
-      console.log(stakes[stakeId].amount);
-      console.log(amountToSlash);
-      stakes[stakeId].status = 0x02;
+      uint128 amountToSlash = amounts[i];
+      stakes[stakeId].slashedAmount = amountToSlash;
       require(
         stakes[stakeId].amount >= amountToSlash,
         "Cannot slash more than the stake amount"

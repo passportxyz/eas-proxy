@@ -277,11 +277,40 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
     ///////////////////////////
     // Slash amounts
     ///////////////////////////
+    // await gitcoinIdentityStaking
+    //   .connect(this.owner)
+    //   .slashAndCheck(
+    //     merkleRoot,
+    //     totalSlashAmount.toString(),
+    //     [
+    //       allStakeMembers[1].stakeId,
+    //       allStakeMembers[2].stakeId,
+    //       allStakeMembers[3].stakeId,
+    //       allStakeMembers[4].stakeId,
+    //       allStakeMembers[5].stakeId,
+    //       allStakeMembers[6].stakeId,
+    //       allStakeMembers[7].stakeId,
+    //       allStakeMembers[8].stakeId,
+    //       allStakeMembers[9].stakeId,
+    //       allStakeMembers[10].stakeId
+    //     ],
+    //     [
+    //       allStakeMembers[1].slashAmount,
+    //       allStakeMembers[2].slashAmount,
+    //       allStakeMembers[3].slashAmount,
+    //       allStakeMembers[4].slashAmount,
+    //       allStakeMembers[5].slashAmount,
+    //       allStakeMembers[6].slashAmount,
+    //       allStakeMembers[7].slashAmount,
+    //       allStakeMembers[8].slashAmount,
+    //       allStakeMembers[9].slashAmount,
+    //       allStakeMembers[10].slashAmount
+    //     ]
+    //   );
+
     await gitcoinIdentityStaking
       .connect(this.owner)
-      .slashAndCheck(
-        merkleRoot,
-        totalSlashAmount.toString(),
+      .slash(
         [
           allStakeMembers[1].stakeId,
           allStakeMembers[2].stakeId,
@@ -294,18 +323,7 @@ describe.only("GitcoinIdentityStaking Merkle Slashing", function () {
           allStakeMembers[9].stakeId,
           allStakeMembers[10].stakeId
         ],
-        [
-          allStakeMembers[1].slashAmount,
-          allStakeMembers[2].slashAmount,
-          allStakeMembers[3].slashAmount,
-          allStakeMembers[4].slashAmount,
-          allStakeMembers[5].slashAmount,
-          allStakeMembers[6].slashAmount,
-          allStakeMembers[7].slashAmount,
-          allStakeMembers[8].slashAmount,
-          allStakeMembers[9].slashAmount,
-          allStakeMembers[10].slashAmount
-        ]
+        50
       );
 
     ///////////////////////////
