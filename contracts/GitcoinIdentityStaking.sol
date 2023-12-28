@@ -41,7 +41,6 @@ contract GitcoinIdentityStaking is
   struct Stake {
     uint64 unlockTime;
     uint96 amount;
-    uint96 slashedAmount;
   }
 
   mapping(address => Stake) public selfStakes;
@@ -56,6 +55,8 @@ contract GitcoinIdentityStaking is
   address public burnAddress;
 
   mapping(uint256 round => uint96 amount) public totalSlashed;
+
+  mapping(bytes32 hash => bool) public slashHashes;
 
   event SelfStake(address indexed staker, uint96 amount, uint64 unlockTime);
 
@@ -182,44 +183,53 @@ contract GitcoinIdentityStaking is
     emit CommunityStakeWithdrawn(msg.sender, stakee, amount);
   }
 
+  struct SelfSlashMember {
+    address staker;
+    uint96 amount;
+  }
+
+  struct CommunitySlashMember {
+    address staker;
+    address stakee;
+    uint96 amount;
+  }
+
   function slash(
-    address[] calldata selfStakers,
-    address[] calldata communityStakers,
-    address[] calldata communityStakees,
-    uint64 percent
+    SelfSlashMember[] calldata selfSlashMembers,
+    CommunitySlashMember[] calldata communitySlashMembers
   ) external onlyRole(SLASHER_ROLE) {
-    uint256 numSelfStakers = selfStakers.length;
-    uint256 numCommunityStakers = communityStakers.length;
+    uint256 numSelfSlashMembers = selfSlashMembers.length;
+    uint256 numCommunitySlashMembers = communitySlashMembers.length;
 
-    if (numCommunityStakers != communityStakees.length) {
-      revert StakerStakeeMismatch();
-    }
-
-    for (uint256 i = 0; i < numSelfStakers; i++) {
-      address staker = selfStakers[i];
-      uint96 slashedAmount = (percent * selfStakes[staker].amount) / 100;
+    for (uint256 i = 0; i < numSelfSlashMembers; i++) {
+      address staker = selfSlashMembers[i].staker;
+      uint96 slashedAmount = selfSlashMembers[i].amount;
       if (slashedAmount > selfStakes[staker].amount) {
         revert FundsNotAvailableToSlash();
       }
       totalSlashed[currentSlashRound] += slashedAmount;
       selfStakes[staker].amount -= slashedAmount;
-      selfStakes[staker].slashedAmount += slashedAmount;
       emit Slash(staker, slashedAmount);
     }
 
-    for (uint256 i = 0; i < numCommunityStakers; i++) {
-      address staker = communityStakers[i];
-      address stakee = communityStakees[i];
-      uint96 slashedAmount = (percent *
-        communityStakes[staker][stakee].amount) / 100;
+    for (uint256 i = 0; i < numCommunitySlashMembers; i++) {
+      address staker = communitySlashMembers[i].staker;
+      address stakee = communitySlashMembers[i].stakee;
+      uint96 slashedAmount = communitySlashMembers[i].amount;
       if (slashedAmount > communityStakes[staker][stakee].amount) {
         revert FundsNotAvailableToSlash();
       }
       totalSlashed[currentSlashRound] += slashedAmount;
       communityStakes[staker][stakee].amount -= slashedAmount;
-      communityStakes[staker][stakee].slashedAmount += slashedAmount;
       emit Slash(staker, slashedAmount);
     }
+
+    bytes32 slashHash = keccak256(abi.encode(
+      selfSlashMembers,
+      communitySlashMembers
+    ));
+
+    slashHashes[slashHash] = true;
   }
 
   // Burn last round and start next round (locking this round)
@@ -264,24 +274,24 @@ contract GitcoinIdentityStaking is
     uint96 amountToRelease,
     uint256 slashRound
   ) external onlyRole(RELEASER_ROLE) {
-    if (staker == stakee) {
-      if (amountToRelease > selfStakes[staker].slashedAmount) {
-        revert FundsNotAvailableToRelease();
-      }
-      selfStakes[staker].slashedAmount -= amountToRelease;
-      selfStakes[staker].amount += amountToRelease;
-    } else {
-      if (amountToRelease > communityStakes[staker][stakee].slashedAmount) {
-        revert FundsNotAvailableToRelease();
-      }
-      communityStakes[staker][stakee].slashedAmount -= amountToRelease;
-      communityStakes[staker][stakee].amount += amountToRelease;
-    }
+    // if (staker == stakee) {
+    //   if (amountToRelease > selfStakes[staker].slashedAmount) {
+    //     revert FundsNotAvailableToRelease();
+    //   }
+    //   selfStakes[staker].slashedAmount -= amountToRelease;
+    //   selfStakes[staker].amount += amountToRelease;
+    // } else {
+    //   if (amountToRelease > communityStakes[staker][stakee].slashedAmount) {
+    //     revert FundsNotAvailableToRelease();
+    //   }
+    //   communityStakes[staker][stakee].slashedAmount -= amountToRelease;
+    //   communityStakes[staker][stakee].amount += amountToRelease;
+    // }
 
-    if (totalSlashed[slashRound] < amountToRelease) {
-      revert FundsNotAvailableToReleaseFromRound();
-    }
-    totalSlashed[slashRound] -= amountToRelease;
+    // if (totalSlashed[slashRound] < amountToRelease) {
+    //   revert FundsNotAvailableToReleaseFromRound();
+    // }
+    // totalSlashed[slashRound] -= amountToRelease;
   }
 
   function _authorizeUpgrade(
