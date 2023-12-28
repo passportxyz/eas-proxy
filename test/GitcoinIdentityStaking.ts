@@ -91,8 +91,9 @@ describe("GitcoinIdentityStaking", function () {
           this.owner.address
         );
 
-        const slashStakers: any[] = [];
-        const slashStakees: any[] = [];
+        const slashSelfStakers: any[] = [];
+        const slashCommunityStakers: any[] = [];
+        const slashCommunityStakees: any[] = [];
 
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
@@ -128,24 +129,28 @@ describe("GitcoinIdentityStaking", function () {
               await func();
             }
 
-            slashStakers.push(
-              userAccount.address,
+            slashSelfStakers.push(userAccount.address);
+            slashCommunityStakers.push(
               userAccount.address,
               userAccount.address
             );
-            slashStakees.push(
-              userAccount.address,
+            slashCommunityStakees.push(
+              this.userAccounts[accountIdx + 1].address,
               this.userAccounts[
                 accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
-              ].address,
-              this.userAccounts[accountIdx + 1].address
+              ]
             );
           })
         );
 
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .slash(slashStakers.slice(0, 214), slashStakees.slice(0, 214), 50);
+          .slash(
+            slashSelfStakers.slice(0, 107),
+            slashCommunityStakers.slice(0, 107),
+            slashCommunityStakees.slice(0, 107),
+            50
+          );
 
         const releaseAddress = userAccounts[0].address;
 

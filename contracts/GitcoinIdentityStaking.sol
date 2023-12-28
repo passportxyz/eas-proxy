@@ -221,39 +221,42 @@ contract GitcoinIdentityStaking is
   }
 
   function slash(
-    address[] calldata stakers,
-    address[] calldata stakees,
+    address[] calldata selfStakers,
+    address[] calldata communityStakers,
+    address[] calldata communityStakees,
     uint64 percent
   ) external onlyRole(SLASHER_ROLE) {
-    uint256 numStakes = stakers.length;
+    uint256 numSelfStakers = selfStakers.length;
+    uint256 numCommunityStakers = communityStakers.length;
 
-    if (numStakes != stakees.length) {
+    if (numCommunityStakers != communityStakees.length) {
       revert StakerStakeeMismatch();
     }
 
-    for (uint256 i = 0; i < numStakes; i++) {
-      address staker = stakers[i];
-      address stakee = stakees[i];
-      if (stakee == staker) {
-        uint96 slashedAmount = (percent * selfStakes[staker].amount) / 100;
-        if (slashedAmount > selfStakes[staker].amount) {
-          revert FundsNotAvailableToSlash();
-        }
-        totalSlashed[currentSlashRound] += slashedAmount;
-        selfStakes[staker].amount -= slashedAmount;
-        selfStakes[staker].slashedAmount += slashedAmount;
-        emit Slash(staker, slashedAmount);
-      } else {
-        uint96 slashedAmount = (percent *
-          communityStakes[staker][stakee].amount) / 100;
-        if (slashedAmount > communityStakes[staker][stakee].amount) {
-          revert FundsNotAvailableToSlash();
-        }
-        totalSlashed[currentSlashRound] += slashedAmount;
-        communityStakes[staker][stakee].amount -= slashedAmount;
-        communityStakes[staker][stakee].slashedAmount += slashedAmount;
-        emit Slash(staker, slashedAmount);
+    for (uint256 i = 0; i < numSelfStakers; i++) {
+      address staker = selfStakers[i];
+      uint96 slashedAmount = (percent * selfStakes[staker].amount) / 100;
+      if (slashedAmount > selfStakes[staker].amount) {
+        revert FundsNotAvailableToSlash();
       }
+      totalSlashed[currentSlashRound] += slashedAmount;
+      selfStakes[staker].amount -= slashedAmount;
+      selfStakes[staker].slashedAmount += slashedAmount;
+      emit Slash(staker, slashedAmount);
+    }
+
+    for (uint256 i = 0; i < numCommunityStakers; i++) {
+      address staker = communityStakers[i];
+      address stakee = communityStakees[i];
+      uint96 slashedAmount = (percent *
+        communityStakes[staker][stakee].amount) / 100;
+      if (slashedAmount > communityStakes[staker][stakee].amount) {
+        revert FundsNotAvailableToSlash();
+      }
+      totalSlashed[currentSlashRound] += slashedAmount;
+      communityStakes[staker][stakee].amount -= slashedAmount;
+      communityStakes[staker][stakee].slashedAmount += slashedAmount;
+      emit Slash(staker, slashedAmount);
     }
   }
 
