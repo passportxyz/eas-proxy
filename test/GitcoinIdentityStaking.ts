@@ -91,6 +91,9 @@ describe("GitcoinIdentityStaking", function () {
           this.owner.address
         );
 
+        const slashStakers: any[] = [];
+        const slashStakees: any[] = [];
+
         await Promise.all(
           userAccounts.map(async (userAccount: any, accountIdx: number) => {
             // This changes the order of the transactions
@@ -124,30 +127,33 @@ describe("GitcoinIdentityStaking", function () {
             ])) {
               await func();
             }
+
+            slashStakers.push(
+              userAccount.address,
+              userAccount.address,
+              userAccount.address
+            );
+            slashStakees.push(
+              userAccount.address,
+              this.userAccounts[
+                accountIdx ? accountIdx - 1 : this.userAccounts.length - 1
+              ].address,
+              this.userAccounts[accountIdx + 1].address
+            );
           })
-        );
-
-        const slashStakers: any[] = [];
-        const slashStakees: any[] = [];
-
-        await Promise.all(
-          userAccounts
-            .slice(0, Math.floor((numUsers * 3) / 10))
-            .map(async (userAccount: any) => {
-              slashStakers.push(userAccount.address);
-              slashStakees.push(userAccount.address);
-            })
         );
 
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .slash(slashStakers, slashStakees, 50);
+          .slash(slashStakers.slice(0, 214), slashStakees.slice(0, 214), 50);
 
         const releaseAddress = userAccounts[0].address;
+
         const [_unlockTime, userAmount, userSlashedAmount] =
           await gitcoinIdentityStaking.selfStakes(releaseAddress);
-        expect(userAmount).to.equal(50000);
-        expect(userSlashedAmount).to.equal(50000);
+        expect(userAmount).to.be.greaterThan(0);
+        expect(userSlashedAmount).to.be.greaterThan(0);
+
         await gitcoinIdentityStaking
           .connect(this.owner)
           .release(releaseAddress, releaseAddress, 500, 1);

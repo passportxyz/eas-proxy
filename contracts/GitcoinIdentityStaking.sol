@@ -25,6 +25,7 @@ contract GitcoinIdentityStaking is
 
   error FundsNotAvailableToRelease();
   error FundsNotAvailableToReleaseFromRound();
+  error FundsNotAvailableToSlash();
   error MinimumBurnRoundDurationNotMet();
   error AmountMustBeGreaterThanZero();
   error CannotStakeOnSelf();
@@ -78,10 +79,7 @@ contract GitcoinIdentityStaking is
     uint192 amount
   );
 
-  event Slash(
-    address indexed slasher,
-    uint64 slashedPercent
-  );
+  event Slash(address indexed staker, uint96 amount);
 
   event Burn(uint256 indexed round, uint96 amount);
 
@@ -238,19 +236,25 @@ contract GitcoinIdentityStaking is
       address stakee = stakees[i];
       if (stakee == staker) {
         uint96 slashedAmount = (percent * selfStakes[staker].amount) / 100;
+        if (slashedAmount > selfStakes[staker].amount) {
+          revert FundsNotAvailableToSlash();
+        }
         totalSlashed[currentSlashRound] += slashedAmount;
         selfStakes[staker].amount -= slashedAmount;
         selfStakes[staker].slashedAmount += slashedAmount;
+        emit Slash(staker, slashedAmount);
       } else {
         uint96 slashedAmount = (percent *
           communityStakes[staker][stakee].amount) / 100;
+        if (slashedAmount > communityStakes[staker][stakee].amount) {
+          revert FundsNotAvailableToSlash();
+        }
         totalSlashed[currentSlashRound] += slashedAmount;
         communityStakes[staker][stakee].amount -= slashedAmount;
         communityStakes[staker][stakee].slashedAmount += slashedAmount;
+        emit Slash(staker, slashedAmount);
       }
     }
-
-    emit Slash(msg.sender, percent);
   }
 
   // Burn last round and start next round (locking this round)
