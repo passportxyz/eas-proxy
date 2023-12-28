@@ -75,9 +75,9 @@ describe("GitcoinIdentityStaking", function () {
     }
   });
 
-  it("gas tests", async function () {
-    // const numUsers = 200;
-    const numUsers = 20;
+  it.only("gas tests", async function () {
+    const numUsers = 200;
+    // const numUsers = 20;
     const userAccounts = this.userAccounts.slice(0, numUsers);
 
     await Promise.all(
@@ -127,42 +127,30 @@ describe("GitcoinIdentityStaking", function () {
           })
         );
 
-        const stakeIds: number[] = [];
-        let slashMembers: any[][] = [];
+        const slashStakers: any[] = [];
+        const slashStakees: any[] = [];
 
         await Promise.all(
           userAccounts
             .slice(0, Math.floor((numUsers * 3) / 10))
             .map(async (userAccount: any) => {
-              const stakeId = await gitcoinIdentityStaking.selfStakeIds(
-                userAccount.address,
-                0
-              );
-              const amount = (await gitcoinIdentityStaking.stakes(stakeId))[0];
-              slashMembers.push([userAccount.address, amount]);
-              stakeIds.push(stakeId);
+              slashStakers.push(userAccount.address);
+              slashStakees.push(userAccount.address);
             })
         );
-        slashMembers = slashMembers.sort((a, b) => (a[0] < b[0] ? -1 : 1));
-
-        const slashNonce = keccak256(Buffer.from(Math.random().toString()));
-
-        const slashProof = makeSlashProof(slashMembers, slashNonce);
 
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .slash(stakeIds, 50, slashProof);
+          .slash(slashStakers, slashStakees, 50);
 
+        const releaseAddress = userAccounts[0].address;
+        const [_unlockTime, userAmount, userSlashedAmount] =
+          await gitcoinIdentityStaking.selfStakes(releaseAddress);
+        expect(userAmount).to.equal(50000);
+        expect(userSlashedAmount).to.equal(50000);
         await gitcoinIdentityStaking
           .connect(this.owner)
-          .release(
-            slashMembers,
-            1,
-            500,
-            slashProof,
-            slashNonce,
-            ethers.keccak256(Buffer.from(Math.random().toString()))
-          );
+          .release(releaseAddress, releaseAddress, 500, 1);
 
         await time.increase(60 * 60 * 24 * 91);
 
