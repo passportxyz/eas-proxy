@@ -133,7 +133,9 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.OP_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 0xaa37dc,
-        from: process.env.DEPLOYER_ADDRESS as string
+        from: process.env.DEPLOYER_ADDRESS as string,
+        // gasPrice: 280000000,
+        // gasPrice: 9068663
       };
     }
   }
