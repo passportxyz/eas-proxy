@@ -155,6 +155,7 @@ let thisChainInfo: {
   GitcoinResolver?: { address?: string };
   GitcoinPassportDecoder?: { address?: string };
   EAS?: { address?: string };
+  EASSchemaRegistry?: { address?: string };
   issuer?: { address?: string };
   Verax?: { AttestationRegistry?: { address?: string } };
 };
@@ -187,6 +188,12 @@ export function getVerifierAddress() {
 
 export function getEASAddress() {
   const easAddress = getThisChainInfo().EAS?.address;
+  if (!easAddress) throw new Error("EAS address not found in onchainInfo");
+  return easAddress;
+}
+
+export function getEASSchemaRegistryAddress() {
+  const easAddress = getThisChainInfo().EASSchemaRegistry?.address;
   if (!easAddress) throw new Error("EAS address not found in onchainInfo");
   return easAddress;
 }

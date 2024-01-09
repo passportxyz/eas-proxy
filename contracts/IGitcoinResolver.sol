@@ -10,8 +10,8 @@ interface IGitcoinResolver {
   // Stores a score in a 32 byte data structure for efficient access when reading
   struct CachedScore {
     uint32 score; // compacted uint value 4 decimal places
-    uint64 issuanceDate; // For checking the age of the stamp, without loading the attestation
-    uint64 expirationDate; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
+    uint64 time; // For checking the age of the stamp, without loading the attestation
+    uint64 expirationTime; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
   }
 
   /**

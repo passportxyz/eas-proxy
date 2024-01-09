@@ -17,13 +17,16 @@ contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
   mapping(address => bool) public verifiers;
 
   // The instance of the EAS contract.
-  IEAS eas;
+  IEAS public eas;
 
   // Emitted when a verifier is added to the allow-list.
   event VerifierAdded(address verifier);
 
   // Emitted when a verifier is removed from the allow-list.
   event VerifierRemoved(address verifier);
+
+  // Emitted when the EAS contract is set.
+  event EASSet(address eas);
 
   function initialize() public initializer {
     __Ownable_init();
@@ -66,6 +69,7 @@ contract GitcoinAttester is UUPSUpgradeable, OwnableUpgradeable, PausableUpgrade
    */
   function setEASAddress(address _easContractAddress) public onlyOwner {
     eas = IEAS(_easContractAddress);
+    emit EASSet(_easContractAddress);
   }
 
   /**

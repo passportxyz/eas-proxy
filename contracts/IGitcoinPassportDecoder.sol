@@ -8,17 +8,8 @@ pragma solidity ^0.8.9;
 struct Credential {
   string provider;
   bytes32 hash;
-  uint64 issuanceDate;
-  uint64 expirationDate;
-}
-
-/**
- * @dev A struct representing the passport score for an ETH address.
- */
-struct Score {
-  uint256 score;
-  uint32 scorerID;
-  uint8 decimals;
+  uint64 time;
+  uint64 expirationTime;
 }
 
 /**
@@ -27,8 +18,10 @@ struct Score {
  */
 interface IGitcoinPassportDecoder {
   function getPassport(
-    address userAddress
+    address user
   ) external returns (Credential[] memory);
 
-  function getScore(address userAddress) external returns (Score memory);
+  function getScore(address user) external view returns (uint256);
+
+  function isHuman(address user) external view returns (bool);
 }

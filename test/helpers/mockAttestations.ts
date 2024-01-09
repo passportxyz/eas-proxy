@@ -33,7 +33,8 @@ export const easEncodeScore = (score: Score) => {
 };
 
 export const getScoreAttestation = (
-  attestion: Pick<Attestation, "attester" | "recipient" | "schema">,
+  attestion: Pick<Attestation, "attester" | "recipient" | "schema"> &
+    Partial<Attestation>,
   score: Score
 ): Attestation => {
   const scoreEncodedData = easEncodeScore(score);
@@ -56,7 +57,7 @@ export const easEncodeStamp = (stamp: Stamp) => {
 
   const encodedData = schemaEncoder.encodeData([
     { name: "provider", value: providerValue, type: "bytes32" },
-    { name: "hash", value: providerValue, type: "bytes32" } // TODO decode hash here
+    { name: "hash", value: providerValue, type: "bytes32" }
   ]);
   return encodedData;
 };

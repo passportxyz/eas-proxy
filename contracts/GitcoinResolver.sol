@@ -31,6 +31,8 @@ contract GitcoinResolver is
   error NotAllowlisted();
   error InvalidAttester();
 
+  event ScoreSchemaSet(bytes32 schema);
+
   // Mapping of addresses to schemas to an attestation UID
   mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 
@@ -44,10 +46,10 @@ contract GitcoinResolver is
   mapping(address => bool) public allowlist;
 
   // Mapping of addresses to scores
-  mapping(address => CachedScore) private scores;
+  mapping(address => CachedScore) public scores;
 
   // Mapping of active passport score schemas - used when storing scores to state
-  bytes32 private scoreSchema;
+  bytes32 public scoreSchema;
 
   /**
    * @dev Creates a new resolver.
@@ -100,6 +102,7 @@ contract GitcoinResolver is
    */
   function setScoreSchema(bytes32 _schema) external onlyOwner {
     scoreSchema = _schema;
+    emit ScoreSchemaSet(_schema);
   }
 
   // solhint-disable-next-line no-empty-blocks
@@ -122,10 +125,6 @@ contract GitcoinResolver is
   function attest(
     Attestation calldata attestation
   ) external payable whenNotPaused onlyAllowlisted returns (bool) {
-    if (scoreSchema == attestation.schema) {
-      _setScore(attestation);
-    }
-
     return _attest(attestation);
   }
 
@@ -137,6 +136,9 @@ contract GitcoinResolver is
     userAttestations[attestation.recipient][attestation.schema] = attestation
       .uid;
 
+    if (scoreSchema == attestation.schema) {
+      _setScore(attestation);
+    }
     return true;
   }
 
@@ -165,10 +167,18 @@ contract GitcoinResolver is
   }
 
   /**
+   * @dev Removes the score data from the state for the specified recipient.
+   * @param recipient The recipient of the score which needs to be removed.
+   */
+  function _removeScore(address recipient) private {
+    delete scores[recipient];
+  }
+
+  /**
    *
    * @param user The ETH address of the recipient
    * @return The `CachedScore` for the given ETH address.
-   * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
+   * A non-zero value in the `time` (issuance time) indicates that a valid score has been retreived.
    */
   function getCachedScore(
     address user
@@ -228,8 +238,14 @@ contract GitcoinResolver is
     return true;
   }
 
+  /**
+   * @dev Processes an revocation request
+   * @param attestation The new attestation request.
+   * @return true indicating if the pre-revocation have been performed and the revocation process should continue
+   */
   function _revoke(Attestation calldata attestation) internal returns (bool) {
     userAttestations[attestation.recipient][attestation.schema] = 0;
+    _removeScore(attestation.recipient);
 
     return true;
   }

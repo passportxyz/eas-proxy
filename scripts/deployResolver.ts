@@ -14,14 +14,17 @@ import {
 assertEnvironment();
 
 export async function main() {
+  const attesterAddress = getAttesterAddress();
+  const easAddress = getEASAddress();
+
   await confirmContinue({
     contract: "GitcoinResolver",
     network: hre.network.name,
-    chainId: hre.network.config.chainId
+    chainId: hre.network.config.chainId,
+    attesterAddress: attesterAddress,
+    easAddress: easAddress,
   });
 
-  const attesterAddress = getAttesterAddress();
-  const easAddress = getEASAddress();
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
   const resolver = await upgrades.deployProxy(
