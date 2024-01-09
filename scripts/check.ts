@@ -1,9 +1,10 @@
-// This script deals with deploying the GitcoinAttester on a given network
-import hre, { ethers } from "hardhat";
+// This script will print out various information about the deployed smart contracts
+// and the provider & score information for a specific ETH address
+// No changes will be made to the contracts, nothing will be deployed
+
+import { ethers } from "hardhat";
 import {
-  confirmContinue,
   assertEnvironment,
-  transferOwnershipToMultisig,
   getAttesterAddress,
   getVerifierAddress,
   getResolverAddress,
@@ -63,7 +64,7 @@ export async function main() {
   console.log("\nGitcoinPassportDecoder");
   console.log("   eas: ", await decoder.eas());
   console.log("   currentVersion: ", await decoder.currentVersion());
-  console.log("   epassportSchemaUIDas: ", await decoder.passportSchemaUID());
+  console.log("   passportSchemaUIDas: ", await decoder.passportSchemaUID());
   console.log("   scoreSchemaUID: ", await decoder.scoreSchemaUID());
   console.log("   maxScoreAge: ", await decoder.maxScoreAge());
   console.log("   threshold: ", await decoder.threshold());
@@ -72,15 +73,16 @@ export async function main() {
     await decoder.getAttestation(attestationUID),
     "\n------------------"
   );
-  console.log("   getScore: ", await decoder.getScore(userAddress));
-
-  // const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
-  // const passportDecoder = GitcoinPassportDecoder.attach(getPassportDecoderAddress());
-
-  // await transferOwnershipToMultisig(resolver);
-  // await transferOwnershipToMultisig(verifier);
-  // await transferOwnershipToMultisig(attester);
-  // await transferOwnershipToMultisig(passportDecoder);
+  try {
+    const score = await decoder.getScore(userAddress);
+    console.log("   getScore: ", score);
+  } catch (e) {
+    console.log(
+      "   getScore: ",
+      "❌ ERROR - this can happen if the user does not yet have an attestation"
+    );
+    // TODO: check for the exception thrown for solidity, provide better logging here
+  }
 }
 
 main().catch((error) => {
