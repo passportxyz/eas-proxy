@@ -8,8 +8,7 @@ import {
   getThisChainInfo
 } from "./lib/utils";
 import { getSchemaUID } from "@ethereum-attestation-service/eas-sdk";
-import providerBitMapInfo from "./data/providerBitMapInfo.json";
-import newBitMap from "../deployments/providerBitMapInfo.json";
+import providerBitMapInfo from "../deployments/providerBitMapInfo.json";
 
 assertEnvironment();
 
@@ -17,7 +16,6 @@ export async function main() {
   const chainInfo = getThisChainInfo();
   const maxScoreAge = ethers.toBigInt(90 * 24 * 3600); // 90 days
   const threshold = ethers.toBigInt(200000); // that means 20.0000
-
 
   const GitcoinPassportDecoder = await ethers.getContractFactory(
     "GitcoinPassportDecoder"
@@ -147,7 +145,6 @@ export async function main() {
   // We do this considering we have only index = 0 in the providerBitMapInfo
   const currentVersion = await passportDecoder.currentVersion();
   console.log("currentVersion", currentVersion);
-
 
   console.log("   providers: ", providers);
   console.log(`🚀    writing providers to blockchain...`);
