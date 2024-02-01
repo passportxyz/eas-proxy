@@ -215,6 +215,9 @@
     },
     "GitcoinVeraxPortal": {
       "address": "0xCAa9E817f02486cE076560B77A86235Ef91c5d5D"
+    },
+    "GitcoinPassportDecoder": {
+      "address": "0x423cd60ab053F1b63D6F78c8c0c63e20F009d669"
     }
   }
 }
