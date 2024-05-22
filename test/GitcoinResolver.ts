@@ -9,10 +9,9 @@ import { encodedData, getScoreAttestation } from "./helpers/mockAttestations";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { EAS_SCHEMA_REGISTRY_ADDRESS } from "./helpers/verifierTests";
 
-export const schemaRegistryContractAddress =
-  process.env.SEPOLIA_SCHEMA_REGISTRY_ADDRESS ||
-  "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0";
+export const schemaRegistryContractAddress = EAS_SCHEMA_REGISTRY_ADDRESS;
 
 async function registerSchema(
   owner: any,

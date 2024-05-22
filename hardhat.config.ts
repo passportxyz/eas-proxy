@@ -75,6 +75,14 @@ let config: HardhatUserConfig = {
           apiURL: "https://api.arbiscan.io/api",
           browserURL: "https://arbiscan.io/"
         }
+      },
+      {
+        network: "arbitrum-sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/"
+        }
       }
     ]
   },
@@ -85,10 +93,10 @@ let config: HardhatUserConfig = {
   solidity: {
     settings: {
       optimizer: {
-        enabled: true,
-        runs: 200
+        enabled: false,
+        runs: 2
       },
-      viaIR: true
+      viaIR: false
     },
 
     compilers: [
@@ -137,36 +145,31 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
       };
     }
     if (process.env.OP_SEPOLIA_PROVIDER_URL) {
-      console.log("process.env.OP_SEPOLIA_PROVIDER_URL: ", process.env.OP_SEPOLIA_PROVIDER_URL);
       config.networks["optimism-sepolia"] = {
         url: process.env.OP_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 0xaa37dc,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };
     }
     if (process.env.ARBITRUM_PROVIDER_URL) {
-      console.log("process.env.ARBITRUM_PROVIDER_URL: ", process.env.ARBITRUM_PROVIDER_URL);
-      console.log("process.env.DEPLOYER_ADDRESS: ", process.env.DEPLOYER_ADDRESS);
       config.networks["arbitrum"] = {
         url: process.env.ARBITRUM_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 42161,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };
     }
     if (process.env.ARBITRUM_SEPOLIA_PROVIDER_URL) {
-      console.log("process.env.ARBITRUM_PROVIDER_URL: ", process.env.ARBITRUM_SEPOLIA_PROVIDER_URL);
-      console.log("process.env.DEPLOYER_ADDRESS: ", process.env.DEPLOYER_ADDRESS);
-      config.networks["arbitrum"] = {
+      config.networks["arbitrum-sepolia"] = {
         url: process.env.ARBITRUM_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 421614,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };

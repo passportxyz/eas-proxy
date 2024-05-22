@@ -30,6 +30,8 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const providers = [BigInt("111")];
 
+const dayInSeconds = 3600 * 24;
+
 const issuanceDates = [1694628559, 1695047108, 1693498086];
 const expirationDates = [1702404559, 1702823108, 1701274086];
 const hashes = [
@@ -274,9 +276,8 @@ describe("GitcoinPassportDecoder", function () {
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
 
-      const savedProviders = await gitcoinPassportDecoder.getProviders(
-        currentVersion
-      );
+      const savedProviders =
+        await gitcoinPassportDecoder.getProviders(currentVersion);
 
       expect(savedProviders.length === providers.length);
       expect(savedProviders).to.eql(providers);
@@ -381,7 +382,8 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime: 1708741995,
+                expirationTime:
+                  Math.floor(new Date().getTime() / 1000) + 10 * dayInSeconds,
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodePassport(),
@@ -401,7 +403,8 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime: 1708741995,
+                expirationTime:
+                  Math.floor(new Date().getTime() / 1000) + 10 * dayInSeconds,
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodeInvalidStamp(),
