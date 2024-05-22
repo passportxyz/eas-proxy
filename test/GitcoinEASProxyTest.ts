@@ -12,6 +12,7 @@ import {
   scorer2Score,
   EAS_CONTRACT_ADDRESS,
   fee1,
+  daysFromNow
 } from "./helpers/verifierTests";
 
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
@@ -60,7 +61,7 @@ describe("GitcoinEASProxy", function () {
       name: "GitcoinVerifier",
       version: "1",
       chainId,
-      verifyingContract: await this.gitcoinVerifier.getAddress(),
+      verifyingContract: await this.gitcoinVerifier.getAddress()
     };
 
     this.getNonce = async (address: string) => {
@@ -129,54 +130,54 @@ describe("GitcoinEASProxy", function () {
           data: [
             {
               recipient: this.recipient.address,
-              expirationTime: 1708741995,
+              expirationTime: daysFromNow(10),
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeStamp(googleStamp),
-              value: 0,
+              value: 0
             },
             {
               recipient: this.recipient.address,
-              expirationTime: 1708741995,
+              expirationTime: daysFromNow(10),
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeStamp(facebookStamp),
-              value: 0,
-            },
-          ],
+              value: 0
+            }
+          ]
         },
         {
           schema: this.scoreSchemaUID,
           data: [
             {
               recipient: this.recipient.address,
-              expirationTime: 1708741995,
+              expirationTime: daysFromNow(10),
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeScore(scorer1Score),
-              value: 0,
+              value: 0
             },
             {
               recipient: this.recipient.address,
-              expirationTime: 1708741995,
+              expirationTime: daysFromNow(10),
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeScore(scorer2Score),
-              value: 0,
+              value: 0
             },
             {
               recipient: this.recipient.address,
-              expirationTime: 1708741995,
+              expirationTime: daysFromNow(10),
               revocable: true,
               refUID: ZERO_BYTES32,
               data: easEncodeScore(scorer2Score),
-              value: 0,
-            },
-          ],
-        },
+              value: 0
+            }
+          ]
+        }
       ],
       nonce: await this.getNonce(this.recipient.address),
-      fee: fee1,
+      fee: fee1
     };
 
     const addVerifierResult = await this.gitcoinAttester
@@ -220,7 +221,7 @@ describe("GitcoinEASProxy", function () {
         r,
         s,
         {
-          value: fee1,
+          value: fee1
         }
       );
 
@@ -252,7 +253,7 @@ describe("GitcoinEASProxy", function () {
         r,
         s,
         {
-          value: fee1,
+          value: fee1
         }
       );
 
@@ -274,19 +275,19 @@ describe("GitcoinEASProxy", function () {
           data: [
             {
               uid: passportAttestationUID,
-              value: 0,
-            },
-          ],
+              value: 0
+            }
+          ]
         },
         {
           schema: this.scoreSchemaUID,
           data: [
             {
               uid: scoreAttestationUID,
-              value: 0,
-            },
-          ],
-        },
+              value: 0
+            }
+          ]
+        }
       ];
 
       await this.gitcoinAttester

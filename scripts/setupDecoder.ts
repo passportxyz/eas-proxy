@@ -56,15 +56,6 @@ export async function main() {
   console.log("== currentMaxScoreAge", currentMaxScoreAge, "/", maxScoreAge);
   console.log("== currentThreshold", currentThreshold, "/", threshold);
 
-  if (currentEas != easAddress) {
-    await passportDecoder.setEASAddress(easAddress);
-    console.log(`✅ Set EAS address ${easAddress} on GitcoinPassportDecoder.`);
-  } else {
-    console.log(
-      `-> skip setting EAS address ${easAddress} on GitcoinPassportDecoder.`
-    );
-  }
-
   const providers = new Array(256).fill("");
   let maxProviderIndex = 0;
   console.log(`🚀 Adding providers...`);
@@ -79,13 +70,31 @@ export async function main() {
   providers.splice(maxProviderIndex + 1);
   console.log(`🚀 providers to be added: `, providers);
 
+  // We do this considering we have only index = 0 in the providerBitMapInfo
+  const currentVersion = await passportDecoder.currentVersion();
+  console.log("currentVersion", currentVersion);
+
   await confirmContinue({
     contract: "Add schema and bitmap information to GitcoinPassportDecoder",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
     maxScoreAge: maxScoreAge,
-    threshold: threshold
+    threshold: threshold,
+    resolverAddress: getResolverAddress(),
+    easAddress: easAddress,
+    passportSchemaUUID: chainInfo.easSchemas.passport.uid,
+    scoreSchemaUUID: chainInfo.easSchemas.score.uid,
+    bitmapVersion: currentVersion
   });
+
+  if (currentEas != easAddress) {
+    await passportDecoder.setEASAddress(easAddress);
+    console.log(`✅ Set EAS address ${easAddress} on GitcoinPassportDecoder.`);
+  } else {
+    console.log(
+      `-> skip setting EAS address ${easAddress} on GitcoinPassportDecoder.`
+    );
+  }
 
   if (currentGitcoinResolver != getResolverAddress()) {
     await passportDecoder.setGitcoinResolver(getResolverAddress());
@@ -141,10 +150,6 @@ export async function main() {
       `-> skip set threshold to ${threshold} on GitcoinPassportDecoder.`
     );
   }
-
-  // We do this considering we have only index = 0 in the providerBitMapInfo
-  const currentVersion = await passportDecoder.currentVersion();
-  console.log("currentVersion", currentVersion);
 
   console.log("   providers: ", providers);
   console.log(`🚀    writing providers to blockchain...`);

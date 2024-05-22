@@ -67,6 +67,22 @@ let config: HardhatUserConfig = {
           apiURL: "https://api-goerli-optimism.etherscan.io/api",
           browserURL: "https://goerli-optimism.etherscan.io/"
         }
+      },
+      {
+        network: "arbitrum",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io/"
+        }
+      },
+      {
+        network: "arbitrum-sepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/"
+        }
       }
     ]
   },
@@ -77,10 +93,10 @@ let config: HardhatUserConfig = {
   solidity: {
     settings: {
       optimizer: {
-        enabled: true,
-        runs: 200
+        enabled: false,
+        runs: 2
       },
-      viaIR: true
+      viaIR: false
     },
 
     compilers: [
@@ -133,7 +149,27 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.OP_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 0xaa37dc,
-        from: process.env.DEPLOYER_ADDRESS as string,
+        from: process.env.DEPLOYER_ADDRESS as string
+        // gasPrice: 280000000,
+        // gasPrice: 9068663
+      };
+    }
+    if (process.env.ARBITRUM_PROVIDER_URL) {
+      config.networks["arbitrum"] = {
+        url: process.env.ARBITRUM_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 42161,
+        from: process.env.DEPLOYER_ADDRESS as string
+        // gasPrice: 280000000,
+        // gasPrice: 9068663
+      };
+    }
+    if (process.env.ARBITRUM_SEPOLIA_PROVIDER_URL) {
+      config.networks["arbitrum-sepolia"] = {
+        url: process.env.ARBITRUM_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 421614,
+        from: process.env.DEPLOYER_ADDRESS as string
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };

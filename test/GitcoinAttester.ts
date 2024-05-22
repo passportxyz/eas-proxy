@@ -7,6 +7,7 @@ import {
 } from "@ethereum-attestation-service/eas-sdk";
 
 import { multiAttestationRequest } from "./helpers/mockAttestations";
+import { EAS_CONTRACT_ADDRESS } from "./helpers/verifierTests";
 
 describe("GitcoinAttester", function () {
   let gitcoinAttester: any,
@@ -24,18 +25,7 @@ describe("GitcoinAttester", function () {
     // We use loadFixture to run this setup once, snapshot that state,
     // and reset Hardhat Network to that snapshot in every test.
     async function deployGitcoinAttester() {
-      // Deployment and ABI: SchemaRegistry.json
-      // Sepolia
-
-      // v0.26
-
-      // EAS:
-      // Contract: 0xC2679fBD37d54388Ce493F1DB75320D236e1815e
-      // Deployment and ABI: EAS.json
-      // SchemaRegistry:
-      // Contract: 0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0
-      // Deployment and ABI: SchemaRegistry.json
-      EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
+      EASContractAddress = EAS_CONTRACT_ADDRESS; 
 
       // Contracts are deployed using the first signer/account by default
       const [

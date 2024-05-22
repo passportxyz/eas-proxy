@@ -19,7 +19,8 @@ import {
 import {
   passportTypes,
   fee1,
-  EAS_CONTRACT_ADDRESS
+  EAS_CONTRACT_ADDRESS,
+  daysFromNow
 } from "./helpers/verifierTests";
 import {
   GitcoinAttester,
@@ -274,9 +275,8 @@ describe("GitcoinPassportDecoder", function () {
 
       const currentVersion = await gitcoinPassportDecoder.currentVersion();
 
-      const savedProviders = await gitcoinPassportDecoder.getProviders(
-        currentVersion
-      );
+      const savedProviders =
+        await gitcoinPassportDecoder.getProviders(currentVersion);
 
       expect(savedProviders.length === providers.length);
       expect(savedProviders).to.eql(providers);
@@ -381,7 +381,7 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime: 1708741995,
+                expirationTime: daysFromNow(10),
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodePassport(),
@@ -401,7 +401,7 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime: 1708741995,
+                expirationTime: daysFromNow(10),
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodeInvalidStamp(),
