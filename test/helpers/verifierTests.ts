@@ -31,6 +31,8 @@ export const EAS_SCHEMA_REGISTRY_ADDRESS =
 export const fee1 = ethers.parseEther("0.001");
 export const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
 export const fee2 = ethers.parseEther("0.002");
+export const secondsInDay = 3600 * 24;
+export const daysFromNow = (days: number) => Math.floor(Date.now() / 1000) + days * secondsInDay;
 
 export const passportTypes = {
   AttestationRequestData: [

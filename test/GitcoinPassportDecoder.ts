@@ -19,7 +19,8 @@ import {
 import {
   passportTypes,
   fee1,
-  EAS_CONTRACT_ADDRESS
+  EAS_CONTRACT_ADDRESS,
+  daysFromNow
 } from "./helpers/verifierTests";
 import {
   GitcoinAttester,
@@ -29,8 +30,6 @@ import {
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 const providers = [BigInt("111")];
-
-const dayInSeconds = 3600 * 24;
 
 const issuanceDates = [1694628559, 1695047108, 1693498086];
 const expirationDates = [1702404559, 1702823108, 1701274086];
@@ -382,8 +381,7 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime:
-                  Math.floor(new Date().getTime() / 1000) + 10 * dayInSeconds,
+                expirationTime: daysFromNow(10),
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodePassport(),
@@ -403,8 +401,7 @@ describe("GitcoinPassportDecoder", function () {
             data: [
               {
                 recipient: recipientAccount.address,
-                expirationTime:
-                  Math.floor(new Date().getTime() / 1000) + 10 * dayInSeconds,
+                expirationTime: daysFromNow(10),
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodeInvalidStamp(),
