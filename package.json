@@ -26,6 +26,7 @@
     "@openzeppelin/contracts": "^4.8.2",
     "@openzeppelin/contracts-upgradeable": "^4.9.2",
     "@openzeppelin/upgrades-core": "^1.27.3",
+    "@spruceid/didkit-wasm-node": "^0.2.1",
     "@typechain/ethers-v6": "^0.4.0",
     "ethers": "^6.6.4",
     "uuid": "^9.0.1"
