@@ -283,5 +283,37 @@
         "uid": ""
       }
     }
+  },
+  "0x12c": {
+    "description": "zkSync Sepolia",
+    "issuer": {
+      "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
+    },
+    "EAS": {
+      "address": "0x21d8d4eE83b80bc0Cc0f2B7df3117Cf212d02901"
+    },
+    "EASSchemaRegistry": {
+      "address": "0xB8566376dFe68B76FA985D5448cc2FbD578412a2"
+    },
+    "GitcoinAttester": {
+      "address": "0x2B5D97CBE50eA9bf809CbE18A2003E4Cb4D283cC"
+    },
+    "GitcoinVerifier": {
+      "address": ""
+    },
+    "GitcoinResolver": {
+      "address": ""
+    },
+    "GitcoinPassportDecoder": {
+      "address": ""
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": ""
+      },
+      "score": {
+        "uid": ""
+      }
+    }
   }
 }
