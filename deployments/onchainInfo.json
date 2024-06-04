@@ -251,5 +251,37 @@
     "GitcoinPassportDecoder": {
       "address": "0x2050256A91cbABD7C42465aA0d5325115C1dEB43"
     }
+  },
+  "0x144": {
+    "description": "zkSync Era",
+    "issuer": {
+      "address": "0x804233b96cbd6d81efeb6517347177ef7bD488ED"
+    },
+    "EAS": {
+      "address": "0x21d8d4eE83b80bc0Cc0f2B7df3117Cf212d02901"
+    },
+    "EASSchemaRegistry": {
+      "address": "0xB8566376dFe68B76FA985D5448cc2FbD578412a2"
+    },
+    "GitcoinAttester": {
+      "address": ""
+    },
+    "GitcoinVerifier": {
+      "address": ""
+    },
+    "GitcoinResolver": {
+      "address": ""
+    },
+    "GitcoinPassportDecoder": {
+      "address": ""
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": ""
+      },
+      "score": {
+        "uid": ""
+      }
+    }
   }
 }
