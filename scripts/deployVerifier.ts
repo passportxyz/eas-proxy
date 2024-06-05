@@ -8,6 +8,7 @@ import {
   getIssuerAddress
 } from "./lib/utils";
 import { deployVerifier } from "./lib/verifier";
+import { deployZkSyncVerifier } from "./lib/zk-verifier";
 
 assertEnvironment();
 
@@ -23,7 +24,11 @@ export async function main() {
     attesterAddress: attesterAddress
   });
 
-  await deployVerifier(attesterAddress, issuerAddress);
+  if (hre.network.zksync) {
+    deployZkSyncVerifier(attesterAddress, issuerAddress);
+  } else {
+    await deployVerifier(attesterAddress, issuerAddress);
+  }
 }
 
 main().catch((error) => {
