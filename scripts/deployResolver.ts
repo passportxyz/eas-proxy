@@ -23,7 +23,7 @@ export async function main() {
     easAddress: easAddress
   });
 
-  deployContract("GitcoinResolver", [attesterAddress, easAddress], {
+  deployContract("GitcoinResolver", [easAddress, attesterAddress], {
     kind: "uups",
     initializer: "initialize"
   });
