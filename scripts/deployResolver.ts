@@ -5,7 +5,9 @@ import {
   assertEnvironment,
   confirmContinue,
   getAttesterAddress,
-  getEASAddress
+  getEASAddress,
+  updateDeploymentsFile,
+  getAbi
 } from "./lib/utils";
 import { deployContract } from "./lib/deployment";
 
@@ -23,10 +25,21 @@ export async function main() {
     easAddress: easAddress
   });
 
-  deployContract("GitcoinResolver", [easAddress, attesterAddress], {
+  const resolver = await deployContract("GitcoinResolver", [easAddress, attesterAddress], {
     kind: "uups",
     initializer: "initialize"
   });
+  const deployment = await resolver.waitForDeployment();
+
+  const resolverAddress = await deployment.getAddress();
+
+  console.log(`✅ Deployed GitcoinResolver to ${resolverAddress}.`);
+
+  await updateDeploymentsFile(
+    "GitcoinResolver",
+    getAbi(deployment),
+    resolverAddress
+  );
 }
 
 main().catch((error) => {
