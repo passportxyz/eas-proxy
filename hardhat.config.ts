@@ -49,10 +49,10 @@ let config: HardhatUserConfig = {
     customChains: [
       {
         network: "eth-mainnet",
-        chainId: 11155111,
+        chainId: 1,
         urls: {
-          apiURL: "https://api-sepolia.etherscan.io/api",
-          browserURL: "https://sepolia.etherscan.io/"
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io/"
         }
       },
       {
@@ -112,7 +112,7 @@ let config: HardhatUserConfig = {
         }
       },
       {
-        network: "zksync-era",
+        network: "zksync",
         chainId: 324,
         urls: {
           apiURL: "https://block-explorer-api.mainnet.zksync.io/api",
@@ -161,6 +161,14 @@ let config: HardhatUserConfig = {
 
 if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
   if (config.networks) {
+    if (process.env.MAINNET_PROVIDER_URL) {
+      config.networks["eth-mainnet"] = {
+        url: process.env.MAINNET_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 1,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
     if (process.env.SEPOLIA_PROVIDER_URL) {
       config.networks["sepolia"] = {
         url: process.env.SEPOLIA_PROVIDER_URL as string,
@@ -218,7 +226,13 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
       };
     }
     if (process.env.ZKSYNC_ERA_PROVIDER_URL) {
-      config.networks["zksync-era"] = {
+      if (!process.env.MAINNET_PROVIDER_URL) {
+        console.error(
+          "MAINNET_PROVIDER_URL is required for zksync network"
+        );
+        throw "MAINNET_PROVIDER_URL is required for zksync network";
+      }
+      config.networks["zksync"] = {
         url: process.env.ZKSYNC_ERA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 324,
@@ -226,7 +240,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         // Verification endpoint for Sepolia
         ethNetwork: "eth-mainnet",
         verifyURL:
-          "https://explorer.sepolia.era.zksync.dev/contract_verification",
+          "https://zksync2-mainnet-explorer.zksync.io/contract_verification",
         zksync: true
       };
     }
@@ -246,7 +260,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         // Verification endpoint for Sepolia
         verifyURL:
           "https://explorer.sepolia.era.zksync.dev/contract_verification",
-        zksync: true,
+        zksync: true
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };
