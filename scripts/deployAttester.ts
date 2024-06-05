@@ -3,7 +3,6 @@ import hre from "hardhat";
 import { confirmContinue, assertEnvironment } from "./lib/utils";
 
 import { deployAttester } from "./lib/attester";
-import { deployZkSyncAttester } from "./lib/zk-attester";
 
 assertEnvironment();
 
@@ -14,11 +13,7 @@ export async function main() {
     chainId: hre.network.config.chainId
   });
 
-  if (hre.network.zksync) {
-    deployZkSyncAttester();
-  } else {
-    deployAttester();
-  }
+  await deployAttester();
 }
 
 main().catch((error) => {
