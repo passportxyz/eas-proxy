@@ -270,7 +270,7 @@
       "address": "0xfCC2d308FD4De098D08f056c424C969d728912bF"
     },
     "GitcoinResolver": {
-      "address": ""
+      "address": "0x8789129C5968EdcA5Cb392C4a9A9D7EFB590A838"
     },
     "GitcoinPassportDecoder": {
       "address": ""
@@ -309,10 +309,10 @@
     },
     "easSchemas": {
       "passport": {
-        "uid": ""
+        "uid": "0x71b9da9e4a2ecd8c87ad57d29ef64b9e63887d54039c97c294a6ecba8a8dfb4e"
       },
       "score": {
-        "uid": ""
+        "uid": "0xfa8f39bf31b38893697a46f2607ef58ef3ec66308840a1e351304d26823a297c"
       }
     }
   }
