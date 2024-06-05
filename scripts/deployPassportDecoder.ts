@@ -1,15 +1,13 @@
 // This script deals with deploying the GitcoinPassportDecoder on a given network
 
-import hre, { ethers, upgrades } from "hardhat";
+import hre from "hardhat";
 import {
   assertEnvironment,
   confirmContinue,
   updateDeploymentsFile,
-  getAbi,
-  getAttesterAddress,
-  getEASAddress,
-  getResolverAddress,
+  getAbi
 } from "./lib/utils";
+import { deployContract } from "./lib/deployment";
 
 assertEnvironment();
 
@@ -17,23 +15,18 @@ export async function main() {
   await confirmContinue({
     contract: "GitcoinPassportDecoder",
     network: hre.network.name,
-    chainId: hre.network.config.chainId,
+    chainId: hre.network.config.chainId
   });
 
-  const GitcoinPassportDecoder = await ethers.getContractFactory("GitcoinPassportDecoder");
-  const passportDecoder = await upgrades.deployProxy(
-    GitcoinPassportDecoder,
-    {
-      initializer: "initialize",
-      kind: "uups",
-    }
-  );
+  const passportDecoder = await deployContract("GitcoinPassportDecoder", []);
 
   const deployment = await passportDecoder.waitForDeployment();
 
   const passportDecoderAddress = await deployment.getAddress();
 
-  console.log(`✅ Deployed GitcoinPassportDecoder to ${passportDecoderAddress}.`);
+  console.log(
+    `✅ Deployed GitcoinPassportDecoder to ${passportDecoderAddress}.`
+  );
 
   await updateDeploymentsFile(
     "GitcoinPassportDecoder",

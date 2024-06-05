@@ -1,15 +1,13 @@
 // This script deals with deploying the GitcoinResolver on a given network
 
-import hre, { ethers, upgrades } from "hardhat";
+import hre from "hardhat";
 import {
   assertEnvironment,
   confirmContinue,
   getAttesterAddress,
   getEASAddress
 } from "./lib/utils";
-
-import { deployResolver } from "./lib/resolver";
-import { deployZkSyncResolver } from "./lib/zk-resolver";
+import { deployContract } from "./lib/deployment";
 
 assertEnvironment();
 
@@ -25,11 +23,10 @@ export async function main() {
     easAddress: easAddress
   });
 
-  if (hre.network.zksync) {
-    deployZkSyncResolver(attesterAddress, easAddress);
-  } else {
-    deployResolver(attesterAddress, easAddress);
-  }
+  deployContract("GitcoinResolver", [attesterAddress, easAddress], {
+    kind: "uups",
+    initializer: "initialize"
+  });
 }
 
 main().catch((error) => {

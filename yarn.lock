@@ -575,6 +575,25 @@
     solidity-ast "^0.4.51"
     zksync-ethers "^6.0.0"
 
+"@matterlabs/hardhat-zksync-verify@^1.4.3":
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@matterlabs/hardhat-zksync-verify/-/hardhat-zksync-verify-1.4.3.tgz#fc36d2ea385eab553ce0b3c3fbc9e216c607873f"
+  integrity sha512-TONID/+mG8KngZ9iI8yiOgC8VD+cus7M+ejCjF4bGNzsmmzsklGJwzry6bQpk8BXqzsMgbuV+4KjDT4JXiS/QA==
+  dependencies:
+    "@ethersproject/abi" "^5.1.2"
+    "@ethersproject/address" "5.7.0"
+    "@matterlabs/hardhat-zksync-solc" "^1.1.4"
+    "@nomicfoundation/hardhat-verify" "^2.0.0"
+    "@openzeppelin/contracts" "^4.9.2"
+    axios "^1.6.2"
+    cbor "^8.1.0"
+    chai "^4.3.6"
+    chalk "4.1.2"
+    debug "^4.1.1"
+    hardhat "^2.19.4"
+    sinon "^17.0.1"
+    sinon-chai "^3.7.0"
+
 "@metamask/eth-sig-util@^4.0.0":
   version "4.0.1"
   resolved "https://registry.npmjs.org/@metamask/eth-sig-util/-/eth-sig-util-4.0.1.tgz"
@@ -1005,10 +1024,10 @@
   resolved "https://registry.npmjs.org/@nomicfoundation/hardhat-toolbox/-/hardhat-toolbox-3.0.0.tgz"
   integrity sha512-MsteDXd0UagMksqm9KvcFG6gNKYNa3GGNCy73iQ6bEasEgg2v8Qjl6XA5hjs8o5UD5A3153B6W2BIVJ8SxYUtA==
 
-"@nomicfoundation/hardhat-verify@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.npmjs.org/@nomicfoundation/hardhat-verify/-/hardhat-verify-1.0.4.tgz"
-  integrity sha512-zKH7lCgesD9MQbrMsV9DH9NS5Qhkv9K1W9LvbkZWvUQdpyS6zzDyIuJwmfxRKfUGXVlpA2X8nSL3MtxSj3s5aw==
+"@nomicfoundation/hardhat-verify@^2.0.0", "@nomicfoundation/hardhat-verify@^2.0.8":
+  version "2.0.8"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.8.tgz#6a77dc03de990a1a3aa8e6dc073c393263dbf258"
+  integrity sha512-x/OYya7A2Kcz+3W/J78dyDHxr0ezU23DKTrRKfy5wDPCnePqnr79vm8EXqX3gYps6IjPBYyGPZ9K6E5BnrWx5Q==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@ethersproject/address" "^5.0.2"
@@ -1120,6 +1139,11 @@
   version "4.9.2"
   resolved "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-4.9.2.tgz"
   integrity sha512-mO+y6JaqXjWeMh9glYVzVu8HYPGknAAnWyxTRhGeckOruyXQMNnlcW6w/Dx9ftLeIQk6N+ZJFuVmTwF7lEIFrg==
+
+"@openzeppelin/contracts@^4.9.2":
+  version "4.9.6"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.6.tgz#2a880a24eb19b4f8b25adc2a5095f2aa27f39677"
+  integrity sha512-xSmezSupL+y9VkHZJGDoCBpmnB2ogM13ccaYDWqJTfS3dbuHkgjuwDFUmaFauBCboQMGB/S5UqUl2y54X99BmA==
 
 "@openzeppelin/defender-base-client@^1.47.0":
   version "1.47.0"
@@ -1882,6 +1906,15 @@ axios@^1.4.0:
   integrity sha512-S4XCWMEmzvo64T9GfvQDOXgYRDJ/wsSZc7Jvdgx5u1sd0JwsuPLqb3SYmusag+edF6ziyMensPVqLTSc1PiSEA==
   dependencies:
     follow-redirects "^1.15.0"
+    form-data "^4.0.0"
+    proxy-from-env "^1.1.0"
+
+axios@^1.6.2:
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.2.tgz#b625db8a7051fbea61c35a3cbb3a1daa7b9c7621"
+  integrity sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==
+  dependencies:
+    follow-redirects "^1.15.6"
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
 
@@ -3307,6 +3340,11 @@ follow-redirects@^1.12.1, follow-redirects@^1.15.0:
   version "1.15.2"
   resolved "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.15.2.tgz"
   integrity sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==
+
+follow-redirects@^1.15.6:
+  version "1.15.6"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.6.tgz#7f815c0cda4249c74ff09e95ef97c23b5fd0399b"
+  integrity sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==
 
 for-each@^0.3.3:
   version "0.3.3"

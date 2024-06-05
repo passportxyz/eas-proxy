@@ -14,6 +14,7 @@ import "@matterlabs/hardhat-zksync-deploy";
 import "@matterlabs/hardhat-zksync-solc";
 import "@matterlabs/hardhat-zksync-ethers";
 import "@matterlabs/hardhat-zksync-upgradable";
+import "@matterlabs/hardhat-zksync-verify";
 
 dotenv.config();
 
@@ -34,14 +35,26 @@ let config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.SEPOLIA_PROVIDER_URL as string
+        url: (process.env.PROVIDER_URL ||
+          process.env.SEPOLIA_PROVIDER_URL) as string
       },
       accounts: testAccounts
     }
   },
+  sourcify: {
+    enabled: true
+  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
     customChains: [
+      {
+        network: "eth-mainnet",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io/"
+        }
+      },
       {
         network: "sepolia",
         chainId: 11155111,
@@ -209,7 +222,12 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.ZKSYNC_ERA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 324,
-        from: process.env.DEPLOYER_ADDRESS as string
+        from: process.env.DEPLOYER_ADDRESS as string,
+        // Verification endpoint for Sepolia
+        ethNetwork: "eth-mainnet",
+        verifyURL:
+          "https://explorer.sepolia.era.zksync.dev/contract_verification",
+        zksync: true
       };
     }
     if (process.env.ZKSYNC_SEPOLIA_PROVIDER_URL) {
@@ -225,8 +243,12 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         chainId: 300,
         from: process.env.DEPLOYER_ADDRESS as string,
         ethNetwork: "sepolia",
+        // Verification endpoint for Sepolia
+        verifyURL:
+          "https://explorer.sepolia.era.zksync.dev/contract_verification",
         zksync: true,
-        forceDeploy: true
+        // gasPrice: 280000000,
+        // gasPrice: 9068663
       };
     }
   }
