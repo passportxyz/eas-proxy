@@ -1,15 +1,15 @@
 // This script deals with deploying the GitcoinResolver on a given network
 
-import hre, { ethers, upgrades } from "hardhat";
+import hre from "hardhat";
 import {
   assertEnvironment,
   confirmContinue,
-  updateDeploymentsFile,
-  getAbi,
   getAttesterAddress,
   getEASAddress,
-  getScoreSchema
+  updateDeploymentsFile,
+  getAbi
 } from "./lib/utils";
+import { deployContract } from "./lib/deployment";
 
 assertEnvironment();
 
@@ -22,20 +22,13 @@ export async function main() {
     network: hre.network.name,
     chainId: hre.network.config.chainId,
     attesterAddress: attesterAddress,
-    easAddress: easAddress,
+    easAddress: easAddress
   });
 
-
-  const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
-  const resolver = await upgrades.deployProxy(
-    GitcoinResolver,
-    [easAddress, attesterAddress],
-    {
-      initializer: "initialize",
-      kind: "uups"
-    }
-  );
-
+  const resolver = await deployContract("GitcoinResolver", [easAddress, attesterAddress], {
+    kind: "uups",
+    initializer: "initialize"
+  });
   const deployment = await resolver.waitForDeployment();
 
   const resolverAddress = await deployment.getAddress();

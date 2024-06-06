@@ -16,9 +16,6 @@ export const assertEnvironment = () => {
   if (!process.env.DEPLOYER_PRIVATE_KEY) {
     console.error("Please set your DEPLOYER_PRIVATE_KEY in a .env file");
   }
-  if (!process.env.PROVIDER_URL) {
-    console.error("Please set your PROVIDER_URL in a .env file");
-  }
 };
 
 /**

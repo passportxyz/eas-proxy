@@ -5,14 +5,14 @@ import {
   getThisChainInfo,
   addChainInfoToFile,
   INFO_FILE,
-  getHexChainId,
+  getHexChainId
 } from "./lib/utils";
 
 export async function main() {
   await confirmContinue({
     contract: "Generating onchainInfo for this chain",
     network: hre.network.name,
-    chainId: hre.network.config.chainId,
+    chainId: hre.network.config.chainId
   });
 
   try {
@@ -22,20 +22,22 @@ export async function main() {
     const chainId = getHexChainId();
     addChainInfoToFile(INFO_FILE, chainId, () => {
       return {
+        description: "TODO: human readable name / description of the chain",
         issuer: { address: "" },
         EAS: { address: "" },
-        GitcoinAttester: {},
-        GitcoinVerifier: {},
-        GitcoinResolver: {},
-        GitcoinPassportDecoder: {},
+        EASSchemaRegistry: { address: "" },
+        GitcoinAttester: { address: "" },
+        GitcoinVerifier: { address: "" },
+        GitcoinResolver: { address: "" },
+        GitcoinPassportDecoder: { address: "" },
         easSchemas: {
           passport: {
-            uid: "",
+            uid: ""
           },
           score: {
-            uid: "",
-          },
-        },
+            uid: ""
+          }
+        }
       };
     });
 

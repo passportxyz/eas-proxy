@@ -10,10 +10,10 @@ export async function main() {
   await confirmContinue({
     contract: "GitcoinAttester",
     network: hre.network.name,
-    chainId: hre.network.config.chainId,
+    chainId: hre.network.config.chainId
   });
 
-  deployAttester();
+  await deployAttester();
 }
 
 main().catch((error) => {

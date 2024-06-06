@@ -9,6 +9,13 @@ import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 import { HttpNetworkHDAccountsConfig } from "hardhat/types";
 
+// Import zksync related plugins
+import "@matterlabs/hardhat-zksync-deploy";
+import "@matterlabs/hardhat-zksync-solc";
+import "@matterlabs/hardhat-zksync-ethers";
+import "@matterlabs/hardhat-zksync-upgradable";
+import "@matterlabs/hardhat-zksync-verify";
+
 dotenv.config();
 
 // this is already a public mnemonic ...
@@ -28,14 +35,34 @@ let config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.PROVIDER_URL as string
+        url: (process.env.PROVIDER_URL ||
+          process.env.SEPOLIA_PROVIDER_URL) as string
       },
       accounts: testAccounts
     }
   },
+  sourcify: {
+    enabled: true
+  },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY as string,
     customChains: [
+      {
+        network: "eth-mainnet",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.io/"
+        }
+      },
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          apiURL: "https://api-sepolia.etherscan.io/api",
+          browserURL: "https://sepolia.etherscan.io/"
+        }
+      },
       {
         network: "linea_mainnet",
         chainId: 59144,
@@ -83,6 +110,22 @@ let config: HardhatUserConfig = {
           apiURL: "https://api-sepolia.arbiscan.io/api",
           browserURL: "https://sepolia.arbiscan.io/"
         }
+      },
+      {
+        network: "zksync",
+        chainId: 324,
+        urls: {
+          apiURL: "https://block-explorer-api.mainnet.zksync.io/api",
+          browserURL: "https://explorer.zksync.io/"
+        }
+      },
+      {
+        network: "zksync-sepolia",
+        chainId: 300,
+        urls: {
+          apiURL: "https://block-explorer-api.sepolia.zksync.dev/api",
+          browserURL: "https://sepolia.explorer.zksync.io/"
+        }
       }
     ]
   },
@@ -118,9 +161,17 @@ let config: HardhatUserConfig = {
 
 if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
   if (config.networks) {
-    if (process.env.PROVIDER_URL) {
+    if (process.env.MAINNET_PROVIDER_URL) {
+      config.networks["eth-mainnet"] = {
+        url: process.env.MAINNET_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 1,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.SEPOLIA_PROVIDER_URL) {
       config.networks["sepolia"] = {
-        url: process.env.PROVIDER_URL as string,
+        url: process.env.SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 11155111,
         from: process.env.DEPLOYER_ADDRESS as string
@@ -170,6 +221,46 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 421614,
         from: process.env.DEPLOYER_ADDRESS as string
+        // gasPrice: 280000000,
+        // gasPrice: 9068663
+      };
+    }
+    if (process.env.ZKSYNC_ERA_PROVIDER_URL) {
+      if (!process.env.MAINNET_PROVIDER_URL) {
+        console.error(
+          "MAINNET_PROVIDER_URL is required for zksync network"
+        );
+        throw "MAINNET_PROVIDER_URL is required for zksync network";
+      }
+      config.networks["zksync"] = {
+        url: process.env.ZKSYNC_ERA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 324,
+        from: process.env.DEPLOYER_ADDRESS as string,
+        // Verification endpoint for Sepolia
+        ethNetwork: "eth-mainnet",
+        verifyURL:
+          "https://zksync2-mainnet-explorer.zksync.io/contract_verification",
+        zksync: true
+      };
+    }
+    if (process.env.ZKSYNC_SEPOLIA_PROVIDER_URL) {
+      if (!process.env.SEPOLIA_PROVIDER_URL) {
+        console.error(
+          "SEPOLIA_PROVIDER_URL is required for zksync-sepolia network"
+        );
+        throw "SEPOLIA_PROVIDER_URL is required for zksync-sepolia network";
+      }
+      config.networks["zksync-sepolia"] = {
+        url: process.env.ZKSYNC_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 300,
+        from: process.env.DEPLOYER_ADDRESS as string,
+        ethNetwork: "sepolia",
+        // Verification endpoint for Sepolia
+        verifyURL:
+          "https://explorer.sepolia.era.zksync.dev/contract_verification",
+        zksync: true
         // gasPrice: 280000000,
         // gasPrice: 9068663
       };

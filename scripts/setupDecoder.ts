@@ -103,7 +103,7 @@ export async function main() {
     );
   } else {
     console.log(
-      `-> skipp setting GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
+      `-> skip setting GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
     );
   }
 

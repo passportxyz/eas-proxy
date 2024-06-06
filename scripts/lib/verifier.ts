@@ -1,20 +1,16 @@
 // This script deals with deploying the GitcoinVerifier on a given network
 
-import hre, { ethers, upgrades } from "hardhat";
 import { getAbi, updateDeploymentsFile } from "./utils";
+import { deployContract } from "./deployment";
 
 export async function deployVerifier(
   attesterAddress: string,
   issuerAddress: string
 ) {
-  const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
-  const verifier = await upgrades.deployProxy(
-    GitcoinVerifier,
-    [issuerAddress, attesterAddress],
-    {
-      kind: "uups",
-    }
-  );
+  const verifier = await deployContract("GitcoinVerifier", [
+    issuerAddress,
+    attesterAddress
+  ]);
 
   const deployment = await verifier.waitForDeployment();
 
