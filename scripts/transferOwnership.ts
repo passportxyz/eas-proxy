@@ -21,6 +21,7 @@ export async function main() {
     contract: "Transferring Ownership of All Contracts to Multisig",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
+    newOwner: process.env.PASSPORT_MULTISIG_ADDRESS,
   });
 
   const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");

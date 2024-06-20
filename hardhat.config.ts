@@ -45,7 +45,10 @@ let config: HardhatUserConfig = {
     enabled: true
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY as string,
+    apiKey: {
+      "eth-mainnet": process.env.ETHERSCAN_API_KEY as string,
+      "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string
+    },
     customChains: [
       {
         network: "eth-mainnet",
@@ -64,14 +67,6 @@ let config: HardhatUserConfig = {
         }
       },
       {
-        network: "linea_mainnet",
-        chainId: 59144,
-        urls: {
-          apiURL: "https://api.lineascan.build/api",
-          browserURL: "https://lineascan.build/"
-        }
-      },
-      {
         network: "baseGoerli",
         chainId: 84531,
         urls: {
@@ -80,19 +75,11 @@ let config: HardhatUserConfig = {
         }
       },
       {
-        network: "linea-goerli",
-        chainId: 59140,
+        network: "optimism-sepolia",
+        chainId: 0xaa37dc,
         urls: {
-          apiURL: "https://api.lineascan.build/api",
-          browserURL: "https://goerli.lineascan.build/"
-        }
-      },
-      {
-        network: "optimism-goerli",
-        chainId: 420,
-        urls: {
-          apiURL: "https://api-goerli-optimism.etherscan.io/api",
-          browserURL: "https://goerli-optimism.etherscan.io/"
+          apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io/"
         }
       },
       {
@@ -126,6 +113,14 @@ let config: HardhatUserConfig = {
           apiURL: "https://block-explorer-api.sepolia.zksync.dev/api",
           browserURL: "https://sepolia.explorer.zksync.io/"
         }
+      },
+      {
+        network: "linea",
+        chainId: 59144,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build/"
+        }
       }
     ]
   },
@@ -154,6 +149,9 @@ let config: HardhatUserConfig = {
       },
       {
         version: "0.8.19"
+      },
+      {
+        version: "0.8.20"
       }
     ]
   }
@@ -183,16 +181,6 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 10,
         from: process.env.DEPLOYER_ADDRESS as string
-      };
-    }
-    if (process.env.OP_GOERLI_PROVIDER_URL) {
-      config.networks["optimism-goerli"] = {
-        url: process.env.OP_GOERLI_PROVIDER_URL as string,
-        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
-        chainId: 420,
-        from: process.env.DEPLOYER_ADDRESS as string
-        // gasPrice: 6168663,
-        // gasPrice: 9068663
       };
     }
     if (process.env.OP_SEPOLIA_PROVIDER_URL) {
@@ -227,9 +215,7 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
     }
     if (process.env.ZKSYNC_ERA_PROVIDER_URL) {
       if (!process.env.MAINNET_PROVIDER_URL) {
-        console.error(
-          "MAINNET_PROVIDER_URL is required for zksync network"
-        );
+        console.error("MAINNET_PROVIDER_URL is required for zksync network");
         throw "MAINNET_PROVIDER_URL is required for zksync network";
       }
       config.networks["zksync"] = {
@@ -265,25 +251,23 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         // gasPrice: 9068663
       };
     }
+    if (process.env.LINEA_PROVIDER_URL) {
+      config.networks["linea"] = {
+        url: process.env.LINEA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 59144,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.LINEA_SEPOLIA_PROVIDER_URL) {
+      config.networks["linea-sepolia"] = {
+        url: process.env.LINEA_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 59141,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
   }
-}
-
-if (
-  process.env.DEPLOYER_PRIVATE_KEY &&
-  process.env.INFURA_KEY &&
-  config.networks
-) {
-  config.networks["linea-goerli"] = {
-    chainId: 59140,
-    gasPrice: 582000007,
-    url: `https://linea-goerli.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
-  };
-  config.networks["linea"] = {
-    chainId: 59144,
-    url: `https://linea-mainnet.infura.io/v3/${process.env.INFURA_KEY ?? ""}`,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
-  };
 }
 
 if (
