@@ -267,6 +267,22 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         from: process.env.DEPLOYER_ADDRESS as string
       };
     }
+    if (process.env.SCROLL_SEPOLIA_PROVIDER_URL) {
+      config.networks["scroll-sepolia"] = {
+        url: process.env.SCROLL_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 534351,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.SCROLL_PROVIDER_URL) {
+      config.networks["scroll"] = {
+        url: process.env.SCROLL_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 534352,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
   }
 }
 
