@@ -121,6 +121,22 @@ let config: HardhatUserConfig = {
           apiURL: "https://api.lineascan.build/api",
           browserURL: "https://lineascan.build/"
         }
+      },
+      {
+        network: "scroll",
+        chainId: 534352,
+        urls: {
+          apiURL: "https://api.scrollscan.com/api",
+          browserURL: "https://scrollscan.com/"
+        }
+      },
+      {
+        network: "scroll-sepolia",
+        chainId: 534351,
+        urls: {
+          apiURL: "https://api-sepolia.scrollscan.com/api",
+          browserURL: "https://sepolia.scrollscan.com/"
+        }
       }
     ]
   },
