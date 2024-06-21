@@ -315,5 +315,37 @@
         "uid": ""
       }
     }
+  },
+  "0x8274f": {
+    "description": "Scroll Sepolia",
+    "issuer": {
+      "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
+    },
+    "EAS": {
+      "address": "0xaEF4103A04090071165F78D45D83A0C0782c2B2a"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x55D26f9ae0203EF95494AE4C170eD35f4Cf77797"
+    },
+    "GitcoinAttester": {
+      "address": "0xCc90105D4A2aa067ee768120AdA19886021dF422"
+    },
+    "GitcoinVerifier": {
+      "address": "0x16db23c4b99bbC9A6Bf55dF7a787C9AEFD261185"
+    },
+    "GitcoinResolver": {
+      "address": "0x90E2C4472Df225e8D31f44725B75FFaA244d5D33"
+    },
+    "GitcoinPassportDecoder": {
+      "address": "0x2443D22Db6d25D141A1138D80724e3Eee54FD4C2"
+    },
+    "easSchemas": {
+      "passport": {
+        "uid": "0x8ae6ee946bf1c936584cacc969bf7e9d0b274631c818df7e45c246051b364341"
+      },
+      "score": {
+        "uid": "0x24620f482734b3806102678e4b8bb68baafb1adc1ec29e524bcd69c85f15b915"
+      }
+    }
   }
 }
