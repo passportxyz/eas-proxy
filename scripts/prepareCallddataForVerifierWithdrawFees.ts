@@ -8,7 +8,11 @@ import {
 assertEnvironment();
 
 export async function main() {
-  const ethAmount = "16.091447181969673068";
+  if(!process.env.GITCOIN_VERIFIER_WITHDRAW_ETH_AMOUNT) {
+    console.error("GITCOIN_VERIFIER_WITHDRAW_ETH_AMOUNT is required");
+    throw "GITCOIN_VERIFIER_WITHDRAW_ETH_AMOUNT is required";
+  }
+  const ethAmount = process.env.GITCOIN_VERIFIER_WITHDRAW_ETH_AMOUNT || "undefined";
   const ethAmountInWei = ethers.parseEther(ethAmount);
 
   await confirmContinue({
