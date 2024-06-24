@@ -146,6 +146,7 @@ let thisChainInfo: {
   easSchemas: {
     score: ScheamUid;
     passport: ScheamUid;
+    namingSchema: ScheamUid;
   };
   GitcoinAttester?: { address?: string };
   GitcoinVerifier?: { address?: string };
@@ -244,4 +245,18 @@ export function getScoreSchema() {
   if (!scoreSchema)
     throw new Error("Score schema was not found in onchainInfo");
   return scoreSchema;
+}
+
+export function getPassportSchema() {
+  const passportSchema = getThisChainInfo().easSchemas?.passport.uid;
+  if (!passportSchema)
+    throw new Error("Passport schema was not found in onchainInfo");
+  return passportSchema;
+}
+
+export function getNamingSchema() {
+  const namingSchema = getThisChainInfo().easSchemas?.namingSchema.uid;
+  if (!namingSchema)
+    throw new Error("namingSchema schema was not found in onchainInfo");
+  return namingSchema;
 }

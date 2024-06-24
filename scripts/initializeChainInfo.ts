@@ -31,6 +31,9 @@ export async function main() {
         GitcoinResolver: { address: "" },
         GitcoinPassportDecoder: { address: "" },
         easSchemas: {
+          namingSchema: {
+            uid: ""
+          },
           passport: {
             uid: ""
           },
