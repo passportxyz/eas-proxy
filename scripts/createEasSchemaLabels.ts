@@ -10,7 +10,6 @@ import {
   getScoreSchema,
   getPassportSchema,
   getNamingSchema
-
 } from "./lib/utils";
 import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 
@@ -39,7 +38,7 @@ export async function main() {
     scoreSchemaUID: scoreSchemaUID,
     gitcoinScoreSchemaLabel: gitcoinScoreSchemaLabel,
     passportSchemaUID: passportSchemaUID,
-    gitcoinPassportSchemaLabel: gitcoinPassportSchemaLabel,
+    gitcoinPassportSchemaLabel: gitcoinPassportSchemaLabel
   });
 
   // Initialize SchemaEncoder with the schema string
