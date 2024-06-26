@@ -25,7 +25,7 @@ describe("GitcoinAttester", function () {
     // We use loadFixture to run this setup once, snapshot that state,
     // and reset Hardhat Network to that snapshot in every test.
     async function deployGitcoinAttester() {
-      EASContractAddress = EAS_CONTRACT_ADDRESS; 
+      EASContractAddress = EAS_CONTRACT_ADDRESS;
 
       // Contracts are deployed using the first signer/account by default
       const [
@@ -53,6 +53,8 @@ describe("GitcoinAttester", function () {
       eas = new EAS(EASContractAddress);
 
       await gitcoinAttester.setEASAddress(EASContractAddress);
+
+      await gitcoinAttester.addVerifier(mockVerifier.address);
     }
 
     await loadFixture(deployGitcoinAttester);
@@ -76,12 +78,9 @@ describe("GitcoinAttester", function () {
     });
 
     it("Should write multiple attestations", async function () {
-      const tx = await gitcoinAttester.addVerifier(owner.address);
-      await tx.wait();
-
-      const resultTx = await gitcoinAttester.submitAttestations([
-        multiAttestationRequest
-      ]);
+      const resultTx = await gitcoinAttester
+        .connect(mockVerifier)
+        .submitAttestations([multiAttestationRequest]);
 
       const result = await resultTx.wait();
 
@@ -151,17 +150,20 @@ describe("GitcoinAttester", function () {
       multiRevocationRequest = [];
 
       const tx = await gitcoinAttester
-        .connect(owner)
+        .connect(mockVerifier)
         .submitAttestations([multiAttestationRequest]);
       const attestationResult = await tx.wait();
 
       // const easInterface = new Interface(eas);
 
-      attestationResult.logs?.forEach((log) => {
+      attestationResult.logs.forEach((log) => {
         const decodedLog = eas.contract.interface.parseLog(log);
         const args = decodedLog?.args;
         if (args) {
-          const { schema, uid } = decodedLog.args;
+          const { uid, ...rest } = decodedLog.args;
+          console.log("rest", rest);
+          const schema = args[3];
+          console.log("schema, uid", schema, uid);
           const value = BigInt(0);
           const existingRevocationRequest = multiRevocationRequest.find(
             (r) => r.schema === schema
@@ -187,12 +189,14 @@ describe("GitcoinAttester", function () {
     });
     it("should allow owner to revoke attestations", async function () {
       const revocationTx = await gitcoinAttester
-        .connect(owner)
+        .connect(mockVerifier)
         .revokeAttestations(multiRevocationRequest);
 
       const revocationResult = await revocationTx.wait();
 
-      revocationResult.logs?.forEach(async (log, i) => {
+      expect(revocationResult.logs).to.not.be.undefined;
+      expect(revocationResult.logs).to.not.be.length(0);
+      revocationResult.logs.forEach(async (log, i) => {
         const easInterface = eas.contract.interface.parseLog(log);
         expect(easInterface?.args).to.not.be.undefined;
         const schema = easInterface?.args.schema;
@@ -205,12 +209,12 @@ describe("GitcoinAttester", function () {
       });
     });
     it("should allow verifier to revoke attestations", async function () {
-      const tx = await gitcoinAttester.addVerifier(mockVerifier.address);
-      const addVerifierRecieptc = await tx.wait();
       const revocationTx = await gitcoinAttester
         .connect(mockVerifier)
         .revokeAttestations(multiRevocationRequest);
       const revocationResult = await revocationTx.wait();
+      expect(revocationResult.logs).to.not.be.undefined;
+      expect(revocationResult.logs).to.not.be.length(0);
       revocationResult.logs?.forEach(async (log, i) => {
         const parsedLogs = eas.contract.interface.parseLog(log);
         const { schema, uid } = parsedLogs.args;
