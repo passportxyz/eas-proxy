@@ -47,7 +47,9 @@ let config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       "eth-mainnet": process.env.ETHERSCAN_API_KEY as string,
-      "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string
+      "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string,
+      scroll: process.env.SCROLL_ETHERSCAN_API_KEY as string,
+      "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string
     },
     customChains: [
       {
@@ -120,6 +122,22 @@ let config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.lineascan.build/api",
           browserURL: "https://lineascan.build/"
+        }
+      },
+      {
+        network: "scroll",
+        chainId: 534352,
+        urls: {
+          apiURL: "https://api.scrollscan.com/api",
+          browserURL: "https://scrollscan.com/"
+        }
+      },
+      {
+        network: "scroll-sepolia",
+        chainId: 534351,
+        urls: {
+          apiURL: "https://api-sepolia.scrollscan.com/api",
+          browserURL: "https://sepolia.scrollscan.com/"
         }
       }
     ]
@@ -264,6 +282,22 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.LINEA_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 59141,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.SCROLL_SEPOLIA_PROVIDER_URL) {
+      config.networks["scroll-sepolia"] = {
+        url: process.env.SCROLL_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 534351,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.SCROLL_PROVIDER_URL) {
+      config.networks["scroll"] = {
+        url: process.env.SCROLL_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 534352,
         from: process.env.DEPLOYER_ADDRESS as string
       };
     }
