@@ -412,5 +412,40 @@
         "uid": "0x24620f482734b3806102678e4b8bb68baafb1adc1ec29e524bcd69c85f15b915"
       }
     }
+  },
+  "0x2b03": {
+    "description": "Shape Sepolia",
+    "issuer": {
+      "address": "0x5f603Ed913738d9105bAf3BD981AA4750016B167"
+    },
+    "EAS": {
+      "address": "0x4200000000000000000000000000000000000021"
+    },
+    "EASSchemaRegistry": {
+      "address": "0x4200000000000000000000000000000000000020"
+    },
+    "GitcoinAttester": {
+      "address": "0xCc90105D4A2aa067ee768120AdA19886021dF422"
+    },
+    "GitcoinVerifier": {
+      "address": "0x16db23c4b99bbC9A6Bf55dF7a787C9AEFD261185"
+    },
+    "GitcoinResolver": {
+      "address": ""
+    },
+    "GitcoinPassportDecoder": {
+      "address": ""
+    },
+    "easSchemas": {
+      "namingSchema": {
+        "uid": ""
+      },
+      "passport": {
+        "uid": ""
+      },
+      "score": {
+        "uid": ""
+      }
+    }
   }
 }

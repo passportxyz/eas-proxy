@@ -139,6 +139,14 @@ let config: HardhatUserConfig = {
           apiURL: "https://api-sepolia.scrollscan.com/api",
           browserURL: "https://sepolia.scrollscan.com/"
         }
+      },
+      {
+        network: "shape-sepolia",
+        chainId: 11011,
+        urls: {
+          apiURL: "https://shape-sepolia-explorer.alchemy.com/api",
+          browserURL: "https://shape-sepolia-explorer.alchemy.com/"
+        }
       }
     ]
   },
@@ -299,6 +307,15 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 534352,
         from: process.env.DEPLOYER_ADDRESS as string
+      };
+    }
+    if (process.env.SHAPE_SEPOLIA_PROVIDER_URL) {
+      config.networks["shape-sepolia"] = {
+        url: process.env.SHAPE_SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 11011,
+        from: process.env.DEPLOYER_ADDRESS as string,
+        gasPrice: 9068663
       };
     }
   }
