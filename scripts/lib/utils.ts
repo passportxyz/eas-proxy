@@ -184,6 +184,13 @@ export function getVerifierAddress() {
   return verifierAddress;
 }
 
+export function getDecoderAddress() {
+  const decoderAddress = getThisChainInfo().GitcoinPassportDecoder?.address;
+  if (!decoderAddress)
+    throw new Error("GitcoinPassportDecoder address not found in onchainInfo");
+  return decoderAddress;
+}
+
 export function getEASAddress() {
   const easAddress = getThisChainInfo().EAS?.address;
   if (!easAddress) throw new Error("EAS address not found in onchainInfo");
