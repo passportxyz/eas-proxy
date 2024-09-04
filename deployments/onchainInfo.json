@@ -469,17 +469,17 @@
       "address": "0x90E2C4472Df225e8D31f44725B75FFaA244d5D33"
     },
     "GitcoinPassportDecoder": {
-      "address": ""
+      "address": "0x2443D22Db6d25D141A1138D80724e3Eee54FD4C2"
     },
     "easSchemas": {
       "namingSchema": {
         "uid": ""
       },
       "passport": {
-        "uid": ""
+        "uid": "0x8ae6ee946bf1c936584cacc969bf7e9d0b274631c818df7e45c246051b364341"
       },
       "score": {
-        "uid": ""
+        "uid": "0x24620f482734b3806102678e4b8bb68baafb1adc1ec29e524bcd69c85f15b915"
       }
     }
   }
