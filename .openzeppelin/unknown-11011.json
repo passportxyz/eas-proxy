@@ -20,6 +20,16 @@
       "address": "0x2050256A91cbABD7C42465aA0d5325115C1dEB43",
       "txHash": "0xd835b0e5a44c0fc7f0b9413cf2703a8d007591d70f7937e66010724efc2d7c98",
       "kind": "uups"
+    },
+    {
+      "address": "0x39571bBD5a4c5d1a5184004c63F45FE426dB85Ea",
+      "txHash": "0x65cbb44dad810c8f558b39754403601eac96992dc2f133435efc96f788858da7",
+      "kind": "uups"
+    },
+    {
+      "address": "0x3508ea66D2ccCEcD3aa9215b6471868431CF2AdC",
+      "txHash": "0x8d40a450448b3588766188fdef9788c21e006ade4c3bbf0b86446e73f08e22e4",
+      "kind": "uups"
     }
   ],
   "impls": {
