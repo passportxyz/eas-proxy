@@ -147,6 +147,14 @@ let config: HardhatUserConfig = {
           apiURL: "https://shape-sepolia-explorer.alchemy.com/api",
           browserURL: "https://shape-sepolia-explorer.alchemy.com/"
         }
+      },
+      {
+        network: "shape",
+        chainId: 360,
+        urls: {
+          apiURL: "https://internal-shaper-explorer.alchemypreview.com/api",
+          browserURL: "https://internal-shaper-explorer.alchemypreview.com/"
+        }
       }
     ]
   },
@@ -314,6 +322,15 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         url: process.env.SHAPE_SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 11011,
+        from: process.env.DEPLOYER_ADDRESS as string,
+        gasPrice: 9068663
+      };
+    }
+    if (process.env.SHAPE_PROVIDER_URL) {
+      config.networks["shape"] = {
+        url: process.env.SHAPE_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 360,
         from: process.env.DEPLOYER_ADDRESS as string,
         gasPrice: 9068663
       };
