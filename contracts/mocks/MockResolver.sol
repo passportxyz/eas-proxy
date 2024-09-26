@@ -63,6 +63,13 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
     return scores[user];
   }
 
+  function getCachedScore(
+    uint32 communityId,
+    address user
+  ) external view returns (CachedScore memory) {
+    return scores[user];
+  }
+
   /**
    * @dev Processes multiple attestations and verifies whether they are valid.
    * @param attestations The new attestations.
@@ -122,6 +129,14 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
   }
 
   function getUserAttestation(
+    address user,
+    bytes32 schema
+  ) external view returns (bytes32) {
+    return userAttestations[user][schema];
+  }
+
+  function getUserAttestation(
+    uint32 communityId,
     address user,
     bytes32 schema
   ) external view returns (bytes32) {

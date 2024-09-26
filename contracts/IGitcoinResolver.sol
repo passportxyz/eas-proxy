@@ -14,25 +14,42 @@ interface IGitcoinResolver {
     uint64 expirationTime; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
   }
 
-  /**
-   *
-   * @param user The ETH address of the recipient
-   * @param schema THE UID of the chema
-   * @return The attestation UID or 0x0 if not found
-   */
+  /// @param user The ETH address of the recipient
+  /// @param schema THE UID of the chema
+  /// @return The attestation UID or 0x0 if not found
+  /// @dev Returns the latest user attestation for a given schema
+  /// @dev Only supported for non-community-specific schemas
   function getUserAttestation(
     address user,
     bytes32 schema
   ) external view returns (bytes32);
 
-  /**
-   *
-   * @param user The ETH address of the recipient
-   * @return The `CachedScore` for the given ETH address.
-   * A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
-   */
+  /// @param user The ETH address of the recipient
+  /// @param schema THE UID of the chema
+  /// @return The attestation UID or 0x0 if not found
+  /// @dev Returns the latest user attestation for a given schema
+  /// @dev Only supported for community-specific schemas
+  function getUserAttestation(
+    uint32 communityId,
+    address user,
+    bytes32 schema
+  ) external view returns (bytes32);
 
+  /// @notice Get the cached score for a user in a the default community
+  /// @param user The ETH address of the recipient
+  /// @return The `CachedScore` for the given ETH address.
+  /// @dev A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
   function getCachedScore(
+    address user
+  ) external view returns (CachedScore memory);
+
+  /// @notice Get the cached score for a user in a specific community
+  /// @param communityId The ID of the community
+  /// @param user The ETH address of the recipient
+  /// @return The `CachedScore` for the given ETH address.
+  /// @dev A non-zero value in the `issuanceDate` indicates that a valid score has been retreived.
+  function getCachedScore(
+    uint32 communityId,
     address user
   ) external view returns (CachedScore memory);
 }

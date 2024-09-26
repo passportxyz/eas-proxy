@@ -502,4 +502,191 @@ describe("GitcoinResolver", function () {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
+
+  describe("community scores", function () {
+    const defaultCommunityId = 1;
+    const testCommunityId = 2;
+
+    it("should set the default community ID", async function () {
+      await gitcoinResolver.setDefaultCommunityId(defaultCommunityId);
+      expect(await gitcoinResolver.defaultCommunityId()).to.equal(
+        defaultCommunityId
+      );
+    });
+
+    it("should not allow non-owner to set default community ID", async function () {
+      await expect(
+        gitcoinResolver.connect(recipient).setDefaultCommunityId(1)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    describe("With default community ID set", function () {
+      before(async function () {
+        await gitcoinResolver.setDefaultCommunityId(defaultCommunityId);
+      });
+
+      it("should cache default and community specific scores", async function () {
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        const attestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "12345",
+            scorer_id: defaultCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        await gitcoinResolver.connect(mockEas).attest(attestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(12345);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        const communityAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "67890",
+            scorer_id: testCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        await gitcoinResolver.connect(mockEas).attest(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(12345);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
+      });
+
+      describe("Community User Attestations", function () {
+        let testSchemaId: string;
+
+        before(async function () {
+          testSchemaId = ethers.keccak256(ethers.toUtf8Bytes("test-schema"));
+        });
+
+        it("should store non-community attestation", async function () {
+          const attestation: AttestationStruct = {
+            uid: ethers.keccak256(ethers.toUtf8Bytes("default-attestation")),
+            schema: testSchemaId,
+            time: 1000,
+            expirationTime: 2000,
+            revocationTime: 0,
+            refUID: ethers.ZeroHash,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress,
+            revocable: true,
+            data: "0x"
+          };
+
+          await gitcoinResolver.connect(mockEas).attest(attestation);
+
+          const storedUID = await gitcoinResolver[
+            "getUserAttestation(address,bytes32)"
+          ](recipient.address, testSchemaId);
+          expect(storedUID).to.equal(attestation.uid);
+        });
+
+        it("should store attestation for specific community", async function () {
+          const attestation = getScoreAttestation(
+            {
+              schema: this.scoreSchemaId,
+              recipient: recipient.address,
+              attester: this.gitcoinAttesterAddress
+            },
+            {
+              score: "12345",
+              scorer_id: testCommunityId,
+              score_decimals: 4
+            }
+          ) as AttestationStruct;
+
+          await gitcoinResolver.connect(mockEas).attest(attestation);
+
+          const storedUID = await gitcoinResolver[
+            "getUserAttestation(uint32,address,bytes32)"
+          ](testCommunityId, recipient.address, testSchemaId);
+          expect(storedUID).to.equal(attestation.uid);
+        });
+
+        it("should revoke attestation for specific community", async function () {
+          const attestation: AttestationStruct = {
+            uid: ethers.keccak256(ethers.toUtf8Bytes("community-attestation")),
+            schema: testSchemaId,
+            time: 1000,
+            expirationTime: 2000,
+            revocationTime: 0,
+            refUID: ethers.ZeroHash,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress,
+            revocable: true,
+            data: ethers.AbiCoder.defaultAbiCoder().encode(
+              ["uint32"],
+              [testCommunityId]
+            )
+          };
+
+          await gitcoinResolver.connect(mockEas).revoke(attestation);
+
+          const storedUID = await gitcoinResolver[
+            "getUserAttestation(uint32,address,bytes32)"
+          ](testCommunityId, recipient.address, testSchemaId);
+          expect(storedUID).to.equal(ethers.ZeroHash);
+        });
+      });
+    });
+  });
 });

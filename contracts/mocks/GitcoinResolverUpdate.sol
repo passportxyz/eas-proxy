@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
@@ -31,6 +32,8 @@ contract GitcoinResolverUpdate is
   error NotAllowlisted();
   error InvalidAttester();
 
+  event ScoreSchemaSet(bytes32 schema);
+
   // Mapping of addresses to schemas to an attestation UID
   mapping(address => mapping(bytes32 => bytes32)) public userAttestations;
 
@@ -49,7 +52,16 @@ contract GitcoinResolverUpdate is
   // Mapping of active passport score schemas - used when storing scores to state
   bytes32 public scoreSchema;
 
-  uint256 public aNewPublicVariable;
+  uint32 public defaultCommunityId;
+
+  // Mapping of communityId => address => score
+  mapping(uint32 => mapping(address => CachedScore)) public communityScores;
+
+  // Mapping of communityId => addresses to schemas to an attestation UID
+  mapping(uint32 => mapping(address => mapping(bytes32 => bytes32)))
+    public communityUserAttestations;
+
+  uint256 aNewVariable;
 
   /**
    * @dev Creates a new resolver.
@@ -96,6 +108,19 @@ contract GitcoinResolverUpdate is
     _unpause();
   }
 
+  function setDefaultCommunityId(uint32 communityId) external onlyOwner {
+    defaultCommunityId = communityId;
+  }
+
+  /**
+   * @dev Set supported score schemas.
+   * @param _schema The score schema uid
+   */
+  function setScoreSchema(bytes32 _schema) external onlyOwner {
+    scoreSchema = _schema;
+    emit ScoreSchemaSet(_schema);
+  }
+
   // solhint-disable-next-line no-empty-blocks
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -124,9 +149,12 @@ contract GitcoinResolverUpdate is
       revert InvalidAttester();
     }
 
-    userAttestations[attestation.recipient][attestation.schema] = attestation
-      .uid;
-
+    if (scoreSchema == attestation.schema) {
+      _setScore(attestation);
+    } else {
+      userAttestations[attestation.recipient][attestation.schema] = attestation
+        .uid;
+    }
     return true;
   }
 
@@ -136,7 +164,7 @@ contract GitcoinResolverUpdate is
    */
   function _setScore(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (uint256 score, , uint8 digits) = abi.decode(
+    (uint256 score, uint32 communityId, uint8 digits) = abi.decode(
       attestation.data,
       (uint256, uint32, uint8)
     );
@@ -147,20 +175,63 @@ contract GitcoinResolverUpdate is
       score *= 10 ** (4 - digits);
     }
 
-    scores[attestation.recipient] = CachedScore(
+    CachedScore memory cachedScore = CachedScore(
       uint32(score),
       attestation.time,
       attestation.expirationTime
     );
+
+    if (communityId == defaultCommunityId) {
+      scores[attestation.recipient] = cachedScore;
+      userAttestations[attestation.recipient][attestation.schema] = attestation
+        .uid;
+    } else {
+      communityScores[communityId][attestation.recipient] = cachedScore;
+      communityUserAttestations[communityId][attestation.recipient][
+        attestation.schema
+      ] = attestation.uid;
+    }
   }
 
   /**
-   * @dev Returns the cached score for a given address.
+   * @dev Removes the score data from the state for the specified recipient.
+   * @param attestation The attestation to be removed.
    */
+  function _removeScore(Attestation calldata attestation) private {
+    // Decode the score attestion output
+    (, uint32 communityId, ) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    if (communityId == defaultCommunityId) {
+      delete scores[attestation.recipient];
+      delete userAttestations[attestation.recipient][attestation.schema];
+    } else {
+      delete communityScores[communityId][attestation.recipient];
+      delete communityUserAttestations[communityId][attestation.recipient][
+        attestation.schema
+      ];
+    }
+  }
+
+  /// @inheritdoc IGitcoinResolver
   function getCachedScore(
     address user
   ) external view returns (CachedScore memory) {
     return scores[user];
+  }
+
+  /// @inheritdoc IGitcoinResolver
+  function getCachedScore(
+    uint32 communityId,
+    address user
+  ) external view returns (CachedScore memory) {
+    if (communityId == defaultCommunityId) {
+      return scores[user];
+    } else {
+      return communityScores[communityId][user];
+    }
   }
 
   /**
@@ -215,16 +286,35 @@ contract GitcoinResolverUpdate is
     return true;
   }
 
+  /**
+   * @dev Processes an revocation request
+   * @param attestation The new attestation request.
+   * @return true indicating if the pre-revocation have been performed and the revocation process should continue
+   */
   function _revoke(Attestation calldata attestation) internal returns (bool) {
-    userAttestations[attestation.recipient][attestation.schema] = 0;
+    if (attestation.schema == scoreSchema) {
+      _removeScore(attestation);
+    } else {
+      userAttestations[attestation.recipient][attestation.schema] = 0;
+    }
 
     return true;
   }
 
+  /// @inheritdoc IGitcoinResolver
   function getUserAttestation(
     address user,
     bytes32 schema
   ) external view returns (bytes32) {
     return userAttestations[user][schema];
+  }
+
+  /// @inheritdoc IGitcoinResolver
+  function getUserAttestation(
+    uint32 communityId,
+    address user,
+    bytes32 schema
+  ) external view returns (bytes32) {
+    return communityUserAttestations[communityId][user][schema];
   }
 }
