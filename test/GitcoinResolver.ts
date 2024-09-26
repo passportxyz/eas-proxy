@@ -611,81 +611,98 @@ describe("GitcoinResolver", function () {
         ).to.equal(67890);
       });
 
-      describe("Community User Attestations", function () {
-        let testSchemaId: string;
-
-        before(async function () {
-          testSchemaId = ethers.keccak256(ethers.toUtf8Bytes("test-schema"));
-        });
-
-        it("should store non-community attestation", async function () {
-          const attestation: AttestationStruct = {
-            uid: ethers.keccak256(ethers.toUtf8Bytes("default-attestation")),
-            schema: testSchemaId,
-            time: 1000,
-            expirationTime: 2000,
-            revocationTime: 0,
-            refUID: ethers.ZeroHash,
+      it("should revoke default and custom community scores correctly", async function () {
+        const scoreAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
             recipient: recipient.address,
-            attester: this.gitcoinAttesterAddress,
-            revocable: true,
-            data: "0x"
-          };
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "12345",
+            scorer_id: defaultCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
 
-          await gitcoinResolver.connect(mockEas).attest(attestation);
+        // Attest
+        await gitcoinResolver.connect(mockEas).attest(scoreAttestation);
 
-          const storedUID = await gitcoinResolver[
-            "getUserAttestation(address,bytes32)"
-          ](recipient.address, testSchemaId);
-          expect(storedUID).to.equal(attestation.uid);
-        });
-
-        it("should store attestation for specific community", async function () {
-          const attestation = getScoreAttestation(
-            {
-              schema: this.scoreSchemaId,
-              recipient: recipient.address,
-              attester: this.gitcoinAttesterAddress
-            },
-            {
-              score: "12345",
-              scorer_id: testCommunityId,
-              score_decimals: 4
-            }
-          ) as AttestationStruct;
-
-          await gitcoinResolver.connect(mockEas).attest(attestation);
-
-          const storedUID = await gitcoinResolver[
-            "getUserAttestation(uint32,address,bytes32)"
-          ](testCommunityId, recipient.address, testSchemaId);
-          expect(storedUID).to.equal(attestation.uid);
-        });
-
-        it("should revoke attestation for specific community", async function () {
-          const attestation: AttestationStruct = {
-            uid: ethers.keccak256(ethers.toUtf8Bytes("community-attestation")),
-            schema: testSchemaId,
-            time: 1000,
-            expirationTime: 2000,
-            revocationTime: 0,
-            refUID: ethers.ZeroHash,
+        const communityAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
             recipient: recipient.address,
-            attester: this.gitcoinAttesterAddress,
-            revocable: true,
-            data: ethers.AbiCoder.defaultAbiCoder().encode(
-              ["uint32"],
-              [testCommunityId]
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "67890",
+            scorer_id: testCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        // Attest
+        await gitcoinResolver.connect(mockEas).attest(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
             )
-          };
+          )[0]
+        ).to.equal(12345);
 
-          await gitcoinResolver.connect(mockEas).revoke(attestation);
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
 
-          const storedUID = await gitcoinResolver[
-            "getUserAttestation(uint32,address,bytes32)"
-          ](testCommunityId, recipient.address, testSchemaId);
-          expect(storedUID).to.equal(ethers.ZeroHash);
-        });
+        // Revoke
+        await gitcoinResolver.connect(mockEas).revoke(scoreAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
+
+        // Revoke
+        await gitcoinResolver.connect(mockEas).revoke(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
       });
     });
   });

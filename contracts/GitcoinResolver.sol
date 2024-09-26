@@ -56,10 +56,6 @@ contract GitcoinResolver is
   // Mapping of communityId => address => score
   mapping(uint32 => mapping(address => CachedScore)) public communityScores;
 
-  // Mapping of communityId => addresses to schemas to an attestation UID
-  mapping(uint32 => mapping(address => mapping(bytes32 => bytes32)))
-    public communityUserAttestations;
-
   /**
    * @dev Creates a new resolver.
    * @notice Initializer function responsible for setting up the contract's initial state.
@@ -184,9 +180,6 @@ contract GitcoinResolver is
         .uid;
     } else {
       communityScores[communityId][attestation.recipient] = cachedScore;
-      communityUserAttestations[communityId][attestation.recipient][
-        attestation.schema
-      ] = attestation.uid;
     }
   }
 
@@ -206,9 +199,6 @@ contract GitcoinResolver is
       delete userAttestations[attestation.recipient][attestation.schema];
     } else {
       delete communityScores[communityId][attestation.recipient];
-      delete communityUserAttestations[communityId][attestation.recipient][
-        attestation.schema
-      ];
     }
   }
 
@@ -304,14 +294,5 @@ contract GitcoinResolver is
     bytes32 schema
   ) external view returns (bytes32) {
     return userAttestations[user][schema];
-  }
-
-  /// @inheritdoc IGitcoinResolver
-  function getUserAttestation(
-    uint32 communityId,
-    address user,
-    bytes32 schema
-  ) external view returns (bytes32) {
-    return communityUserAttestations[communityId][user][schema];
   }
 }

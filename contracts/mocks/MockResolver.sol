@@ -134,12 +134,4 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
   ) external view returns (bytes32) {
     return userAttestations[user][schema];
   }
-
-  function getUserAttestation(
-    uint32 communityId,
-    address user,
-    bytes32 schema
-  ) external view returns (bytes32) {
-    return userAttestations[user][schema];
-  }
 }

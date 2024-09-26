@@ -18,19 +18,8 @@ interface IGitcoinResolver {
   /// @param schema THE UID of the chema
   /// @return The attestation UID or 0x0 if not found
   /// @dev Returns the latest user attestation for a given schema
-  /// @dev Only supported for non-community-specific schemas
+  /// @dev Not supported for community-specific attestations
   function getUserAttestation(
-    address user,
-    bytes32 schema
-  ) external view returns (bytes32);
-
-  /// @param user The ETH address of the recipient
-  /// @param schema THE UID of the chema
-  /// @return The attestation UID or 0x0 if not found
-  /// @dev Returns the latest user attestation for a given schema
-  /// @dev Only supported for community-specific schemas
-  function getUserAttestation(
-    uint32 communityId,
     address user,
     bytes32 schema
   ) external view returns (bytes32);
