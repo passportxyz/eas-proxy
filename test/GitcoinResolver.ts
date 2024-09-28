@@ -502,4 +502,208 @@ describe("GitcoinResolver", function () {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
+
+  describe("community scores", function () {
+    const defaultCommunityId = 1;
+    const testCommunityId = 2;
+
+    it("should set the default community ID", async function () {
+      await gitcoinResolver.setDefaultCommunityId(defaultCommunityId);
+      expect(await gitcoinResolver.defaultCommunityId()).to.equal(
+        defaultCommunityId
+      );
+    });
+
+    it("should not allow non-owner to set default community ID", async function () {
+      await expect(
+        gitcoinResolver.connect(recipient).setDefaultCommunityId(1)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    describe("With default community ID set", function () {
+      before(async function () {
+        await gitcoinResolver.setDefaultCommunityId(defaultCommunityId);
+      });
+
+      it("should cache default and community specific scores", async function () {
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        const attestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "12345",
+            scorer_id: defaultCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        await gitcoinResolver.connect(mockEas).attest(attestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(12345);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        const communityAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "67890",
+            scorer_id: testCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        await gitcoinResolver.connect(mockEas).attest(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(12345);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
+      });
+
+      it("should revoke default and custom community scores correctly", async function () {
+        const scoreAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "12345",
+            scorer_id: defaultCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        // Attest
+        await gitcoinResolver.connect(mockEas).attest(scoreAttestation);
+
+        const communityAttestation = getScoreAttestation(
+          {
+            schema: this.scoreSchemaId,
+            recipient: recipient.address,
+            attester: this.gitcoinAttesterAddress
+          },
+          {
+            score: "67890",
+            scorer_id: testCommunityId,
+            score_decimals: 4
+          }
+        ) as AttestationStruct;
+
+        // Attest
+        await gitcoinResolver.connect(mockEas).attest(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(12345);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
+
+        // Revoke
+        await gitcoinResolver.connect(mockEas).revoke(scoreAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(67890);
+
+        // Revoke
+        await gitcoinResolver.connect(mockEas).revoke(communityAttestation);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              defaultCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+
+        expect(
+          (
+            await gitcoinResolver["getCachedScore(uint32,address)"](
+              testCommunityId,
+              recipient.address
+            )
+          )[0]
+        ).to.equal(0);
+      });
+    });
+  });
 });

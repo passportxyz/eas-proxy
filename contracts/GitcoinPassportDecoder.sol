@@ -457,6 +457,30 @@ contract GitcoinPassportDecoder is
   }
 
   /**
+   * @dev Retrieves the user's Score attestation for a given community via the GitcoinResolver and returns it as a 4 digit number
+   * @param user The ETH address of the recipient
+   */
+  function getScore(
+    uint32 communityId,
+    address user
+  ) public view returns (uint256) {
+    IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver
+      .getCachedScore(communityId, user);
+
+    if (cachedScore.time != 0) {
+      // Check for expiration time
+      if (_isCachedScoreExpired(cachedScore)) {
+        revert AttestationExpired(cachedScore.time);
+      }
+
+      // Return the score value
+      return cachedScore.score;
+    } else {
+      revert AttestationNotFound();
+    }
+  }
+
+  /**
    * @dev Determines if a user is a human based on their score being above a certain threshold and valid within the max score age
    * @param user The ETH address of the recipient
    */

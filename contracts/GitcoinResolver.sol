@@ -51,6 +51,11 @@ contract GitcoinResolver is
   // Mapping of active passport score schemas - used when storing scores to state
   bytes32 public scoreSchema;
 
+  uint32 public defaultCommunityId;
+
+  // Mapping of communityId => address => score
+  mapping(uint32 => mapping(address => CachedScore)) public communityScores;
+
   /**
    * @dev Creates a new resolver.
    * @notice Initializer function responsible for setting up the contract's initial state.
@@ -96,6 +101,10 @@ contract GitcoinResolver is
     _unpause();
   }
 
+  function setDefaultCommunityId(uint32 communityId) external onlyOwner {
+    defaultCommunityId = communityId;
+  }
+
   /**
    * @dev Set supported score schemas.
    * @param _schema The score schema uid
@@ -133,11 +142,11 @@ contract GitcoinResolver is
       revert InvalidAttester();
     }
 
-    userAttestations[attestation.recipient][attestation.schema] = attestation
-      .uid;
-
     if (scoreSchema == attestation.schema) {
       _setScore(attestation);
+    } else {
+      userAttestations[attestation.recipient][attestation.schema] = attestation
+        .uid;
     }
     return true;
   }
@@ -148,7 +157,7 @@ contract GitcoinResolver is
    */
   function _setScore(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (uint256 score, , uint8 digits) = abi.decode(
+    (uint256 score, uint32 communityId, uint8 digits) = abi.decode(
       attestation.data,
       (uint256, uint32, uint8)
     );
@@ -159,31 +168,57 @@ contract GitcoinResolver is
       score *= 10 ** (4 - digits);
     }
 
-    scores[attestation.recipient] = CachedScore(
+    CachedScore memory cachedScore = CachedScore(
       uint32(score),
       attestation.time,
       attestation.expirationTime
     );
+
+    if (communityId == defaultCommunityId || defaultCommunityId == 0) {
+      scores[attestation.recipient] = cachedScore;
+      userAttestations[attestation.recipient][attestation.schema] = attestation
+        .uid;
+    } else {
+      communityScores[communityId][attestation.recipient] = cachedScore;
+    }
   }
 
   /**
    * @dev Removes the score data from the state for the specified recipient.
-   * @param recipient The recipient of the score which needs to be removed.
+   * @param attestation The attestation to be removed.
    */
-  function _removeScore(address recipient) private {
-    delete scores[recipient];
+  function _removeScore(Attestation calldata attestation) private {
+    // Decode the score attestion output
+    (, uint32 communityId, ) = abi.decode(
+      attestation.data,
+      (uint256, uint32, uint8)
+    );
+
+    if (communityId == defaultCommunityId || defaultCommunityId == 0) {
+      delete scores[attestation.recipient];
+      delete userAttestations[attestation.recipient][attestation.schema];
+    } else {
+      delete communityScores[communityId][attestation.recipient];
+    }
   }
 
-  /**
-   *
-   * @param user The ETH address of the recipient
-   * @return The `CachedScore` for the given ETH address.
-   * A non-zero value in the `time` (issuance time) indicates that a valid score has been retreived.
-   */
+  /// @inheritdoc IGitcoinResolver
   function getCachedScore(
     address user
   ) external view returns (CachedScore memory) {
     return scores[user];
+  }
+
+  /// @inheritdoc IGitcoinResolver
+  function getCachedScore(
+    uint32 communityId,
+    address user
+  ) external view returns (CachedScore memory) {
+    if (communityId == defaultCommunityId || defaultCommunityId == 0) {
+      return scores[user];
+    } else {
+      return communityScores[communityId][user];
+    }
   }
 
   /**
@@ -244,18 +279,16 @@ contract GitcoinResolver is
    * @return true indicating if the pre-revocation have been performed and the revocation process should continue
    */
   function _revoke(Attestation calldata attestation) internal returns (bool) {
-    userAttestations[attestation.recipient][attestation.schema] = 0;
-    _removeScore(attestation.recipient);
+    if (attestation.schema == scoreSchema) {
+      _removeScore(attestation);
+    } else {
+      userAttestations[attestation.recipient][attestation.schema] = 0;
+    }
 
     return true;
   }
 
-  /**
-   *
-   * @param user The ETH address of the recipient
-   * @param schema THE UID of the chema
-   * @return The attestation UID or 0x0 if not found
-   */
+  /// @inheritdoc IGitcoinResolver
   function getUserAttestation(
     address user,
     bytes32 schema
