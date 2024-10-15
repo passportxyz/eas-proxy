@@ -49,7 +49,8 @@ let config: HardhatUserConfig = {
       "eth-mainnet": process.env.ETHERSCAN_API_KEY as string,
       "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string,
       scroll: process.env.SCROLL_ETHERSCAN_API_KEY as string,
-      "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string
+      "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string,
+      "shape": "dummy api key"
     },
     customChains: [
       {
@@ -152,8 +153,8 @@ let config: HardhatUserConfig = {
         network: "shape",
         chainId: 360,
         urls: {
-          apiURL: "https://internal-shaper-explorer.alchemypreview.com/api",
-          browserURL: "https://internal-shaper-explorer.alchemypreview.com/"
+          apiURL: "https://shapescan.xyz/api",
+          browserURL: "https://shapescan.xyz/"
         }
       }
     ]
