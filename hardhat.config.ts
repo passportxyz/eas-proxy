@@ -78,6 +78,14 @@ let config: HardhatUserConfig = {
         }
       },
       {
+        network: "optimism",
+        chainId: 0xa,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/"
+        }
+      },
+      {
         network: "optimism-sepolia",
         chainId: 0xaa37dc,
         urls: {
