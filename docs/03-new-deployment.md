@@ -7,13 +7,15 @@ This is the process to deploy these contracts to a new chain:
 2. Run `initializeChainInfo.ts` and follow instructions
 3. Run `deployVerifierAndAttester.ts` (this calls addVerifier and setEASAddress)
 4. Run `deployResolver.ts`
-5. Run `deployPassportDecoder.ts`
-6. Run `setupDecoder.ts`
-7. Verify contracts, make sure everything looks good
-8. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
-9. Create EAS schemas pointing to the new resolver,
+5. Run `deploySchemas.ts`
+6. Run `resolverSetScoreSchema.ts`
+6. Run `deployPassportDecoder.ts`
+7. Run `setupDecoder.ts`
+8. Verify contracts, make sure everything looks good
+9. Ensure `PASSPORT_MULTISIG_ADDRESS` is set in your .env, then run `transferOwnership.ts`
+10. Create EAS schemas pointing to the new resolver,
    add to `onChainInfo.json`
-10. In the Passport app, copy over the new `deployments` directory and
+11. In the Passport app, copy over the new `deployments` directory and
     configure `NEXT_PUBLIC_ACTIVE_ON_CHAIN_PASSPORT_CHAINIDS`
     and `NEXT_PUBLIC_POSSIBLE_ON_CHAIN_PASSPORT_CHAINIDS`
 
@@ -80,6 +82,14 @@ vim deployments/onchainInfo.json
 npx hardhat run scripts/deployVerifierAndAttester.ts --network optimism
 
 npx hardhat run scripts/deployResolver.ts --network optimism
+
+npx hardhat run scripts/deploySchemas.ts --network optimism
+
+npx hardhat run scripts/resolverSetScoreSchema.ts --network optimism
+
+npx hardhat run scripts/deployPassportDecoder.ts --network optimism
+
+npx hardhat run scripts/setupDecoder.ts --network optimism
 
 # Using addresses output from previous commands
 npx hardhat verify <verifier_address> --network optimism
