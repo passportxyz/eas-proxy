@@ -50,7 +50,8 @@ let config: HardhatUserConfig = {
       "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string,
       scroll: process.env.SCROLL_ETHERSCAN_API_KEY as string,
       "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string,
-      "shape": "dummy api key"
+      shape: "dummy api key",
+      base: process.env.BASE_ETHERSCAN_API_KEY as string
     },
     customChains: [
       {
@@ -75,6 +76,14 @@ let config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-goerli.basescan.org/api",
           browserURL: "https://goerli.basescan.org/"
+        }
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org/"
         }
       },
       {
@@ -226,6 +235,14 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
         from: process.env.DEPLOYER_ADDRESS as string
         // gasPrice: 280000000,
         // gasPrice: 9068663
+      };
+    }
+    if (process.env.BASE_PROVIDER_URL) {
+      config.networks["base"] = {
+        url: process.env.BASE_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 8453,
+        from: process.env.DEPLOYER_ADDRESS as string
       };
     }
     if (process.env.ARBITRUM_PROVIDER_URL) {

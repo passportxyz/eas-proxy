@@ -22,14 +22,16 @@ export async function main() {
   const revocable = true;
   const schemaRegistryContractAddress = getEASSchemaRegistryAddress();
 
+  const deployer = await hre.ethers.provider.getSigner();
+
   const schemaRegistry = new ethers.Contract(
     ethers.getAddress(schemaRegistryContractAddress),
     SCHEMA_REGISTRY_ABI,
-    await hre.ethers.provider.getSigner()
+    deployer
   );
 
   await confirmContinue({
-    contract: "GitcoinVerifier",
+    action: "Deploying schemas",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
     registryAddress: schemaRegistryContractAddress,
@@ -37,7 +39,7 @@ export async function main() {
     scoreSchema: scoreSchema,
     passportSchema: passportSchema,
     revocable: revocable,
-    deplyerAddress: await (await hre.ethers.provider.getSigner()).getAddress()
+    deployerAddress: await deployer.getAddress()
   });
 
   const txScoreSchema = await schemaRegistry.register(

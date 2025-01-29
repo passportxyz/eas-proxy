@@ -19,7 +19,8 @@ export async function deployAttester() {
     deployedAddress
   );
 
-  await deployment.setEASAddress(easAddress);
+  const setEasTx = await deployment.setEASAddress(easAddress);
+  await setEasTx.wait();
   console.log(`✅ Set EAS address ${easAddress} on GitcoinAttester.`);
 
   return deployment;

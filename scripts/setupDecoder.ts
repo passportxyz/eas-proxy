@@ -88,7 +88,8 @@ export async function main() {
   });
 
   if (currentEas != easAddress) {
-    await passportDecoder.setEASAddress(easAddress);
+    const setEASTx = await passportDecoder.setEASAddress(easAddress);
+    await setEASTx.wait();
     console.log(`✅ Set EAS address ${easAddress} on GitcoinPassportDecoder.`);
   } else {
     console.log(
@@ -97,7 +98,10 @@ export async function main() {
   }
 
   if (currentGitcoinResolver != getResolverAddress()) {
-    await passportDecoder.setGitcoinResolver(getResolverAddress());
+    const setResolverTx = await passportDecoder.setGitcoinResolver(
+      getResolverAddress()
+    );
+    await setResolverTx.wait();
     console.log(
       `✅ Set GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
     );
@@ -108,9 +112,10 @@ export async function main() {
   }
 
   if (currentPassportSchemaUID != chainInfo.easSchemas.passport.uid) {
-    await passportDecoder.setPassportSchemaUID(
+    const setPassportSchemaTx = await passportDecoder.setPassportSchemaUID(
       chainInfo.easSchemas.passport.uid
     );
+    await setPassportSchemaTx.wait();
     console.log(
       `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.passport.uid} on GitcoinPassportDecoder.`
     );
@@ -121,7 +126,10 @@ export async function main() {
   }
 
   if (currentScoreSchemaUID != chainInfo.easSchemas.score.uid) {
-    await passportDecoder.setScoreSchemaUID(chainInfo.easSchemas.score.uid);
+    const setScoreSchemaTx = await passportDecoder.setScoreSchemaUID(
+      chainInfo.easSchemas.score.uid
+    );
+    await setScoreSchemaTx.wait();
     console.log(
       `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
     );
@@ -132,7 +140,8 @@ export async function main() {
   }
 
   if (currentMaxScoreAge != maxScoreAge) {
-    await passportDecoder.setMaxScoreAge(maxScoreAge);
+    const setMaxScoreAgeTx = await passportDecoder.setMaxScoreAge(maxScoreAge);
+    await setMaxScoreAgeTx.wait();
     console.log(
       `✅ Set maxScoreAge to ${maxScoreAge} on GitcoinPassportDecoder.`
     );
@@ -143,7 +152,8 @@ export async function main() {
   }
 
   if (currentThreshold != threshold) {
-    await passportDecoder.setThreshold(threshold);
+    const setThresholdTx = await passportDecoder.setThreshold(threshold);
+    await setThresholdTx.wait();
     console.log(`✅ Set threshold to ${threshold} on GitcoinPassportDecoder.`);
   } else {
     console.log(

@@ -132,9 +132,10 @@ export function addChainInfoToFile(
 }
 
 export async function transferOwnershipToMultisig(deployment: any) {
-  await deployment.transferOwnership(
+  const tx = await deployment.transferOwnership(
     process.env.PASSPORT_MULTISIG_ADDRESS || ""
   );
+  await tx.wait();
   console.log("✅ Transferred ownership of contract to multisig");
 }
 

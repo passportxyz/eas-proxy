@@ -28,7 +28,6 @@ export async function main() {
   console.log("✅ Deployed GitcoinAttester");
   const attesterAddress = await attester.getAddress();
 
-
   console.log("🚀 Deploying GitcoinVerifier...");
   const verifier = await deployVerifier(attesterAddress, issuerAddress);
   console.log("✅ Deployed GitcoinVerifier");
