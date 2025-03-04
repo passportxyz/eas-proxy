@@ -42,6 +42,9 @@ contract GitcoinPassportDecoder is
   // Score attestation schema UID
   bytes32 public scoreSchemaUID;
 
+  // Score attestation schema UID
+  bytes32 public scoreV2SchemaUID;
+
   // Maximum score age in seconds
   uint64 public maxScoreAge;
 
@@ -156,6 +159,18 @@ contract GitcoinPassportDecoder is
   }
 
   /**
+   * @dev Sets the schemaUID for the Score Attestation.
+   * @param _schemaUID The UID of the schema used to make the user's score attestation
+   */
+  function setScoreV2SchemaUID(bytes32 _schemaUID) public onlyOwner {
+    if (_schemaUID == bytes32(0)) {
+      revert ZeroValue();
+    }
+    scoreV2SchemaUID = _schemaUID;
+    emit SchemaSet(_schemaUID);
+  }
+
+  /**
    * @dev Sets the maximum allowed age of the score
    * @param _maxScoreAge Max age of the score in seconds
    */
@@ -245,6 +260,42 @@ contract GitcoinPassportDecoder is
     return attestation;
   }
 
+  function _getPassportFromScoreV2(
+    bytes32 attestationUID
+  ) internal view returns (Credential[] memory) {
+    // Get the attestation from the user's attestation UID
+    Attestation memory attestation = getAttestation(attestationUID);
+
+    // Check for expiration time
+    if (
+      attestation.expirationTime > 0 &&
+      attestation.expirationTime <= block.timestamp
+    ) {
+      revert AttestationExpired(attestation.expirationTime);
+    }
+
+    // Decode the attestion output
+    (, , , , , , IGitcoinResolver.Stamp[] memory stamps) = abi.decode(
+      attestation.data,
+      (bool, uint8, uint128, uint32, uint32, uint48, IGitcoinResolver.Stamp[])
+    );
+
+    Credential[] memory credentials = new Credential[](stamps.length);
+
+    for (uint256 i = 0; i < stamps.length; ) {
+      credentials[i].provider = stamps[i].provider;
+      credentials[i].hash = bytes32(0);
+      credentials[i].time = attestation.time;
+      credentials[i].expirationTime = attestation.expirationTime;
+
+      unchecked {
+        ++i;
+      }
+    }
+
+    return credentials;
+  }
+
   /**
    * @dev Retrieves the user's Passport attestation via the GitcoinResolver and IEAS and decodes the bits in the provider map to output a readable Passport
    * @param user User's address
@@ -252,6 +303,15 @@ contract GitcoinPassportDecoder is
   function getPassport(
     address user
   ) external view returns (Credential[] memory) {
+    bytes32 scoreV2AttestationUID = gitcoinResolver.getUserAttestation(
+      user,
+      scoreV2SchemaUID
+    );
+
+    if (scoreV2AttestationUID != 0) {
+      return _getPassportFromScoreV2(scoreV2AttestationUID);
+    }
+
     // Get the attestation UID from the user's attestations
     bytes32 attestationUID = gitcoinResolver.getUserAttestation(
       user,
@@ -366,36 +426,23 @@ contract GitcoinPassportDecoder is
   }
 
   /**
-   * This function will check a score attestation for expiration.
-   * Even though the score attestation does not have an expiry date, ths function will check
-   * that it is not older than `maxScoreAge` seconds since issuance.
-   *
-   * @param attestation The attestation to check for expiration
-   */
-  function _isScoreAttestationExpired(
-    Attestation memory attestation
-  ) internal view returns (bool) {
-    if (attestation.expirationTime > 0) {
-      return block.timestamp > attestation.expirationTime;
-    }
-
-    return block.timestamp > attestation.time + maxScoreAge;
-  }
-
-  /**
-   * This function will check a cached score for expiration (this is the equivalent
-   * of the `_isScoreAttestationExpired` function for cached scores)
+   * This function will check a cached score for expiration
    *
    * @param score The attestation to check for expiration
    */
-  function _isCachedScoreExpired(
+  function _checkExpiration(
     IGitcoinResolver.CachedScore memory score
-  ) internal view returns (bool) {
-    if (score.expirationTime > 0) {
-      // If the score has an expiration time, check that it is not expired
-      return block.timestamp > score.expirationTime;
+  ) internal view {
+    // Use score expiration if available
+    uint64 expirationTime = score.expirationTime;
+    if (expirationTime == 0) {
+      // Otherwise, use maxScoreAge
+      expirationTime = score.time + maxScoreAge;
     }
-    return (block.timestamp > score.time + maxScoreAge);
+
+    if (block.timestamp >= expirationTime) {
+      revert AttestationExpired(expirationTime);
+    }
   }
 
   /**
@@ -406,54 +453,14 @@ contract GitcoinPassportDecoder is
     IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver
       .getCachedScore(user);
 
-    if (cachedScore.time != 0) {
-      // Check for expiration time
-      if (_isCachedScoreExpired(cachedScore)) {
-        revert AttestationExpired(cachedScore.time);
-      }
-
-      // Return the score value
-      return cachedScore.score;
-    }
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    // Fallback: read the score from the attestation if retreiving it from the cache eas not possible
-    //////////////////////////////////////////////////////////////////////////////////////////////////
-    bytes32 attestationUID = gitcoinResolver.getUserAttestation(
-      user,
-      scoreSchemaUID
-    );
-
-    // Check if the attestation UID exists within the GitcoinResolver. When an attestation is revoked that attestation UID is set to 0.
-    if (attestationUID == 0) {
+    if (cachedScore.time == 0) {
       revert AttestationNotFound();
     }
 
-    // Get the attestation from the user's attestation UID
-    Attestation memory attestation = getAttestation(attestationUID);
-
-    // Decode the attestion output
-    uint256 score;
-    uint8 decimals;
-    (score, , decimals) = abi.decode(
-      attestation.data,
-      (uint256, uint32, uint8)
-    );
-
-    // Convert the number to a 4 digit number
-    if (decimals > 4) {
-      score /= 10 ** (decimals - 4);
-    } else if (decimals < 4) {
-      score *= 10 ** (4 - decimals);
-    }
-
-    // Check if score is older than max age
-    if (_isScoreAttestationExpired(attestation)) {
-      revert AttestationExpired(attestation.time + maxScoreAge);
-    }
+    _checkExpiration(cachedScore);
 
     // Return the score value
-    return score;
+    return cachedScore.score;
   }
 
   /**
@@ -467,17 +474,14 @@ contract GitcoinPassportDecoder is
     IGitcoinResolver.CachedScore memory cachedScore = gitcoinResolver
       .getCachedScore(communityId, user);
 
-    if (cachedScore.time != 0) {
-      // Check for expiration time
-      if (_isCachedScoreExpired(cachedScore)) {
-        revert AttestationExpired(cachedScore.time);
-      }
-
-      // Return the score value
-      return cachedScore.score;
-    } else {
+    if (cachedScore.time == 0) {
       revert AttestationNotFound();
     }
+
+    _checkExpiration(cachedScore);
+
+    // Return the score value
+    return cachedScore.score;
   }
 
   /**
