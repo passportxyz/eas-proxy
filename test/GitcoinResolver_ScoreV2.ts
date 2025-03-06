@@ -5,9 +5,11 @@ import {
   NO_EXPIRATION
 } from "@ethereum-attestation-service/eas-sdk";
 import { GitcoinAttester, GitcoinResolver } from "../typechain-types";
-import { encodedData, getScoreAttestation } from "./helpers/mockAttestations";
+import { getScoreAttestation } from "./helpers/mockAttestations";
 import { AttestationStruct } from "../typechain-types/contracts/GitcoinResolver";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { registerSchema } from "./GitcoinResolver";
+import { scoreV2EasSchema } from "./GitcoinPassportDecoder";
 
 // Helper function to create ScoreV2 attestation data
 function getScoreV2Attestation(
@@ -121,8 +123,11 @@ describe("GitcoinResolver - ScoreV2", function () {
     const gitcoinResolverAddress = await gitcoinResolver.getAddress();
 
     // Register SchemaV2
-    // For testing purposes, we'll just create a schema ID without actual registry interaction
-    scoreV2SchemaId = ethers.keccak256(ethers.toUtf8Bytes("scoreV2Schema"));
+    scoreV2SchemaId = await registerSchema(
+      owner,
+      gitcoinResolverAddress,
+      scoreV2EasSchema
+    );
 
     // Set the ScoreV2 schema
     await gitcoinResolver.connect(owner).setScoreV2Schema(scoreV2SchemaId);

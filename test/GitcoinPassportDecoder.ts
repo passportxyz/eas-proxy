@@ -3,15 +3,11 @@ import { ethers } from "hardhat";
 import {
   SchemaEncoder,
   ZERO_ADDRESS,
-  ZERO_BYTES32,
-  Attestation
+  ZERO_BYTES32
 } from "@ethereum-attestation-service/eas-sdk";
 import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 import { schemaRegistryContractAddress } from "./GitcoinResolver";
-import {
-  getScoreAttestation,
-  easEncodeScore
-} from "./helpers/mockAttestations";
+import { getScoreAttestation } from "./helpers/mockAttestations";
 import {
   AttestationStruct,
   GitcoinResolver
@@ -65,6 +61,9 @@ const invalidHashes = [
     "0x84c6f60094c95180e54fac3e9a5cfde8ca430e598e987504474151a219af2d35"
   )
 ];
+
+export const scoreV2EasSchema =
+  "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, uint48 reserved, tuple(string provider, uint32 score)[] stamps";
 
 const easEncodePassport = () => {
   const schemaEncoder = new SchemaEncoder(
@@ -139,9 +138,6 @@ describe("GitcoinPassportDecoder", function () {
   let otherAccount: HardhatEthersSigner;
 
   // Define the schema for V2 scores
-  const scoreV2EasSchema =
-    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, uint48 reserved, tuple(string provider, uint32 score)[] stamps";
-
   this.beforeAll(async function () {
     [ownerAccount, iamAccount, recipientAccount, otherAccount] =
       await ethers.getSigners();
@@ -255,6 +251,8 @@ describe("GitcoinPassportDecoder", function () {
     await gitcoinPassportDecoder.setMaxScoreAge(maxScoreAge); // Sets the max age to 90 days
     await gitcoinPassportDecoder.setScoreSchemaUID(scoreSchemaUID);
     await gitcoinPassportDecoder.setScoreV2SchemaUID(scoreV2SchemaUID);
+
+    await gitcoinResolver.setDefaultCommunityId(1);
     await gitcoinResolver.setScoreSchema(scoreSchemaUID);
     await gitcoinResolver.setScoreV2Schema(scoreV2SchemaUID);
   });
@@ -1080,67 +1078,171 @@ describe("GitcoinPassportDecoder", function () {
     }));
     const expirationTime = daysFromNow(10);
 
-    beforeEach(async function () {
-      // Create a V2 score attestation
-      const data = easEncodeScoreV2({
-        passing_score: true,
-        score_decimals: BigInt(5),
-        scorer_id: BigInt(1),
-        score: BigInt("330000"),
-        threshold: BigInt("300000"),
-        stamps
+    describe("with a passing score", function () {
+      beforeEach(async function () {
+        // Create a V2 score attestation
+        const data1 = easEncodeScoreV2({
+          passing_score: true,
+          score_decimals: BigInt(5),
+          scorer_id: BigInt(1),
+          score: BigInt("330000"),
+          threshold: BigInt("300000"),
+          stamps
+        });
+
+        // Create another, in a different community
+        const data2 = easEncodeScoreV2({
+          passing_score: true,
+          score_decimals: BigInt(5),
+          scorer_id: BigInt(2),
+          score: BigInt("660000"),
+          threshold: BigInt("300000"),
+          stamps: stamps.map((stamp) => ({ ...stamp, score: BigInt("220000") }))
+        });
+
+        const attestationRequest = {
+          multiAttestationRequest: [
+            {
+              schema: scoreV2SchemaUID,
+              data: [
+                {
+                  recipient: recipientAccount.address,
+                  expirationTime,
+                  revocable: true,
+                  refUID: ZERO_BYTES32,
+                  data: data1,
+                  value: 0
+                }
+              ]
+            },
+            {
+              schema: scoreV2SchemaUID,
+              data: [
+                {
+                  recipient: recipientAccount.address,
+                  expirationTime,
+                  revocable: true,
+                  refUID: ZERO_BYTES32,
+                  data: data2,
+                  value: 0
+                }
+              ]
+            }
+          ],
+          nonce: await this.getNonce(recipientAccount.address),
+          fee: fee1
+        };
+
+        const signature = await iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          attestationRequest
+        );
+
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        await (
+          await gitcoinVerifier.verifyAndAttest(attestationRequest, v, r, s, {
+            value: fee1
+          })
+        ).wait();
       });
 
-      const attestationRequest = {
-        multiAttestationRequest: [
-          {
-            schema: scoreV2SchemaUID,
-            data: [
-              {
-                recipient: recipientAccount.address,
-                expirationTime,
-                revocable: true,
-                refUID: ZERO_BYTES32,
-                data,
-                value: 0
-              }
-            ]
-          }
-        ],
-        nonce: await this.getNonce(recipientAccount.address),
-        fee: fee1
-      };
+      it("should fetch passport from ScoreV2 schema", async function () {
+        const passport = await gitcoinPassportDecoder.getPassport(
+          recipientAccount.address
+        );
 
-      const signature = await iamAccount.signTypedData(
-        this.domain,
-        passportTypes,
-        attestationRequest
-      );
+        // Check that we have the right number of credentials
+        expect(passport.length).to.equal(providerNames.length);
 
-      const { v, r, s } = ethers.Signature.from(signature);
+        // Check the credential properties
+        for (let i = 0; i < passport.length; i++) {
+          expect(passport[i].provider).to.equal(providerNames[i]);
+          expect(passport[i].expirationTime).to.equal(expirationTime);
+          expect(passport[i].hash).to.equal(ZERO_BYTES32);
+        }
+      });
 
-      // Submit attestations
-      await (
-        await gitcoinVerifier.verifyAndAttest(attestationRequest, v, r, s, {
-          value: fee1
-        })
-      ).wait();
+      it("should get a user's score", async function () {
+        const score = await gitcoinPassportDecoder["getScore(address)"](
+          recipientAccount.address
+        );
+        // We expect the value as a 4 digit decimal
+        expect(score).to.equal(33000);
+      });
+
+      it("should get a user's score in a community", async function () {
+        const score = await gitcoinPassportDecoder["getScore(uint32,address)"](
+          2,
+          recipientAccount.address
+        );
+        // We expect the value as a 4 digit decimal
+        expect(score).to.equal(66000);
+      });
+
+      it("should pass when isHuman", async function () {
+        const isHuman = await gitcoinPassportDecoder.isHuman(
+          recipientAccount.address
+        );
+        expect(isHuman).to.equal(true);
+      });
     });
 
-    it("should fetch passport from ScoreV2 schema", async function () {
-      const passport = await gitcoinPassportDecoder.getPassport(
-        recipientAccount.address
-      );
+    describe("with a low score", function () {
+      beforeEach(async function () {
+        const lowScoreData = easEncodeScoreV2({
+          passing_score: false,
+          score_decimals: BigInt(5),
+          scorer_id: BigInt(1),
+          score: BigInt("90000"),
+          threshold: BigInt("300000"),
+          stamps: stamps.map((stamp) => ({ ...stamp, score: BigInt("30000") }))
+        });
 
-      // Check that we have the right number of credentials
-      expect(passport.length).to.equal(providerNames.length);
+        const attestationRequest = {
+          multiAttestationRequest: [
+            {
+              schema: scoreV2SchemaUID,
+              data: [
+                {
+                  recipient: recipientAccount.address,
+                  expirationTime,
+                  revocable: true,
+                  refUID: ZERO_BYTES32,
+                  data: lowScoreData,
+                  value: 0
+                }
+              ]
+            }
+          ],
+          nonce: await this.getNonce(recipientAccount.address),
+          fee: fee1
+        };
 
-      // Check the credential properties
-      for (let i = 0; i < passport.length; i++) {
-        expect(passport[i].provider).to.equal(providerNames[i]);
-        expect(passport[i].expirationTime).to.equal(expirationTime);
-        expect(passport[i].hash).to.equal(ZERO_BYTES32);
-      }
+        const signature = await iamAccount.signTypedData(
+          this.domain,
+          passportTypes,
+          attestationRequest
+        );
+
+        const { v, r, s } = ethers.Signature.from(signature);
+
+        // Submit attestations
+        await (
+          await gitcoinVerifier.verifyAndAttest(attestationRequest, v, r, s, {
+            value: fee1
+          })
+        ).wait();
+      });
+
+      it("should fail when not isHuman", async function () {
+        const isHuman = await gitcoinPassportDecoder.isHuman(
+          recipientAccount.address
+        );
+        expect(isHuman).to.equal(false);
+      });
     });
   });
 });

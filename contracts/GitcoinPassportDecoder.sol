@@ -42,14 +42,14 @@ contract GitcoinPassportDecoder is
   // Score attestation schema UID
   bytes32 public scoreSchemaUID;
 
-  // Score attestation schema UID
-  bytes32 public scoreV2SchemaUID;
-
   // Maximum score age in seconds
   uint64 public maxScoreAge;
 
   // Minimum score
   uint256 public threshold;
+
+  // Score attestation schema UID
+  bytes32 public scoreV2SchemaUID;
 
   /// A provider with the same name already exists
   /// @param provider the name of the duplicate provider
@@ -489,6 +489,30 @@ contract GitcoinPassportDecoder is
    * @param user The ETH address of the recipient
    */
   function isHuman(address user) public view returns (bool) {
+    bytes32 scoreV2AttestationUID = gitcoinResolver.getUserAttestation(
+      user,
+      scoreV2SchemaUID
+    );
+
+    if (scoreV2AttestationUID != 0) {
+      Attestation memory attestation = getAttestation(scoreV2AttestationUID);
+
+      if (
+        attestation.expirationTime > 0 &&
+        attestation.expirationTime <= block.timestamp
+      ) {
+        revert AttestationExpired(attestation.expirationTime);
+      }
+
+      // Decode the attestion output
+      (bool passing_score, , , , , , ) = abi.decode(
+        attestation.data,
+        (bool, uint8, uint128, uint32, uint32, uint48, IGitcoinResolver.Stamp[])
+      );
+
+      return passing_score;
+    }
+
     uint256 score = getScore(user);
     return score >= threshold;
   }

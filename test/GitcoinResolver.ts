@@ -13,7 +13,7 @@ import { EAS_SCHEMA_REGISTRY_ADDRESS } from "./helpers/verifierTests";
 
 export const schemaRegistryContractAddress = EAS_SCHEMA_REGISTRY_ADDRESS;
 
-async function registerSchema(
+export async function registerSchema(
   owner: any,
   gitcoinResolverAddress: string,
   schema: string
