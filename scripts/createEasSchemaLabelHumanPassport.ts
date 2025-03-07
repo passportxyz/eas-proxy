@@ -1,14 +1,12 @@
 // This script will create 2 'NAME A SCHEMA' attestations for the scorer and stamps
 // schemas
 
-import hre, { ethers } from "hardhat";
+import hre from "hardhat";
 import {
   confirmContinue,
   assertEnvironment,
   getResolverAddress,
   getEASAddress,
-  getScoreSchema,
-  getPassportSchema,
   getNamingSchema,
   getScoreV2Schema
 } from "./lib/utils";

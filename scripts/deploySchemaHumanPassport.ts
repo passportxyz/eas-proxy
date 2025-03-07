@@ -17,7 +17,7 @@ assertEnvironment();
 export async function main() {
   const resolverAddress = getResolverAddress();
   const scoreV2Schema =
-    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint32 score)[] stamps";
+    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint256 score)[] stamps";
 
   const revocable = true;
   const schemaRegistryContractAddress = getEASSchemaRegistryAddress();

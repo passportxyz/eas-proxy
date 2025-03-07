@@ -63,7 +63,7 @@ const invalidHashes = [
 ];
 
 export const scoreV2EasSchema =
-  "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint32 score)[] stamps";
+  "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint256 score)[] stamps";
 
 const easEncodePassport = () => {
   const schemaEncoder = new SchemaEncoder(
@@ -284,7 +284,7 @@ describe("GitcoinPassportDecoder", function () {
       {
         name: "stamps",
         value: stamps,
-        type: "(string,uint32)[]"
+        type: "(string,uint256)[]"
       }
     ]);
     return encodedData;

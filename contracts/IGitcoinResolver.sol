@@ -17,7 +17,7 @@ interface IGitcoinResolver {
   // @dev Stamp used in encoding of V2 scores
   struct Stamp {
     string provider;
-    uint32 score;
+    uint256 score;
   }
 
   /// @param user The ETH address of the recipient
