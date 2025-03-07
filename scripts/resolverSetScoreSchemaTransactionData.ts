@@ -4,21 +4,21 @@ import hre, { ethers } from "hardhat";
 import {
   assertEnvironment,
   confirmContinue,
-  getScoreSchema,
-  getResolverAddress
+  getResolverAddress,
+  getScoreV2Schema
 } from "./lib/utils";
 
 assertEnvironment();
 
 export async function main() {
-  const scoreSchema = getScoreSchema();
+  const scoreV2Schema = getScoreV2Schema();
   const resolverAddress = getResolverAddress();
 
   await confirmContinue({
     contract: "GitcoinResolver",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
-    scoreSchema: scoreSchema
+    scoreV2Schema
   });
 
   const resolverContract = await ethers.getContractAt(
@@ -26,12 +26,11 @@ export async function main() {
     resolverAddress
   );
 
-  // Encode upgrade transaction
   const upgradeData = resolverContract.interface.encodeFunctionData(
-    "setScoreSchema",
-    [scoreSchema]
+    "setScoreV2Schema",
+    [scoreV2Schema]
   );
-  console.log(`'setScoreSchema' transaction data: ${upgradeData}`);
+  console.log(`'setScoreV2Schema' transaction data: ${upgradeData}`);
 }
 
 main().catch((error) => {

@@ -39,6 +39,9 @@ export async function main() {
           },
           score: {
             uid: ""
+          },
+          scoreV2: {
+            uid: ""
           }
         }
       };

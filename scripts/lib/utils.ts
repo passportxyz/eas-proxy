@@ -139,15 +139,16 @@ export async function transferOwnershipToMultisig(deployment: any) {
   console.log("✅ Transferred ownership of contract to multisig");
 }
 
-type ScheamUid = {
+type SchemaUid = {
   uid: string;
 };
 
 let thisChainInfo: {
   easSchemas: {
-    score: ScheamUid;
-    passport: ScheamUid;
-    namingSchema: ScheamUid;
+    score: SchemaUid;
+    scoreV2: SchemaUid;
+    passport: SchemaUid;
+    namingSchema: SchemaUid;
   };
   GitcoinAttester?: { address?: string };
   GitcoinVerifier?: { address?: string };
@@ -252,6 +253,13 @@ export function getScoreSchema() {
   const scoreSchema = getThisChainInfo().easSchemas?.score.uid;
   if (!scoreSchema)
     throw new Error("Score schema was not found in onchainInfo");
+  return scoreSchema;
+}
+
+export function getScoreV2Schema() {
+  const scoreSchema = getThisChainInfo().easSchemas?.scoreV2.uid;
+  if (!scoreSchema)
+    throw new Error("ScoreV2 schema was not found in onchainInfo");
   return scoreSchema;
 }
 

@@ -41,6 +41,9 @@ populated by scripts_
       },
       "score": {
         "uid": "[✏️ uid of the Passport score EAS Schema]"
+      },
+      "scoreV2": {
+        "uid": "[✏️ uid of the Passport score V2 EAS Schema]"
       }
     }
   }

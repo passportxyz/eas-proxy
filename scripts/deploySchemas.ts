@@ -17,6 +17,9 @@ assertEnvironment();
 export async function main() {
   const resolverAddress = getResolverAddress();
   const scoreSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
+  const scoreV2Schema =
+    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, uint48 reserved, tuple(string provider, uint32 score)[] stamps";
+
   const passportSchema =
     "uint256[] providers,bytes32[] hashes,uint64[] issuanceDates,uint64[] expirationDates,uint16 providerMapVersion";
   const revocable = true;
@@ -53,6 +56,17 @@ export async function main() {
   });
   const scoreSchemaUID = scoreSchemaEvent[0].args[0];
 
+  const txScoreV2Schema = await schemaRegistry.register(
+    scoreV2Schema,
+    resolverAddress,
+    revocable
+  );
+  const txScoreV2SchemaReceipt = await txScoreV2Schema.wait();
+  const scoreV2SchemaEvent = txScoreV2SchemaReceipt.logs.filter((log: any) => {
+    return log.fragment.name == "Registered";
+  });
+  const scoreV2SchemaUID = scoreV2SchemaEvent[0].args[0];
+
   const txPassportSchema = await schemaRegistry.register(
     passportSchema,
     resolverAddress,
@@ -75,12 +89,16 @@ export async function main() {
       },
       score: {
         uid: scoreSchemaUID
+      },
+      scoreV2: {
+        uid: scoreV2SchemaUID
       }
     }
   }));
 
   console.log(`✅ Deployed passport schema ${passportSchemaUID}`);
   console.log(`✅ Deployed score schema ${scoreSchemaUID}`);
+  console.log(`✅ Deployed scoreV2 schema ${scoreV2SchemaUID}`);
 }
 
 main().catch((error) => {
