@@ -31,7 +31,6 @@ function getScoreV2Attestation(
       "uint128",
       "uint32",
       "uint32",
-      "uint48",
       "tuple(string provider, uint256 score)[]"
     ],
     [
@@ -40,7 +39,6 @@ function getScoreV2Attestation(
       scoreParams.scorer_id,
       scoreParams.score,
       scoreParams.threshold,
-      0, // Submission time, using 0 as default
       scoreParams.stamps
     ]
   );

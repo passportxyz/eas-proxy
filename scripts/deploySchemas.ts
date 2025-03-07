@@ -18,7 +18,7 @@ export async function main() {
   const resolverAddress = getResolverAddress();
   const scoreSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
   const scoreV2Schema =
-    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, uint48 reserved, tuple(string provider, uint32 score)[] stamps";
+    "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint32 score)[] stamps";
 
   const passportSchema =
     "uint256[] providers,bytes32[] hashes,uint64[] issuanceDates,uint64[] expirationDates,uint16 providerMapVersion";

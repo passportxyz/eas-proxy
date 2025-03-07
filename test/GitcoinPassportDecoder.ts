@@ -63,7 +63,7 @@ const invalidHashes = [
 ];
 
 export const scoreV2EasSchema =
-  "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, uint48 reserved, tuple(string provider, uint32 score)[] stamps";
+  "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint32 score)[] stamps";
 
 const easEncodePassport = () => {
   const schemaEncoder = new SchemaEncoder(
@@ -281,7 +281,6 @@ describe("GitcoinPassportDecoder", function () {
       { name: "scorer_id", value: scorer_id, type: "uint128" },
       { name: "score", value: score, type: "uint32" },
       { name: "threshold", value: threshold, type: "uint32" },
-      { name: "reserved", value: 0, type: "uint48" },
       {
         name: "stamps",
         value: stamps,
@@ -1071,7 +1070,14 @@ describe("GitcoinPassportDecoder", function () {
   });
 
   describe("getPassport with ScoreV2 format", function () {
-    const providerNames = ["Github", "Twitter", "Google"];
+    const providerNames = [
+      "githubContributionActivityGte#60",
+      "NFTScore#75",
+      "NFTScore#50",
+      "HolonymGovIdProvider",
+      "CivicUniquenessPass",
+      "BinanceBABT2"
+    ];
     const stamps = providerNames.map((provider) => ({
       provider,
       score: BigInt("110000")

@@ -205,10 +205,10 @@ contract GitcoinResolver is
    */
   function _setScoreV2(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (, uint8 scoreDecimals, uint128 rawCommunityId, uint32 score, , , ) = abi
+    (, uint8 scoreDecimals, uint128 rawCommunityId, uint32 score, , ) = abi
       .decode(
         attestation.data,
-        (bool, uint8, uint128, uint32, uint32, uint48, Stamp[])
+        (bool, uint8, uint128, uint32, uint32, Stamp[])
       );
 
     uint32 communityId = uint32(rawCommunityId);
@@ -262,9 +262,9 @@ contract GitcoinResolver is
    */
   function _removeScoreV2(Attestation calldata attestation) private {
     // Decode the score attestion output
-    (, , uint128 rawCommunityId, , , , ) = abi.decode(
+    (, , uint128 rawCommunityId, , , ) = abi.decode(
       attestation.data,
-      (bool, uint8, uint128, uint32, uint32, uint48, Stamp[])
+      (bool, uint8, uint128, uint32, uint32, Stamp[])
     );
 
     uint32 communityId = uint32(rawCommunityId);

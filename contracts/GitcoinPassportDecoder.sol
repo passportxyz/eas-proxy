@@ -275,9 +275,9 @@ contract GitcoinPassportDecoder is
     }
 
     // Decode the attestion output
-    (, , , , , , IGitcoinResolver.Stamp[] memory stamps) = abi.decode(
+    (, , , , , IGitcoinResolver.Stamp[] memory stamps) = abi.decode(
       attestation.data,
-      (bool, uint8, uint128, uint32, uint32, uint48, IGitcoinResolver.Stamp[])
+      (bool, uint8, uint128, uint32, uint32, IGitcoinResolver.Stamp[])
     );
 
     Credential[] memory credentials = new Credential[](stamps.length);
@@ -505,9 +505,9 @@ contract GitcoinPassportDecoder is
       }
 
       // Decode the attestion output
-      (bool passing_score, , , , , , ) = abi.decode(
+      (bool passing_score, , , , , ) = abi.decode(
         attestation.data,
-        (bool, uint8, uint128, uint32, uint32, uint48, IGitcoinResolver.Stamp[])
+        (bool, uint8, uint128, uint32, uint32, IGitcoinResolver.Stamp[])
       );
 
       return passing_score;
