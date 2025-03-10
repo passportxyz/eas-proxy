@@ -31,6 +31,7 @@ export async function main() {
   const currentGitcoinResolver = await passportDecoder.gitcoinResolver();
   const currentPassportSchemaUID = await passportDecoder.passportSchemaUID();
   const currentScoreSchemaUID = await passportDecoder.scoreSchemaUID();
+  const currentScoreV2SchemaUID = await passportDecoder.scoreV2SchemaUID();
   const currentMaxScoreAge = await passportDecoder.maxScoreAge();
   const currentThreshold = await passportDecoder.threshold();
 
@@ -52,6 +53,12 @@ export async function main() {
     currentScoreSchemaUID,
     "/",
     chainInfo.easSchemas.score.uid
+  );
+  console.log(
+    "== currentScoreV2SchemaUID",
+    currentScoreV2SchemaUID,
+    "/",
+    chainInfo.easSchemas.scoreV2.uid
   );
   console.log("== currentMaxScoreAge", currentMaxScoreAge, "/", maxScoreAge);
   console.log("== currentThreshold", currentThreshold, "/", threshold);
@@ -84,6 +91,7 @@ export async function main() {
     easAddress: easAddress,
     passportSchemaUUID: chainInfo.easSchemas.passport.uid,
     scoreSchemaUUID: chainInfo.easSchemas.score.uid,
+    scoreV2SchemaUUID: chainInfo.easSchemas.scoreV2.uid,
     bitmapVersion: currentVersion
   });
 
@@ -131,11 +139,25 @@ export async function main() {
     );
     await setScoreSchemaTx.wait();
     console.log(
-      `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
+      `✅ Set Score SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
     );
   } else {
     console.log(
-      `-> skip setting Passport SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
+      `-> skip setting Score SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
+    );
+  }
+
+  if (currentScoreV2SchemaUID != chainInfo.easSchemas.scoreV2.uid) {
+    const setScoreV2SchemaTx = await passportDecoder.setScoreV2SchemaUID(
+      chainInfo.easSchemas.scoreV2.uid
+    );
+    await setScoreV2SchemaTx.wait();
+    console.log(
+      `✅ Set ScoreV2 SchemaUID to ${chainInfo.easSchemas.scoreV2.uid} on GitcoinPassportDecoder.`
+    );
+  } else {
+    console.log(
+      `-> skip setting ScoreV2 SchemaUID to ${chainInfo.easSchemas.scoreV2.uid} on GitcoinPassportDecoder.`
     );
   }
 

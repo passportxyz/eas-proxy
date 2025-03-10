@@ -14,6 +14,12 @@ interface IGitcoinResolver {
     uint64 expirationTime; // This makes sense because we want to make sure the stamp is not expired, and also do not want to load the attestation
   }
 
+  // @dev Stamp used in encoding of V2 scores
+  struct Stamp {
+    string provider;
+    uint256 score;
+  }
+
   /// @param user The ETH address of the recipient
   /// @param schema THE UID of the chema
   /// @return The attestation UID or 0x0 if not found

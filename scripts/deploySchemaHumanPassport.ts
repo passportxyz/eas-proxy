@@ -1,4 +1,6 @@
-// This script deals with deploying the GitcoinVerifier on a given network
+// This script is for deploying the new human passport schema on an already
+// deployed attestation system. If deploying on a new chain, these steps
+// are done in other scripts
 
 import hre, { ethers } from "hardhat";
 import {
@@ -8,7 +10,8 @@ import {
   getResolverAddress,
   addChainInfoToFile,
   INFO_FILE,
-  getHexChainId
+  getHexChainId,
+  getDecoderAddress
 } from "./lib/utils";
 import { SCHEMA_REGISTRY_ABI } from "../test/abi/SCHEMA_REGISTRY_ABI";
 
@@ -16,12 +19,10 @@ assertEnvironment();
 
 export async function main() {
   const resolverAddress = getResolverAddress();
-  const scoreSchema = "uint256 score,uint32 scorer_id,uint8 score_decimals";
+  const decoderAddress = getDecoderAddress();
   const scoreV2Schema =
     "bool passing_score, uint8 score_decimals, uint128 scorer_id, uint32 score, uint32 threshold, tuple(string provider, uint256 score)[] stamps";
 
-  const passportSchema =
-    "uint256[] providers,bytes32[] hashes,uint64[] issuanceDates,uint64[] expirationDates,uint16 providerMapVersion";
   const revocable = true;
   const schemaRegistryContractAddress = getEASSchemaRegistryAddress();
 
@@ -38,23 +39,11 @@ export async function main() {
     network: hre.network.name,
     chainId: hre.network.config.chainId,
     registryAddress: schemaRegistryContractAddress,
-    resolverAddress: resolverAddress,
-    scoreSchema: scoreSchema,
-    passportSchema: passportSchema,
-    revocable: revocable,
+    resolverAddress,
+    decoderAddress,
+    revocable,
     deployerAddress: await deployer.getAddress()
   });
-
-  const txScoreSchema = await schemaRegistry.register(
-    scoreSchema,
-    resolverAddress,
-    revocable
-  );
-  const txScoreSchemaReceipt = await txScoreSchema.wait();
-  const scoreSchemaEvent = txScoreSchemaReceipt.logs.filter((log: any) => {
-    return log.fragment.name == "Registered";
-  });
-  const scoreSchemaUID = scoreSchemaEvent[0].args[0];
 
   const txScoreV2Schema = await schemaRegistry.register(
     scoreV2Schema,
@@ -67,38 +56,35 @@ export async function main() {
   });
   const scoreV2SchemaUID = scoreV2SchemaEvent[0].args[0];
 
-  const txPassportSchema = await schemaRegistry.register(
-    passportSchema,
-    resolverAddress,
-    revocable
-  );
-  const txPassportSchemaReceipt = await txPassportSchema.wait();
-
-  const passportSchemaEvent = txPassportSchemaReceipt.logs.filter(
-    (log: any) => {
-      return log.fragment.name == "Registered";
-    }
-  );
-  const passportSchemaUID = passportSchemaEvent[0].args[0];
-
   addChainInfoToFile(INFO_FILE, getHexChainId(), (thisChainExistingInfo) => ({
     ...thisChainExistingInfo,
     easSchemas: {
-      passport: {
-        uid: passportSchemaUID
-      },
-      score: {
-        uid: scoreSchemaUID
-      },
+      ...thisChainExistingInfo.easSchemas,
       scoreV2: {
         uid: scoreV2SchemaUID
       }
     }
   }));
 
-  console.log(`✅ Deployed passport schema ${passportSchemaUID}`);
-  console.log(`✅ Deployed score schema ${scoreSchemaUID}`);
   console.log(`✅ Deployed scoreV2 schema ${scoreV2SchemaUID}`);
+
+  const Resolver = await ethers.getContractFactory("GitcoinResolver");
+  const resolver = Resolver.attach(resolverAddress);
+
+  const Decoder = await ethers.getContractFactory("GitcoinPassportDecoder");
+  const decoder = Decoder.attach(decoderAddress);
+
+  await (await resolver.setScoreV2Schema(scoreV2SchemaUID)).wait();
+
+  console.log(
+    `✅ Set scoreV2 schema ${scoreV2SchemaUID} on resolver ${resolverAddress}`
+  );
+
+  await (await decoder.setScoreV2SchemaUID(scoreV2SchemaUID)).wait();
+
+  console.log(
+    `✅ Set scoreV2 schema ${scoreV2SchemaUID} on decoder ${decoderAddress}`
+  );
 }
 
 main().catch((error) => {
