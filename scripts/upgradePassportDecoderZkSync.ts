@@ -1,8 +1,10 @@
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 import {
   confirmContinue,
   assertEnvironment,
-  getPassportDecoderAddress
+  getPassportDecoderAddress,
+  getAbi,
+  updateDeploymentsFile
 } from "./lib/utils";
 import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 import { Wallet } from "zksync-ethers";
@@ -26,7 +28,16 @@ export async function main() {
     passportDecoderAddress,
     artifact
   );
+
   console.log("Upgraded GitcoinPassportDecoder at:", { upgrade });
+
+  const GitcoinResolver = await ethers.getContractFactory(
+    "GitcoinPassportDecoder"
+  );
+  await updateDeploymentsFile(
+    "GitcoinPassportDecoder",
+    getAbi(GitcoinResolver)
+  );
 }
 
 main().catch((error) => {

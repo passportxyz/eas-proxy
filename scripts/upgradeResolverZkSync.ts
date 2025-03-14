@@ -1,8 +1,10 @@
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 import {
   confirmContinue,
   assertEnvironment,
-  getResolverAddress
+  getResolverAddress,
+  getAbi,
+  updateDeploymentsFile
 } from "./lib/utils";
 import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 import { Wallet } from "zksync-ethers";
@@ -26,7 +28,11 @@ export async function main() {
     resolverAddress,
     artifact
   );
+
   console.log("Upgraded GitcoinResolver at:", { upgrade });
+
+  const GitcoinResolver = await ethers.getContractFactory("GitcoinResolver");
+  await updateDeploymentsFile("GitcoinResolver", getAbi(GitcoinResolver));
 }
 
 main().catch((error) => {
