@@ -271,7 +271,7 @@
     },
     "easSchemas": {
       "namingSchema": {
-        "uid": ""
+        "uid": "0x44d562ac1d7cd77e232978687fea027ace48f719cf1d58c7888e509663bb87fc"
       },
       "passport": {
         "uid": "0x71b9da9e4a2ecd8c87ad57d29ef64b9e63887d54039c97c294a6ecba8a8dfb4e"
@@ -280,7 +280,7 @@
         "uid": "0xfa8f39bf31b38893697a46f2607ef58ef3ec66308840a1e351304d26823a297c"
       },
       "scoreV2": {
-        "uid": ""
+        "uid": "0xb68405dffc0b727188de5a3af2ecbbc544ab01aef5353409c5006ffff342d143"
       }
     }
   },
