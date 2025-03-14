@@ -34,6 +34,7 @@ export async function main() {
     SCHEMA_REGISTRY_ABI,
     deployer
   );
+  const scoreV2SchemaUID = getScoreV2Schema();
 
   await confirmContinue({
     action: "Set V2 schema ID in contracts: GitcoinResolver, GitcoinPassportDecoder",
@@ -43,10 +44,10 @@ export async function main() {
     resolverAddress,
     decoderAddress,
     revocable,
-    deployerAddress: await deployer.getAddress()
+    deployerAddress: await deployer.getAddress(),
+    scoreV2SchemaUID
   });
 
-  const scoreV2SchemaUID = getScoreV2Schema();
 
   const Resolver = await ethers.getContractFactory("GitcoinResolver");
   const resolver = Resolver.attach(resolverAddress);
