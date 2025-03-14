@@ -51,7 +51,9 @@ let config: HardhatUserConfig = {
       scroll: process.env.SCROLL_ETHERSCAN_API_KEY as string,
       "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string,
       shape: "dummy api key",
-      base: process.env.BASE_ETHERSCAN_API_KEY as string
+      base: process.env.BASE_ETHERSCAN_API_KEY as string,
+      "zksync-sepolia": process.env.ZKSYNC_API_KEY as string,
+      "zksync": process.env.ZKSYNC_API_KEY as string
     },
     customChains: [
       {
@@ -172,6 +174,15 @@ let config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS ? true : false,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY
   },
+  zksolc: {
+    // version: "1.5.11",
+    // compilerSource: "binary", 
+    settings: {
+      suppressedErrors: [
+        "sendtransfer",
+      ],
+    },
+  },
   solidity: {
     settings: {
       optimizer: {
@@ -196,6 +207,9 @@ let config: HardhatUserConfig = {
       },
       {
         version: "0.8.20"
+      },
+      {
+        version: "0.8.22"
       }
     ]
   }
