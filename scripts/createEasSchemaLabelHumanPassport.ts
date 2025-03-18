@@ -32,7 +32,9 @@ export async function main() {
     chainId: hre.network.config.chainId,
     easAddress: easAddress,
     namingSchema: namingSchema,
-    scoreV2SchemaUID: scoreV2SchemaUID
+    scoreV2SchemaUID: scoreV2SchemaUID,
+    namingSchemaUID,
+    deployer: (await hre.ethers.provider.getSigner()).address
   });
 
   // Initialize SchemaEncoder with the schema string
