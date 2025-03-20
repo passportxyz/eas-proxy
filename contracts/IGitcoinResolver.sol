@@ -20,6 +20,11 @@ interface IGitcoinResolver {
     uint256 score;
   }
 
+  function communityScoreAttestations(
+    uint32 communityId,
+    address user
+  ) external view returns  (bytes32);
+
   /// @param user The ETH address of the recipient
   /// @param schema THE UID of the chema
   /// @return The attestation UID or 0x0 if not found
