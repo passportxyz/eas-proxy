@@ -27,6 +27,10 @@ contract MockResolver is IGitcoinResolver, ISchemaResolver {
   // Mapping of active passport score schemas - used when storing scores to state
   mapping(bytes32 => bool) private scoreSchemas;
 
+  // Mapping of communityId => address => score attestation UID
+  mapping(uint32 => mapping(address => bytes32))
+    public communityScoreAttestations;
+
   /**
    * @dev Returns whether the resolver supports ETH transfers. Required function from the interface ISchemaResolver that we won't be using
    * @inheritdoc ISchemaResolver
