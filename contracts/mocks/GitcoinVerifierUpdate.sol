@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import "../PausableUpgradeableForVerifier.sol";
 import "../GitcoinAttester.sol";
 
 /**
@@ -17,7 +16,7 @@ import "../GitcoinAttester.sol";
 contract GitcoinVerifierUpdate is
   UUPSUpgradeable,
   OwnableUpgradeable,
-  PausableUpgradeableForVerifier
+  PausableUpgradeable
 {
   using ECDSA for bytes32;
 
@@ -35,8 +34,6 @@ contract GitcoinVerifierUpdate is
 
   // Nonces for each recipient address
   mapping(address => uint) public recipientNonces;
-
-  // `address withdrawalAddress` is defined in PausableUpgradeableForVerifier
 
   error InsufficientFee();
   error InvalidNonce();
@@ -282,26 +279,16 @@ contract GitcoinVerifierUpdate is
   }
 
   /**
-   * @dev Withdraws collected fees to the withdrawal address.
+   * @dev Withdraws collected fees to the owner address.
    */
   function withdrawFees() external {
-    if (withdrawalAddress == address(0)) {
+    if (owner() == address(0)) {
       revert InvalidWithdrawalAddress();
     }
 
     uint256 balance = address(this).balance;
 
-    (bool success, ) = payable(withdrawalAddress).call{value: balance}("");
+    (bool success, ) = payable(owner()).call{value: balance}("");
     require(success, "Transfer failed");
-  }
-
-  /**
-   * @dev Sets the withdrawal address.
-   * @param _withdrawalAddress The new withdrawal address.
-   */
-  function setWithdrawalAddress(
-    address _withdrawalAddress
-  ) external onlyOwner {
-    withdrawalAddress = _withdrawalAddress;
   }
 }

@@ -277,11 +277,6 @@ describe("Upgrading GitcoinVerifierWithVeraxPortal", function () {
   });
 
   it("should expose public functions from proxy", async function () {
-    await (
-      await this.upgradedGitcoinVerifier.setWithdrawalAddress(
-        this.iamAccount.address
-      )
-    ).wait();
     await (await this.upgradedGitcoinVerifier.withdrawFees()).wait();
   });
 });
