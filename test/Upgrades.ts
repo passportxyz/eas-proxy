@@ -49,10 +49,7 @@ describe("Upgrading GitcoinVerifier", function () {
     );
   });
   it("should expose public functions from proxy", async function () {
-    const withdrawAmount = ethers.parseUnits("0", 18);
-    await this.gitcoinVerifierProxy
-      .connect(this.owner)
-      .withdrawFees(withdrawAmount);
+    await this.gitcoinVerifierProxy.withdrawFees();
   });
 });
 

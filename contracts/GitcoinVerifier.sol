@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
 import "./GitcoinAttester.sol";
 
@@ -91,7 +91,10 @@ contract GitcoinVerifier is
     __GitcoinVerifier_init(_issuer, _attester);
   }
 
-  function __GitcoinVerifier_init(address _issuer, address _attester) internal onlyInitializing {
+  function __GitcoinVerifier_init(
+    address _issuer,
+    address _attester
+  ) internal onlyInitializing {
     __Ownable_init();
     __Pausable_init();
 
@@ -110,7 +113,6 @@ contract GitcoinVerifier is
         address(this) // verifyingContract
       )
     );
-
   }
 
   function pause() public onlyOwner {
@@ -265,7 +267,7 @@ contract GitcoinVerifier is
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public virtual payable whenNotPaused returns (bytes32[] memory) {
+  ) public payable virtual whenNotPaused returns (bytes32[] memory) {
     _verify(v, r, s, attestationRequest);
 
     if (msg.value < attestationRequest.fee) {
@@ -277,13 +279,12 @@ contract GitcoinVerifier is
   }
 
   /**
-   * @dev Allows the contract owner to withdraw the contract's balance.
+   * @dev Withdraws collected fees to the owner address.
    */
-  function withdrawFees(uint256 _amount) external onlyOwner {
+  function withdrawFees() external {
     uint256 balance = address(this).balance;
 
-    require(_amount <= balance, "Insufficient contract balance");
-
-    payable(owner()).transfer(_amount);
+    (bool success, ) = payable(owner()).call{value: balance}("");
+    require(success, "Transfer failed");
   }
 }
