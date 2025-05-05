@@ -24,9 +24,10 @@ contract GitcoinVerifierWithVeraxPortal is GitcoinVerifier {
   function initialize(
     address _issuer,
     address _attester,
+    address _feeAddress,
     address _portal
   ) public initializer {
-    __GitcoinVerifier_init(_issuer, _attester);
+    __GitcoinVerifier_init(_issuer, _attester, _feeAddress);
     portal = GitcoinVeraxPortal(_portal);
   }
 

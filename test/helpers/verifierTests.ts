@@ -89,7 +89,6 @@ const easEncodedPassport = encodeEasPassport(
     "0x1234123412341234123412341234123412341234123412341234123412341234",
     "0x1234123412341234123412341234123412341234123412341234123412341234",
     "0x1234123412341234123412341234123412341234123412341234123412341234",
-    "0x1234123412341234123412341234123412341234123412341234123412341234",
     "0x1234123412341234123412341234123412341234123412341234123412341234"
   ],
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
@@ -100,7 +99,6 @@ const easEncodedPassport = encodeEasPassport(
 const easOtherEncodedPassport = encodeEasPassport(
   [12345678],
   [
-    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
@@ -138,16 +136,18 @@ export const runVerifierTests = (
     issuer: string,
     attester: string,
     gitcoinPassportSchemaUID: string,
-    gitcoinScoreSchemaUID: string
+    gitcoinScoreSchemaUID: string,
+    feeAddress: string
   ) => Promise<void>
 ) => {
   describe(contractName, function () {
     this.beforeAll(async function () {
-      const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+      const [owner, iamAccount, recipientAccount, feeAccount] = await ethers.getSigners();
       this.owner = owner;
       this.iamAccount = iamAccount;
       this.owner = owner;
       this.recipientAccount = recipientAccount;
+      this.feeAccount = feeAccount;
 
       // Deploy GitcoinAttester
       const GitcoinAttester = await ethers.getContractFactory(
@@ -226,7 +226,8 @@ export const runVerifierTests = (
         await this.iamAccount.getAddress(),
         await this.gitcoinAttester.getAddress(),
         this.passportAttestationSchemaUID,
-        this.scoreAttestationSchemaUID
+        this.scoreAttestationSchemaUID,
+        await this.feeAccount.getAddress()
       );
 
       // Create some test data
@@ -424,7 +425,7 @@ export const runVerifierTests = (
       ).to.be.revertedWithCustomError(this.gitcoinVerifier, "InsufficientFee");
     });
 
-    it("should accept fee", async function () {
+    it("should accept fee and transfer it to fee address", async function () {
       const signature = await this.iamAccount.signTypedData(
         this.domain,
         passportTypes,
@@ -441,6 +442,8 @@ export const runVerifierTests = (
 
       const { v, r, s } = ethers.Signature.from(signature);
 
+      const feeAccountBalanceBefore = await ethers.provider.getBalance(await this.feeAccount.getAddress());
+      
       const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
         this.passport,
         v,
@@ -452,56 +455,29 @@ export const runVerifierTests = (
       );
       const receipt = await verifiedPassport.wait();
       expect(receipt.status).to.equal(1);
+
+      const feeAccountBalanceAfter = await ethers.provider.getBalance(await this.feeAccount.getAddress());
+      expect(feeAccountBalanceAfter - feeAccountBalanceBefore).to.equal(fee2);
     });
 
-    describe("withdrawFees", function () {
-      this.beforeEach(async function () {
-        const signature = await this.iamAccount.signTypedData(
-          this.domain,
-          passportTypes,
-          this.passport
-        );
-        const { v, r, s } = ethers.Signature.from(signature);
-        await (
-          await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-            value: fee2
-          })
-        ).wait();
+    describe("Fee Address Management", function () {
+      it("should allow owner to update fee address", async function () {
+        const [, , , , newFeeAccount] = await ethers.getSigners();
+        await this.gitcoinVerifier.setFeeAddress(await newFeeAccount.getAddress());
+        expect(await this.gitcoinVerifier.feeAddress()).to.equal(await newFeeAccount.getAddress());
       });
 
-      it("should allow the owner to withdraw the entire balance", async function () {
-        const ownerBalanceBefore = await ethers.provider.getBalance(
-          await this.owner.getAddress()
-        );
-        expect(
-          await ethers.provider.getBalance(
-            await this.gitcoinVerifier.getAddress()
-          )
-        ).to.be.greaterThan(0);
-
-        const tx = await this.gitcoinVerifier.withdrawFees();
-        await tx.wait();
-
-        const ownerBalanceAfter = await ethers.provider.getBalance(
-          await this.owner.getAddress()
-        );
-        // Expect the owner balance to increase (minus gas costs)
-        expect(ownerBalanceAfter > ownerBalanceBefore).to.be.true;
-
-        // Contract should have zero balance after full withdrawal
-        expect(
-          await ethers.provider.getBalance(
-            await this.gitcoinVerifier.getAddress()
-          )
-        ).to.equal(0n);
-      });
-
-      it("should allow non-owners to withdraw fees", async function () {
-        const [, nonOwner] = await ethers.getSigners();
-
+      it("should not allow non-owner to update fee address", async function () {
+        const [, , , , newFeeAccount] = await ethers.getSigners();
         await expect(
-          this.gitcoinVerifier.connect(nonOwner).withdrawFees()
-        ).not.to.be.revertedWith("Ownable: caller is not the owner");
+          this.gitcoinVerifier.connect(this.iamAccount).setFeeAddress(await newFeeAccount.getAddress())
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("should not allow setting zero address as fee address", async function () {
+        await expect(
+          this.gitcoinVerifier.setFeeAddress(ethers.ZeroAddress)
+        ).to.be.revertedWithCustomError(this.gitcoinVerifier, "ZeroAddress");
       });
     });
 

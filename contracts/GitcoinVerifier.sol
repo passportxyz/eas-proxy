@@ -2,10 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {OwnableUpgradeable, __Ownable_init} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {PausableUpgradeable, __Pausable_init} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable, __ReentrancyGuard_init, nonReentrant} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import {AttestationRequestData, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
@@ -96,8 +96,8 @@ contract GitcoinVerifier is
    * @param _issuer The address of the issuer of the passport.
    * @param _attester The address of the GitcoinAttester contract.
    */
-  function initialize(address _issuer, address _attester) public initializer {
-    __GitcoinVerifier_init(_issuer, _attester);
+  function initialize(address _issuer, address _attester, address _feeAddress) public initializer {
+    __GitcoinVerifier_init(_issuer, _attester, _feeAddress);
   }
 
   function __GitcoinVerifier_init(
