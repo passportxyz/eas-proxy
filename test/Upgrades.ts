@@ -16,7 +16,7 @@ describe("Upgrading GitcoinVerifier", function () {
     const GitcoinVerifier = await ethers.getContractFactory("GitcoinVerifier");
     const gitcoinVerifier = await upgrades.deployProxy(
       GitcoinVerifier,
-      [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS],
+      [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS, this.owner.address],
       {
         kind: "uups"
       }
@@ -28,7 +28,7 @@ describe("Upgrading GitcoinVerifier", function () {
   });
   it("should upgrade GitcoinVerifier", async function () {
     const GitcoinVerifierUpdate = await ethers.getContractFactory(
-      "GitcoinVerifier"
+      "GitcoinVerifierUpdate"
     );
 
     const preparedUpgradeAddress = await upgrades.prepareUpgrade(
@@ -40,16 +40,16 @@ describe("Upgrading GitcoinVerifier", function () {
       }
     );
 
-    const upgradeCall = await this.gitcoinVerifierProxy.upgradeTo(
+    await this.gitcoinVerifierProxy.upgradeTo(
       preparedUpgradeAddress as string
     );
 
-    expect(await this.gitcoinVerifierProxy.getAddress()).to.be.equal(
+    this.upgradedGitcoinVerifier = GitcoinVerifierUpdate.attach(
       this.verifierProxyAddress
     );
   });
   it("should expose public functions from proxy", async function () {
-    await this.gitcoinVerifierProxy.withdrawFees();
+    await this.upgradedGitcoinVerifier.newVariable();
   });
 });
 
@@ -242,7 +242,7 @@ describe("Upgrading GitcoinVerifierWithVeraxPortal", function () {
     );
     const gitcoinVerifier = await upgrades.deployProxy(
       GitcoinVerifierWithVeraxPortal,
-      [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS, ZERO_ADDRESS],
+      [IAM_ISSUER, GITCOIN_ATTESTER_ADDRESS, this.owner.address],
       {
         kind: "uups",
         initializer: "initialize(address,address,address)"
@@ -274,6 +274,6 @@ describe("Upgrading GitcoinVerifierWithVeraxPortal", function () {
   });
 
   it("should expose public functions from proxy", async function () {
-    await (await this.upgradedGitcoinVerifier.withdrawFees()).wait();
+    await this.upgradedGitcoinVerifier.newVariable();
   });
 });

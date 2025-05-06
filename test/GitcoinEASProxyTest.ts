@@ -20,12 +20,13 @@ import { SCHEMA_REGISTRY_ABI } from "./abi/SCHEMA_REGISTRY_ABI";
 
 describe("GitcoinEASProxy", function () {
   this.beforeAll(async function () {
-    const [ownerAccount, otherAccount, recipientAccount] =
+    const [ownerAccount, otherAccount, recipientAccount, feeAccount] =
       await ethers.getSigners();
 
     this.owner = ownerAccount;
     this.iamAccount = otherAccount;
     this.recipient = recipientAccount;
+    this.feeAccount = feeAccount;
 
     // Deploy GitcoinAttester
     const GitcoinAttester = await ethers.getContractFactory(
@@ -47,7 +48,8 @@ describe("GitcoinEASProxy", function () {
       .connect(this.owner)
       .initialize(
         await this.iamAccount.getAddress(),
-        await this.gitcoinAttester.getAddress()
+        await this.gitcoinAttester.getAddress(),
+        await this.feeAccount.getAddress()
       );
 
     this.eas = new EAS(EAS_CONTRACT_ADDRESS);

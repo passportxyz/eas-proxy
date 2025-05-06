@@ -135,10 +135,11 @@ describe("GitcoinPassportDecoderShape", function () {
   let iamAccount: HardhatEthersSigner;
   let recipientAccount: HardhatEthersSigner;
   let otherAccount: HardhatEthersSigner;
+  let feeAccount: HardhatEthersSigner;
 
   // Define the schema for V2 scores
   this.beforeAll(async function () {
-    [ownerAccount, iamAccount, recipientAccount, otherAccount] =
+    [ownerAccount, iamAccount, recipientAccount, otherAccount, feeAccount] =
       await ethers.getSigners();
   });
 
@@ -168,7 +169,8 @@ describe("GitcoinPassportDecoderShape", function () {
       .connect(ownerAccount)
       .initialize(
         await iamAccount.getAddress(),
-        await gitcoinAttester.getAddress()
+        await gitcoinAttester.getAddress(),
+        await feeAccount.getAddress()
       );
 
     const chainId = await ethers.provider

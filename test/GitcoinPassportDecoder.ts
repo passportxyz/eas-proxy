@@ -136,10 +136,11 @@ describe("GitcoinPassportDecoder", function () {
   let iamAccount: HardhatEthersSigner;
   let recipientAccount: HardhatEthersSigner;
   let otherAccount: HardhatEthersSigner;
+  let feeAccount: HardhatEthersSigner;
 
   // Define the schema for V2 scores
   this.beforeAll(async function () {
-    [ownerAccount, iamAccount, recipientAccount, otherAccount] =
+    [ownerAccount, iamAccount, recipientAccount, otherAccount, feeAccount] =
       await ethers.getSigners();
   });
 
@@ -169,7 +170,8 @@ describe("GitcoinPassportDecoder", function () {
       .connect(ownerAccount)
       .initialize(
         await iamAccount.getAddress(),
-        await gitcoinAttester.getAddress()
+        await gitcoinAttester.getAddress(),
+        await feeAccount.getAddress()
       );
 
     const chainId = await ethers.provider
@@ -640,27 +642,27 @@ describe("GitcoinPassportDecoder", function () {
         mockValue = mockBytes32;
       }
       it(`should set the ${addressConstant}`, async function () {
-        await gitcoinPassportDecoder
-          .connect(ownerAccount)
+        await (gitcoinPassportDecoder
+          .connect(ownerAccount) as any)
           [functionName](mockValue);
-        const setValue = await gitcoinPassportDecoder
-          .connect(ownerAccount)
+        const setValue = await (gitcoinPassportDecoder
+          .connect(ownerAccount) as any)
           [getterName]();
         expect(setValue).to.equal(mockValue);
       });
 
       it(`should not allow anyone other than owner to set the ${addressConstant}`, async function () {
         await expect(
-          gitcoinPassportDecoder
-            .connect(recipientAccount)
+          (gitcoinPassportDecoder
+            .connect(recipientAccount) as any)
             [functionName](mockValue)
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
       it(`should not allow ${addressConstant} to be set to zero address`, async function () {
         await expect(
-          gitcoinPassportDecoder
-            .connect(ownerAccount)
+          (gitcoinPassportDecoder
+            .connect(ownerAccount) as any)
             [functionName](addressParam ? ZERO_ADDRESS : ZERO_BYTES32)
         ).to.be.revertedWithCustomError(gitcoinPassportDecoder, error);
       });
@@ -678,28 +680,28 @@ describe("GitcoinPassportDecoder", function () {
           it(`should set the ${attrName} to ${vs.value}`, async function () {
             const otherValue = vs.value + 1;
             // First set another value - just to make sure the value we test is not there from the start
-            await gitcoinPassportDecoder
-              .connect(ownerAccount)
+            await (gitcoinPassportDecoder
+              .connect(ownerAccount) as any)
               [functionName](otherValue);
-            const setOtherValue = await gitcoinPassportDecoder
-              .connect(ownerAccount)
+            const setOtherValue = await (gitcoinPassportDecoder
+              .connect(ownerAccount) as any)
               [getterName]();
             expect(setOtherValue).to.equal(otherValue);
 
             // Now set and check the expected value
-            await gitcoinPassportDecoder
-              .connect(ownerAccount)
+            await (gitcoinPassportDecoder
+              .connect(ownerAccount) as any)
               [functionName](vs.value);
-            const setValue = await gitcoinPassportDecoder
-              .connect(ownerAccount)
+            const setValue = await (gitcoinPassportDecoder
+              .connect(ownerAccount) as any)
               [getterName]();
             expect(setValue).to.equal(vs.value);
           });
         } else {
           it(`should throw ${vs.error} when setting ${attrName} to ${vs.value}`, async function () {
             await expect(
-              gitcoinPassportDecoder
-                .connect(ownerAccount)
+              (gitcoinPassportDecoder
+                .connect(ownerAccount) as any)
                 [functionName](vs.value)
             ).to.be.revertedWithCustomError(
               gitcoinPassportDecoder,
@@ -711,8 +713,8 @@ describe("GitcoinPassportDecoder", function () {
 
       it(`should not allow anyone other than owner to set the ${attrName}`, async function () {
         await expect(
-          gitcoinPassportDecoder
-            .connect(recipientAccount)
+          (gitcoinPassportDecoder
+            .connect(recipientAccount) as any)
             [functionName](valuesSets[0].value) // We just pick any value here, since we are testing the permission
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });

@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import {AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
-
-import "../GitcoinAttester.sol";
-import "./GitcoinVerifierUpdate.sol";
+import { GitcoinVerifierUpdate } from "./GitcoinVerifierUpdate.sol";
 import { GitcoinVeraxPortal } from "../GitcoinVeraxPortal.sol";
 
 /**
@@ -30,9 +24,10 @@ contract GitcoinVerifierWithVeraxPortalUpdate is GitcoinVerifierUpdate {
   function initialize(
     address _issuer,
     address _attester,
+    address _feeAddress,
     address _portal
   ) public initializer {
-    __GitcoinVerifier_init(_issuer, _attester);
+    __GitcoinVerifier_init(_issuer, _attester, _feeAddress);
     portal = GitcoinVeraxPortal(_portal);
   }
 

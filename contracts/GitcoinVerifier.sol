@@ -44,7 +44,7 @@ contract GitcoinVerifier is
   // Nonces for each recipient address
   mapping(address => uint) public recipientNonces;
 
-  address public feeAddress;
+  address public feeRecipient;
 
   // Gap for upgradeability
   uint256[50] private __gap;
@@ -95,15 +95,16 @@ contract GitcoinVerifier is
    * @notice Initializer function responsible for setting up the contract's initial state.
    * @param _issuer The address of the issuer of the passport.
    * @param _attester The address of the GitcoinAttester contract.
+   * @param _feeRecipient The address of the fee recipient.
    */
-  function initialize(address _issuer, address _attester, address _feeAddress) public initializer {
-    __GitcoinVerifier_init(_issuer, _attester, _feeAddress);
+  function initialize(address _issuer, address _attester, address _feeRecipient) public initializer {
+    __GitcoinVerifier_init(_issuer, _attester, _feeRecipient);
   }
 
   function __GitcoinVerifier_init(
     address _issuer,
     address _attester,
-    address _feeAddress
+    address _feeRecipient
   ) internal onlyInitializing {
     __Ownable_init();
     __Pausable_init();
@@ -111,11 +112,11 @@ contract GitcoinVerifier is
 
     if (_issuer == address(0)) revert ZeroAddress();
     if (_attester == address(0)) revert ZeroAddress();
-    if (_feeAddress == address(0)) revert ZeroAddress();
+    if (_feeRecipient == address(0)) revert ZeroAddress();
 
     attester = GitcoinAttester(_attester);
     issuer = _issuer;
-    feeAddress = _feeAddress;
+    feeRecipient = _feeRecipient;
     name = "GitcoinVerifier";
 
     uint256 chainId = _getChainId();
@@ -292,14 +293,14 @@ contract GitcoinVerifier is
 
     bytes32[] memory attestations = attester.submitAttestations(attestationRequest.multiAttestationRequest);
 
-    (bool success, ) = feeAddress.call{value: msg.value}("");
+    (bool success, ) = feeRecipient.call{value: msg.value}("");
     if (!success) revert TransferFailed();
 
     return attestations;
   }
 
-  function setFeeAddress(address _feeAddress) external onlyOwner {
-    if (_feeAddress == address(0)) revert ZeroAddress();
-    feeAddress = _feeAddress;
+  function setFeeRecipient(address _feeRecipient) external onlyOwner {
+    if (_feeRecipient == address(0)) revert ZeroAddress();
+    feeRecipient = _feeRecipient;
   }
 }

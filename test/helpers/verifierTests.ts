@@ -137,7 +137,7 @@ export const runVerifierTests = (
     attester: string,
     gitcoinPassportSchemaUID: string,
     gitcoinScoreSchemaUID: string,
-    feeAddress: string
+    feeRecipient: string
   ) => Promise<void>
 ) => {
   describe(contractName, function () {
@@ -463,20 +463,20 @@ export const runVerifierTests = (
     describe("Fee Address Management", function () {
       it("should allow owner to update fee address", async function () {
         const [, , , , newFeeAccount] = await ethers.getSigners();
-        await this.gitcoinVerifier.setFeeAddress(await newFeeAccount.getAddress());
-        expect(await this.gitcoinVerifier.feeAddress()).to.equal(await newFeeAccount.getAddress());
+        await this.gitcoinVerifier.setFeeRecipient(await newFeeAccount.getAddress());
+        expect(await this.gitcoinVerifier.feeRecipient()).to.equal(await newFeeAccount.getAddress());
       });
 
       it("should not allow non-owner to update fee address", async function () {
         const [, , , , newFeeAccount] = await ethers.getSigners();
         await expect(
-          this.gitcoinVerifier.connect(this.iamAccount).setFeeAddress(await newFeeAccount.getAddress())
+          this.gitcoinVerifier.connect(this.iamAccount).setFeeRecipient(await newFeeAccount.getAddress())
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
       it("should not allow setting zero address as fee address", async function () {
         await expect(
-          this.gitcoinVerifier.setFeeAddress(ethers.ZeroAddress)
+          this.gitcoinVerifier.setFeeRecipient(ethers.ZeroAddress)
         ).to.be.revertedWithCustomError(this.gitcoinVerifier, "ZeroAddress");
       });
     });
