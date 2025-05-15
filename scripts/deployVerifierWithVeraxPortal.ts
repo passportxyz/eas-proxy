@@ -8,6 +8,7 @@ import {
   updateDeploymentsFile,
   getAbi,
   getResolverAddress,
+  getFeeAddress,
 } from "./lib/utils";
 
 assertEnvironment();
@@ -22,6 +23,7 @@ export async function main() {
   });
 
   const issuerAddress = getIssuerAddress();
+  const feeAddress = getFeeAddress();
 
   let veraxAttestationRegistryAddress;
   if (DEPLOY_FAKE_VERAX_ATTESTATION_REGISTRY) {
@@ -61,10 +63,10 @@ export async function main() {
 
   const verifier = await upgrades.deployProxy(
     GitcoinVerifierWithVeraxPortal,
-    [issuerAddress, getAttesterAddress(), await veraxPortal.getAddress()],
+    [issuerAddress, getAttesterAddress(), feeAddress, await veraxPortal.getAddress()],
     {
       kind: "uups",
-      initializer: "initialize(address,address,address)",
+      initializer: "initialize(address,address,address,address)",
     }
   );
 

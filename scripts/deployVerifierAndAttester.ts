@@ -5,7 +5,8 @@ import {
   assertEnvironment,
   confirmContinue,
   getEASAddress,
-  getIssuerAddress
+  getIssuerAddress,
+  getFeeAddress
 } from "./lib/utils";
 import { deployAttester } from "./lib/attester";
 import { deployVerifier } from "./lib/verifier";
@@ -15,12 +16,14 @@ assertEnvironment();
 export async function main() {
   const issuerAddress = getIssuerAddress();
   const easAddress = getEASAddress();
+  const feeAddress = getFeeAddress();
   await confirmContinue({
     contract: "GitcoinAttester and GitcoinVerifier",
     network: hre.network.name,
     chainId: hre.network.config.chainId,
     issuerAddress: issuerAddress,
-    easAddress: easAddress
+    easAddress: easAddress,
+    feeAddress: feeAddress
   });
 
   console.log("🚀 Deploying GitcoinAttester...");
@@ -29,7 +32,7 @@ export async function main() {
   const attesterAddress = await attester.getAddress();
 
   console.log("🚀 Deploying GitcoinVerifier...");
-  const verifier = await deployVerifier(attesterAddress, issuerAddress);
+  const verifier = await deployVerifier(attesterAddress, issuerAddress, feeAddress);
   console.log("✅ Deployed GitcoinVerifier");
 
   console.log("🚀 adding Verifier to attester ...");
