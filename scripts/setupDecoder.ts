@@ -7,8 +7,6 @@ import {
   getEASAddress,
   getThisChainInfo
 } from "./lib/utils";
-import { getSchemaUID } from "@ethereum-attestation-service/eas-sdk";
-import providerBitMapInfo from "../deployments/providerBitMapInfo.json";
 
 assertEnvironment();
 
@@ -29,8 +27,6 @@ export async function main() {
   const currentEas = await passportDecoder.eas();
 
   const currentGitcoinResolver = await passportDecoder.gitcoinResolver();
-  const currentPassportSchemaUID = await passportDecoder.passportSchemaUID();
-  const currentScoreSchemaUID = await passportDecoder.scoreSchemaUID();
   const currentScoreV2SchemaUID = await passportDecoder.scoreV2SchemaUID();
   const currentMaxScoreAge = await passportDecoder.maxScoreAge();
   const currentThreshold = await passportDecoder.threshold();
@@ -43,18 +39,6 @@ export async function main() {
     getResolverAddress()
   );
   console.log(
-    "== currentPassportSchemaUID",
-    currentPassportSchemaUID,
-    "/",
-    chainInfo.easSchemas.passport.uid
-  );
-  console.log(
-    "== currentScoreSchemaUID",
-    currentScoreSchemaUID,
-    "/",
-    chainInfo.easSchemas.score.uid
-  );
-  console.log(
     "== currentScoreV2SchemaUID",
     currentScoreV2SchemaUID,
     "/",
@@ -62,24 +46,6 @@ export async function main() {
   );
   console.log("== currentMaxScoreAge", currentMaxScoreAge, "/", maxScoreAge);
   console.log("== currentThreshold", currentThreshold, "/", threshold);
-
-  const providers = new Array(256).fill("");
-  let maxProviderIndex = 0;
-  console.log(`🚀 Adding providers...`);
-  providerBitMapInfo.forEach(async (provider) => {
-    providers[provider.bit] = provider.name;
-    if (provider.bit > maxProviderIndex) {
-      maxProviderIndex = provider.bit;
-    }
-  });
-
-  // Drop the empty elemnts at the end
-  providers.splice(maxProviderIndex + 1);
-  console.log(`🚀 providers to be added: `, providers);
-
-  // We do this considering we have only index = 0 in the providerBitMapInfo
-  const currentVersion = await passportDecoder.currentVersion();
-  console.log("currentVersion", currentVersion);
 
   await confirmContinue({
     contract: "Add schema and bitmap information to GitcoinPassportDecoder",
@@ -89,10 +55,7 @@ export async function main() {
     threshold: threshold,
     resolverAddress: getResolverAddress(),
     easAddress: easAddress,
-    passportSchemaUUID: chainInfo.easSchemas.passport.uid,
-    scoreSchemaUUID: chainInfo.easSchemas.score.uid,
-    scoreV2SchemaUUID: chainInfo.easSchemas.scoreV2.uid,
-    bitmapVersion: currentVersion
+    scoreV2SchemaUUID: chainInfo.easSchemas.scoreV2.uid
   });
 
   if (currentEas != easAddress) {
@@ -116,34 +79,6 @@ export async function main() {
   } else {
     console.log(
       `-> skip setting GitcoinResolver address ${getResolverAddress()} on GitcoinPassportDecoder.`
-    );
-  }
-
-  if (currentPassportSchemaUID != chainInfo.easSchemas.passport.uid) {
-    const setPassportSchemaTx = await passportDecoder.setPassportSchemaUID(
-      chainInfo.easSchemas.passport.uid
-    );
-    await setPassportSchemaTx.wait();
-    console.log(
-      `✅ Set Passport SchemaUID to ${chainInfo.easSchemas.passport.uid} on GitcoinPassportDecoder.`
-    );
-  } else {
-    console.log(
-      `-> skip setiing Passport SchemaUID to ${chainInfo.easSchemas.passport.uid} on GitcoinPassportDecoder.`
-    );
-  }
-
-  if (currentScoreSchemaUID != chainInfo.easSchemas.score.uid) {
-    const setScoreSchemaTx = await passportDecoder.setScoreSchemaUID(
-      chainInfo.easSchemas.score.uid
-    );
-    await setScoreSchemaTx.wait();
-    console.log(
-      `✅ Set Score SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
-    );
-  } else {
-    console.log(
-      `-> skip setting Score SchemaUID to ${chainInfo.easSchemas.score.uid} on GitcoinPassportDecoder.`
     );
   }
 
@@ -182,13 +117,6 @@ export async function main() {
       `-> skip set threshold to ${threshold} on GitcoinPassportDecoder.`
     );
   }
-
-  console.log("   providers: ", providers);
-  console.log(`🚀    writing providers to blockchain...`);
-  const tx = await passportDecoder.addProviders(providers);
-  const receipt = await tx.wait();
-
-  console.log(`✅ Added providers to GitcoinPassportDecoder.`);
 }
 
 main();

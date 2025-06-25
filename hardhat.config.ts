@@ -10,11 +10,11 @@ import "hardhat-contract-sizer";
 import { HttpNetworkHDAccountsConfig } from "hardhat/types";
 
 // Import zksync related plugins
-import "@matterlabs/hardhat-zksync-deploy";
-import "@matterlabs/hardhat-zksync-solc";
-import "@matterlabs/hardhat-zksync-ethers";
-import "@matterlabs/hardhat-zksync-upgradable";
-import "@matterlabs/hardhat-zksync-verify";
+// import "@matterlabs/hardhat-zksync-deploy";
+// import "@matterlabs/hardhat-zksync-solc";
+// import "@matterlabs/hardhat-zksync-ethers";
+// import "@matterlabs/hardhat-zksync-upgradable";
+// import "@matterlabs/hardhat-zksync-verify";
 
 dotenv.config();
 
@@ -53,7 +53,7 @@ let config: HardhatUserConfig = {
       shape: "dummy api key",
       base: process.env.BASE_ETHERSCAN_API_KEY as string,
       "zksync-sepolia": process.env.ZKSYNC_API_KEY as string,
-      "zksync": process.env.ZKSYNC_API_KEY as string
+      zksync: process.env.ZKSYNC_API_KEY as string
     },
     customChains: [
       {
@@ -176,12 +176,10 @@ let config: HardhatUserConfig = {
   },
   zksolc: {
     // version: "1.5.11",
-    // compilerSource: "binary", 
+    // compilerSource: "binary",
     settings: {
-      suppressedErrors: [
-        "sendtransfer",
-      ],
-    },
+      suppressedErrors: ["sendtransfer"]
+    }
   },
   solidity: {
     settings: {
@@ -227,6 +225,12 @@ if (process.env.DEPLOYER_PRIVATE_KEY && process.env.DEPLOYER_ADDRESS) {
     }
     if (process.env.SEPOLIA_PROVIDER_URL) {
       config.networks["sepolia"] = {
+        url: process.env.SEPOLIA_PROVIDER_URL as string,
+        accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+        chainId: 11155111,
+        from: process.env.DEPLOYER_ADDRESS as string
+      };
+      config.networks["eth-sepolia"] = {
         url: process.env.SEPOLIA_PROVIDER_URL as string,
         accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
         chainId: 11155111,
