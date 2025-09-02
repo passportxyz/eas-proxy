@@ -46,8 +46,11 @@ let config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
+      linea: process.env.LINEASCAN_API_KEY as string,
+      arbitrum: process.env.ARBISCAN_API_KEY as string,
       "eth-mainnet": process.env.ETHERSCAN_API_KEY as string,
-      "optimism-sepolia": process.env.OP_SEPOLIA_ETHERSCAN_API_KEY as string,
+      "optimism-sepolia": process.env.ETHERSCAN_API_KEY_OP as string,
+      optimisticEthereum: process.env.ETHERSCAN_API_KEY_OP as string,
       scroll: process.env.SCROLL_ETHERSCAN_API_KEY as string,
       "scroll-sepolia": process.env.SCROLL_SEPOLIA_ETHERSCAN_API_KEY as string,
       shape: "dummy api key",

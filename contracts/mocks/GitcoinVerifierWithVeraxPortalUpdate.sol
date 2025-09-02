@@ -3,14 +3,14 @@ pragma solidity ^0.8.9;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import { GitcoinVerifier } from "./GitcoinVerifier.sol";
-import { GitcoinVeraxPortal } from "./GitcoinVeraxPortal.sol";
+import { GitcoinVerifierUpdate } from "./GitcoinVerifierUpdate.sol";
+import { GitcoinVeraxPortal } from "../GitcoinVeraxPortal.sol";
 
 /**
  * @title GitcoinVerifier
  * @notice This contract is used to verify a passport's authenticity and to add a passport to the GitcoinAttester contract using the verifyAndAttest() function.
  */
-contract GitcoinVerifierWithVeraxPortal is GitcoinVerifier {
+contract GitcoinVerifierWithVeraxPortalUpdate is GitcoinVerifierUpdate {
   using ECDSA for bytes32;
 
   GitcoinVeraxPortal public portal;

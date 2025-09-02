@@ -122,8 +122,7 @@ const easEncodeInvalidStamp = () => {
   return encodedData;
 };
 
-// TODO
-describe.only("GitcoinPassportDecoderShape", function () {
+describe("GitcoinPassportDecoderShape", function () {
   const maxScoreAge = 3600 * 24 * 90; // 90 days
   let gitcoinResolver: GitcoinResolver;
   let gitcoinAttester: GitcoinAttester;
@@ -136,10 +135,11 @@ describe.only("GitcoinPassportDecoderShape", function () {
   let iamAccount: HardhatEthersSigner;
   let recipientAccount: HardhatEthersSigner;
   let otherAccount: HardhatEthersSigner;
+  let feeAccount: HardhatEthersSigner;
 
   // Define the schema for V2 scores
   this.beforeAll(async function () {
-    [ownerAccount, iamAccount, recipientAccount, otherAccount] =
+    [ownerAccount, iamAccount, recipientAccount, otherAccount, feeAccount] =
       await ethers.getSigners();
   });
 
@@ -169,7 +169,8 @@ describe.only("GitcoinPassportDecoderShape", function () {
       .connect(ownerAccount)
       .initialize(
         await iamAccount.getAddress(),
-        await gitcoinAttester.getAddress()
+        await gitcoinAttester.getAddress(),
+        await feeAccount.getAddress()
       );
 
     const chainId = await ethers.provider

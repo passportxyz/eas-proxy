@@ -2,24 +2,24 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import {
   NO_EXPIRATION,
-  ZERO_BYTES32,
+  ZERO_BYTES32
 } from "@ethereum-attestation-service/eas-sdk";
 import { easEncodeScore, encodeEasPassport } from "./mockAttestations";
 import { SCHEMA_REGISTRY_ABI } from "../abi/SCHEMA_REGISTRY_ABI";
 
 export const googleStamp = {
   provider: "Google",
-  stampHash: "234567890",
+  stampHash: "234567890"
 };
 
 export const facebookStamp = {
   provider: "Facebook",
-  stampHash: "234567891",
+  stampHash: "234567891"
 };
 
 export const twitterStamp = {
   provider: "Twitter",
-  stampHash: "234567891",
+  stampHash: "234567891"
 };
 
 // SEPOLIA SPECIFIC
@@ -32,7 +32,8 @@ export const fee1 = ethers.parseEther("0.001");
 export const fee1Less1Wei = ethers.parseEther("0.000999999999999999");
 export const fee2 = ethers.parseEther("0.002");
 export const secondsInDay = 3600 * 24;
-export const daysFromNow = (days: number) => Math.floor(Date.now() / 1000) + days * secondsInDay;
+export const daysFromNow = (days: number) =>
+  Math.floor(Date.now() / 1000) + days * secondsInDay;
 
 export const passportTypes = {
   AttestationRequestData: [
@@ -41,29 +42,29 @@ export const passportTypes = {
     { name: "revocable", type: "bool" },
     { name: "refUID", type: "bytes32" },
     { name: "data", type: "bytes" },
-    { name: "value", type: "uint256" },
+    { name: "value", type: "uint256" }
   ],
   MultiAttestationRequest: [
     { name: "schema", type: "bytes32" },
-    { name: "data", type: "AttestationRequestData[]" },
+    { name: "data", type: "AttestationRequestData[]" }
   ],
   PassportAttestationRequest: [
     { name: "multiAttestationRequest", type: "MultiAttestationRequest[]" },
     { name: "nonce", type: "uint256" },
-    { name: "fee", type: "uint256" },
-  ],
+    { name: "fee", type: "uint256" }
+  ]
 };
 
 export const scorer1Score = {
   score: 100,
   scorer_id: 420,
-  score_decimals: 18,
+  score_decimals: 18
 };
 
 export const scorer2Score = {
   score: 200,
   scorer_id: 240,
-  score_decimals: 18,
+  score_decimals: 18
 };
 
 const easEncodedPassport = encodeEasPassport(
@@ -88,8 +89,7 @@ const easEncodedPassport = encodeEasPassport(
     "0x1234123412341234123412341234123412341234123412341234123412341234",
     "0x1234123412341234123412341234123412341234123412341234123412341234",
     "0x1234123412341234123412341234123412341234123412341234123412341234",
-    "0x1234123412341234123412341234123412341234123412341234123412341234",
-    "0x1234123412341234123412341234123412341234123412341234123412341234",
+    "0x1234123412341234123412341234123412341234123412341234123412341234"
   ],
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
@@ -118,8 +118,7 @@ const easOtherEncodedPassport = encodeEasPassport(
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
     "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
-    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
-    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa",
+    "0x1234123412341234123412341234123412341234123412341234123412aaaaaa"
   ],
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21],
@@ -137,16 +136,18 @@ export const runVerifierTests = (
     issuer: string,
     attester: string,
     gitcoinPassportSchemaUID: string,
-    gitcoinScoreSchemaUID: string
+    gitcoinScoreSchemaUID: string,
+    feeRecipient: string
   ) => Promise<void>
 ) => {
   describe(contractName, function () {
     this.beforeAll(async function () {
-      const [owner, iamAccount, recipientAccount] = await ethers.getSigners();
+      const [owner, iamAccount, recipientAccount, feeAccount] = await ethers.getSigners();
       this.owner = owner;
       this.iamAccount = iamAccount;
       this.owner = owner;
       this.recipientAccount = recipientAccount;
+      this.feeAccount = feeAccount;
 
       // Deploy GitcoinAttester
       const GitcoinAttester = await ethers.getContractFactory(
@@ -225,7 +226,8 @@ export const runVerifierTests = (
         await this.iamAccount.getAddress(),
         await this.gitcoinAttester.getAddress(),
         this.passportAttestationSchemaUID,
-        this.scoreAttestationSchemaUID
+        this.scoreAttestationSchemaUID,
+        await this.feeAccount.getAddress()
       );
 
       // Create some test data
@@ -235,7 +237,7 @@ export const runVerifierTests = (
         name: "GitcoinVerifier",
         version: "1",
         chainId,
-        verifyingContract: await this.gitcoinVerifier.getAddress(),
+        verifyingContract: await this.gitcoinVerifier.getAddress()
       };
 
       this.getNonce = async (address: string) => {
@@ -254,9 +256,9 @@ export const runVerifierTests = (
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodedPassport,
-                value: 0,
-              },
-            ],
+                value: 0
+              }
+            ]
           },
           {
             schema: this.scoreAttestationSchemaUID,
@@ -268,13 +270,13 @@ export const runVerifierTests = (
                 revocable: true,
                 refUID: ZERO_BYTES32,
                 data: easEncodeScore(scorer1Score),
-                value: 0,
-              },
-            ],
-          },
+                value: 0
+              }
+            ]
+          }
         ],
         nonce: await this.getNonce(await this.recipientAccount.getAddress()),
-        fee: fee1,
+        fee: fee1
       };
 
       this.getOtherPassport = async () => {
@@ -289,9 +291,9 @@ export const runVerifierTests = (
                   revocable: true,
                   refUID: ZERO_BYTES32,
                   data: easOtherEncodedPassport,
-                  value: 0,
-                },
-              ],
+                  value: 0
+                }
+              ]
             },
             {
               schema: this.scoreAttestationSchemaUID,
@@ -302,13 +304,13 @@ export const runVerifierTests = (
                   revocable: true,
                   refUID: ZERO_BYTES32,
                   data: easEncodeScore(scorer1Score),
-                  value: 0,
-                },
-              ],
-            },
+                  value: 0
+                }
+              ]
+            }
           ],
           nonce: await this.getNonce(await this.recipientAccount.getAddress()),
-          fee: fee1,
+          fee: fee1
         };
       };
     });
@@ -338,7 +340,7 @@ export const runVerifierTests = (
 
       const verifiedPassport = await (
         await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-          value: fee1,
+          value: fee1
         })
       ).wait();
 
@@ -368,7 +370,7 @@ export const runVerifierTests = (
       const otherPassport = await this.getOtherPassport();
       await expect(
         this.gitcoinVerifier.verifyAndAttest(otherPassport, v, r, s, {
-          value: fee1,
+          value: fee1
         })
       ).to.be.revertedWithCustomError(this.gitcoinVerifier, "InvalidSignature");
     });
@@ -384,7 +386,7 @@ export const runVerifierTests = (
       // calling verifyAndAttest 1st time
       const result = await (
         await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-          value: fee1,
+          value: fee1
         })
       ).wait();
 
@@ -394,7 +396,7 @@ export const runVerifierTests = (
 
       await expect(
         this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-          value: fee1,
+          value: fee1
         })
       ).to.be.revertedWithCustomError(this.gitcoinVerifier, "InvalidNonce");
     });
@@ -418,12 +420,12 @@ export const runVerifierTests = (
 
       await expect(
         this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-          value: fee1Less1Wei,
+          value: fee1Less1Wei
         })
       ).to.be.revertedWithCustomError(this.gitcoinVerifier, "InsufficientFee");
     });
 
-    it("should accept fee", async function () {
+    it("should accept fee and transfer it to fee address", async function () {
       const signature = await this.iamAccount.signTypedData(
         this.domain,
         passportTypes,
@@ -440,103 +442,42 @@ export const runVerifierTests = (
 
       const { v, r, s } = ethers.Signature.from(signature);
 
+      const feeAccountBalanceBefore = await ethers.provider.getBalance(await this.feeAccount.getAddress());
+      
       const verifiedPassport = await this.gitcoinVerifier.verifyAndAttest(
         this.passport,
         v,
         r,
         s,
         {
-          value: fee2,
+          value: fee2
         }
       );
       const receipt = await verifiedPassport.wait();
       expect(receipt.status).to.equal(1);
+
+      const feeAccountBalanceAfter = await ethers.provider.getBalance(await this.feeAccount.getAddress());
+      expect(feeAccountBalanceAfter - feeAccountBalanceBefore).to.equal(fee2);
     });
 
-    describe("withdrawFees", function () {
-      this.beforeEach(async function () {
-        const signature = await this.iamAccount.signTypedData(
-          this.domain,
-          passportTypes,
-          this.passport
-        );
-
-        const { v, r, s } = ethers.Signature.from(signature);
-        await (
-          await this.gitcoinVerifier.verifyAndAttest(this.passport, v, r, s, {
-            value: fee2,
-          })
-        ).wait();
-      });
-      it("should allow the owner to withdraw a specified amount fee amount", async function () {
-        const balanceBefore = await ethers.provider.getBalance(
-          await this.owner.getAddress()
-        );
-        const verifierBalance = await ethers.provider.getBalance(
-          await this.gitcoinVerifier.getAddress()
-        );
-
-        const withdrawAmount = ethers.parseUnits("0.0005", 18);
-
-        const tx = await this.gitcoinVerifier.withdrawFees(withdrawAmount);
-        await tx.wait();
-
-        const ownerBalanceAfter = await ethers.provider.getBalance(
-          await this.owner.getAddress()
-        );
-
-        const contractBalanceAfter = await ethers.provider.getBalance(
-          await this.gitcoinVerifier.getAddress()
-        );
-
-        const contractBalance = verifierBalance - withdrawAmount;
-
-        expect(ownerBalanceAfter > balanceBefore).to.be.true;
-        expect(contractBalanceAfter === BigInt(contractBalance)).to.be.true;
+    describe("Fee Address Management", function () {
+      it("should allow owner to update fee address", async function () {
+        const [, , , , newFeeAccount] = await ethers.getSigners();
+        await this.gitcoinVerifier.setFeeRecipient(await newFeeAccount.getAddress());
+        expect(await this.gitcoinVerifier.feeRecipient()).to.equal(await newFeeAccount.getAddress());
       });
 
-      it("should reduce the contract balance after withdrawal", async function () {
-        const [owner] = await ethers.getSigners();
-        const contractBalanceBefore = await ethers.provider.getBalance(
-          await this.gitcoinVerifier.getAddress()
-        );
-
-        const withdrawAmount = ethers.parseUnits("0.0005", 18);
-
-        await this.gitcoinVerifier.withdrawFees(withdrawAmount);
-
-        const contractBalanceAfter = await ethers.provider.getBalance(
-          await this.gitcoinVerifier.getAddress()
-        );
-
-        const contractBalance = contractBalanceBefore - withdrawAmount;
-
-        expect(contractBalanceAfter < contractBalanceBefore).to.be.true;
-        expect(contractBalanceAfter === BigInt(contractBalance)).to.be.true;
-      });
-
-      it("should not allow non-owners to withdraw fees", async function () {
-        const [, nonOwner] = await ethers.getSigners();
-
-        const withdrawAmount = ethers.parseUnits("0.0005", 18);
-
+      it("should not allow non-owner to update fee address", async function () {
+        const [, , , , newFeeAccount] = await ethers.getSigners();
         await expect(
-          this.gitcoinVerifier.connect(nonOwner).withdrawFees(withdrawAmount)
+          this.gitcoinVerifier.connect(this.iamAccount).setFeeRecipient(await newFeeAccount.getAddress())
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("should revert if withdrawal amount is greater than the contract balance", async function () {
-        const [owner] = await ethers.getSigners();
-
-        const contractBalanceBefore = await ethers.provider.getBalance(
-          await this.gitcoinVerifier.getAddress()
-        );
-
-        const withdrawAmount = ethers.parseUnits("0.07", 18);
-
+      it("should not allow setting zero address as fee address", async function () {
         await expect(
-          this.gitcoinVerifier.connect(owner).withdrawFees(withdrawAmount)
-        ).to.be.revertedWith("Insufficient contract balance");
+          this.gitcoinVerifier.setFeeRecipient(ethers.ZeroAddress)
+        ).to.be.revertedWithCustomError(this.gitcoinVerifier, "ZeroAddress");
       });
     });
 
@@ -580,7 +521,7 @@ export const runVerifierTests = (
             "0x69bec0b6cd72c2116c44b777f6d3df6cd5e40b0aa2107e6c79108a414260e35b",
             "0x25fa382cd5b3d4577f4977fc3a0b742ee65ac8a3037789466f4ac3dfbb6eccc6",
             {
-              value: fee2,
+              value: fee2
             }
           )
         ).to.be.revertedWith("Pausable: paused");

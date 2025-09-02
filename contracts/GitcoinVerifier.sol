@@ -5,10 +5,11 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import { AttestationRequest, AttestationRequestData, EAS, Attestation, MultiAttestationRequest } from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
+import {AttestationRequestData, MultiAttestationRequest} from "@ethereum-attestation-service/eas-contracts/contracts/EAS.sol";
 
-import "./GitcoinAttester.sol";
+import {GitcoinAttester} from "./GitcoinAttester.sol";
 
 /**
  * @title GitcoinVerifier
@@ -17,9 +18,16 @@ import "./GitcoinAttester.sol";
 contract GitcoinVerifier is
   UUPSUpgradeable,
   OwnableUpgradeable,
-  PausableUpgradeable
+  PausableUpgradeable,
+  ReentrancyGuardUpgradeable
 {
   using ECDSA for bytes32;
+
+  error InsufficientFee();
+  error InvalidNonce();
+  error InvalidSignature();
+  error TransferFailed();
+  error ZeroAddress();
 
   // Instance of the GitcoinAttester contract
   GitcoinAttester public attester;
@@ -36,9 +44,10 @@ contract GitcoinVerifier is
   // Nonces for each recipient address
   mapping(address => uint) public recipientNonces;
 
-  error InsufficientFee();
-  error InvalidNonce();
-  error InvalidSignature();
+  address public feeRecipient;
+
+  // Gap for upgradeability
+  uint256[50] private __gap;
 
   /**
    * @dev EIP712Domain represents the domain separator struct for EIP-712 typed data hashing.
@@ -86,17 +95,28 @@ contract GitcoinVerifier is
    * @notice Initializer function responsible for setting up the contract's initial state.
    * @param _issuer The address of the issuer of the passport.
    * @param _attester The address of the GitcoinAttester contract.
+   * @param _feeRecipient The address of the fee recipient.
    */
-  function initialize(address _issuer, address _attester) public initializer {
-    __GitcoinVerifier_init(_issuer, _attester);
+  function initialize(address _issuer, address _attester, address _feeRecipient) public initializer {
+    __GitcoinVerifier_init(_issuer, _attester, _feeRecipient);
   }
 
-  function __GitcoinVerifier_init(address _issuer, address _attester) internal onlyInitializing {
+  function __GitcoinVerifier_init(
+    address _issuer,
+    address _attester,
+    address _feeRecipient
+  ) internal onlyInitializing {
     __Ownable_init();
     __Pausable_init();
+    __ReentrancyGuard_init();
+
+    if (_issuer == address(0)) revert ZeroAddress();
+    if (_attester == address(0)) revert ZeroAddress();
+    if (_feeRecipient == address(0)) revert ZeroAddress();
 
     attester = GitcoinAttester(_attester);
     issuer = _issuer;
+    feeRecipient = _feeRecipient;
     name = "GitcoinVerifier";
 
     uint256 chainId = _getChainId();
@@ -110,7 +130,6 @@ contract GitcoinVerifier is
         address(this) // verifyingContract
       )
     );
-
   }
 
   function pause() public onlyOwner {
@@ -265,25 +284,23 @@ contract GitcoinVerifier is
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public virtual payable whenNotPaused returns (bytes32[] memory) {
+  ) public payable virtual whenNotPaused nonReentrant returns (bytes32[] memory) {
     _verify(v, r, s, attestationRequest);
 
     if (msg.value < attestationRequest.fee) {
       revert InsufficientFee();
     }
 
-    return
-      attester.submitAttestations(attestationRequest.multiAttestationRequest);
+    bytes32[] memory attestations = attester.submitAttestations(attestationRequest.multiAttestationRequest);
+
+    (bool success, ) = feeRecipient.call{value: msg.value}("");
+    if (!success) revert TransferFailed();
+
+    return attestations;
   }
 
-  /**
-   * @dev Allows the contract owner to withdraw the contract's balance.
-   */
-  function withdrawFees(uint256 _amount) external onlyOwner {
-    uint256 balance = address(this).balance;
-
-    require(_amount <= balance, "Insufficient contract balance");
-
-    payable(owner()).transfer(_amount);
+  function setFeeRecipient(address _feeRecipient) external onlyOwner {
+    if (_feeRecipient == address(0)) revert ZeroAddress();
+    feeRecipient = _feeRecipient;
   }
 }

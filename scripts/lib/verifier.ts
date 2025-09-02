@@ -5,11 +5,13 @@ import { deployContract } from "./deployment";
 
 export async function deployVerifier(
   attesterAddress: string,
-  issuerAddress: string
+  issuerAddress: string,
+  feeAddress: string
 ) {
   const verifier = await deployContract("GitcoinVerifier", [
     issuerAddress,
-    attesterAddress
+    attesterAddress,
+    feeAddress
   ]);
 
   const deployment = await verifier.waitForDeployment();

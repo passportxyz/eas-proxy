@@ -276,3 +276,11 @@ export function getNamingSchema() {
     throw new Error("namingSchema schema was not found in onchainInfo");
   return namingSchema;
 }
+
+export function getFeeAddress() {
+  const feeAddress = process.env.FEE_ADDRESS;
+  if (!feeAddress) {
+    throw new Error("FEE_ADDRESS env variable must be set");
+  }
+  return feeAddress;
+}

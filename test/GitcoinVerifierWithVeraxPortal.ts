@@ -8,7 +8,8 @@ runVerifierTests(
     issuer,
     attester,
     gitcoinPassportSchemaUID,
-    gitcoinScoreSchemaUID
+    gitcoinScoreSchemaUID,
+    feeRecipient
   ) => {
     const GitcoinVeraxPortal = await ethers.getContractFactory(
       "GitcoinVeraxPortal"
@@ -29,9 +30,10 @@ runVerifierTests(
       await registry.getAddress()
     );
 
-    await contract["initialize(address,address,address)"](
+    await contract["initialize(address,address,address,address)"](
       issuer,
       attester,
+      feeRecipient,
       await gitcoinVeraxPortal.getAddress()
     );
 
